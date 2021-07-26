@@ -10,6 +10,8 @@ To add an assembly to the build list, you need to mark it with an attribute.
 ```
 Or you can create an assembly folder via the menu: `Create/UDON Assembly Folder`
 
+All classes are compiled and stored directly in SerializedUdonProgramAsset, bypassing UdonAssemblyProgramAsset. This creates less garbage in the project, and the program is used to link the script and the UdonBehaviour on scene. Therefore, be careful not to delete this asset, otherwise the links on the scene will be broken.
+
 ### So far implemented
 - Interfaces
 - Abstract and generic classes
