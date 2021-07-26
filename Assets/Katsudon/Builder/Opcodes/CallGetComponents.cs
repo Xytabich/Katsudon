@@ -32,7 +32,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			var getterName = methodInfo.Name;
 			if((getterName == "GetComponents" || getterName == "GetComponentsInParent" || getterName == "GetComponentsInChildren") &&
-				methodInfo.DeclaringType == typeof(UnityEngine.Component))
+				(methodInfo.DeclaringType == typeof(Component) || methodInfo.DeclaringType == typeof(GameObject)))
 			{
 				var parameters = methodInfo.GetParameters();
 				if(!methodInfo.IsGenericMethod && parameters[0].ParameterType != typeof(Type))
