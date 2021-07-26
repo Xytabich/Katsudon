@@ -1,0 +1,32 @@
+﻿using System;
+
+namespace Katsudon.Builder.Extensions.EnumExtension
+{
+	[NumberConverter]
+	public class EnumConstConverter : IFromNumberConverter
+	{
+		public int order => 50;
+
+		public bool TryConvert(IMethodDescriptor method, in IVariable variable, Type toType, out IVariable converted)
+		{
+			if(!(variable is IConstVariable constVariable))
+			{
+				converted = null;
+				return false;
+			}
+			if(!typeof(Enum).IsAssignableFrom(toType))
+			{
+				converted = null;
+				return false;
+			}
+
+			converted = method.machine.GetConstVariable(Enum.ToObject(toType, constVariable.value));
+			return true;
+		}
+
+		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		{
+			container.AddConverter(new EnumConstConverter());
+		}
+	}
+}

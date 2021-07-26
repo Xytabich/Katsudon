@@ -1,0 +1,22 @@
+{
+    "name": "Katsudon.Editor",
+    "references": [
+        "VRC.Udon",
+        "VRC.Udon.Editor",
+        "VRC.Udon.Serialization.OdinSerializer",
+        "Katsudon.Builder",
+        "Katsudon.Cache",
+        "Katsudon.Reflection",
+        "Katsudon.Runtime"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}

@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 134147d898ba5604993f411ec1c181ae
+MonoImporter:
+  externalObjects:
+  - first:
+      type: VRC.Udon.ProgramSources:SerializedUdonProgramAsset
+      assembly: VRC.Udon
+      name: Katsudon-Program
+    second: {fileID: 11400000, guid: 3e24762fec06fbe42a0204778dfd80a2, type: 2}
+  serializedVersion: 2
+  defaultReferences:
+  - img: {instanceID: 0}
+  - sprite: {instanceID: 0}
+  - other: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

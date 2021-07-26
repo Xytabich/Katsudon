@@ -1,0 +1,20 @@
+{
+    "name": "Katsudon.Cache",
+    "references": [
+        "Cinemachine",
+        "VRC.Udon",
+        "VRC.Udon.Editor",
+        "Unity.TextMeshPro",
+        "Katsudon.Reflection"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}
