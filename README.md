@@ -18,4 +18,6 @@ All classes are compiled and stored directly in SerializedUdonProgramAsset, bypa
 - Calls to unity and vrchat api
 - Unty and VRChat events: Update, OnEnabled, OnDisabled, etc.
 
-At the moment, this utility is under development, so many things may not be implemented, as well as optimizations are not implemented everywhere
+### Notes
+- At the moment, this utility is under development, so many things may not be implemented, as well as optimizations are not implemented everywhere
+- All default values declared for the class fields are assigned at the time of the build, for example: `private DateTime startTime = DateTime.Now;` will have a value at the time of the build, and not at the time of loading the UdonBehaviour, so such things should be assigned in Start or other methods.
