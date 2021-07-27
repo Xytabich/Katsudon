@@ -392,7 +392,31 @@ namespace Katsudon.Editor
 
 		private static void DisplayObjectContextMenu(Rect rect, ProgramEditor editor)
 		{
-			throw new NotImplementedException();
+			var menu = new GenericMenu();
+			menu.AddItem(EditorGUIUtility.TrTextContent("Reset"), false, OnResetProxy, editor);
+			menu.AddSeparator("");
+			menu.AddItem(EditorGUIUtility.TrTextContent("Edit Script"), false, OnEditProxyScript, editor);
+			menu.DropDown(rect);
+		}
+
+		private static void OnResetProxy(object obj)
+		{
+			var editor = (ProgramEditor)obj;
+			Undo.IncrementCurrentGroup();
+			Undo.SetCurrentGroupName("Reset");
+			Undo.RecordObjects(editor.proxies, "Reset");
+			Undo.RecordObjects(editor.behaviours, "Reset");
+			for(int i = 0; i < editor.proxies.Length; i++)
+			{
+				Unsupported.SmartReset(editor.proxies[i]);
+				ProxyUtils.CopyFieldsToBehaviour(editor.proxies[i], editor.behaviours[i]);
+			}
+		}
+
+		private static void OnEditProxyScript(object obj)
+		{
+			var editor = (ProgramEditor)obj;
+			AssetDatabase.OpenAsset(MonoScript.FromMonoBehaviour(editor.proxies[0]));
 		}
 
 		private enum EditorState
