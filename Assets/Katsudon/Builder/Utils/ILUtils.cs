@@ -22,16 +22,16 @@ namespace Katsudon.Builder
 					index = 3;
 					return true;
 				case 0x0E:
-					index = (byte)op.argument;
+					index = ((ParameterInfo)op.argument).Position;
 					return true;
 				case 0x0F:
-					index = (byte)op.argument;
+					index = ((ParameterInfo)op.argument).Position;
 					return true;
 				case 0xFE09:
-					index = (short)op.argument;
+					index = ((ParameterInfo)op.argument).Position;
 					return true;
 				case 0xFE0A:
-					index = (short)op.argument;
+					index = ((ParameterInfo)op.argument).Position;
 					return true;
 			}
 			index = -1;
@@ -83,10 +83,10 @@ namespace Katsudon.Builder
 			switch((int)op.opCode.Value)
 			{
 				case 0x10:
-					index = (byte)op.argument;
+					index = ((ParameterInfo)op.argument).Position;
 					return true;
 				case 0xFE0B:
-					index = (short)op.argument;
+					index = ((ParameterInfo)op.argument).Position;
 					return true;
 			}
 			index = -1;

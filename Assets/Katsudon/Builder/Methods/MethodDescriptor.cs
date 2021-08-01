@@ -478,34 +478,41 @@ namespace Katsudon.Builder
 				this.releaseVariable = releaseVariable;
 			}
 
-			public ITmpVariable Reserve()
+			public override void Use()
+			{
+				if(isHandle) return;
+
+				isUsed = true;
+				if(onUse != null) onUse.Invoke();
+
+				usesLeft--;
+				if(usesLeft <= 0)
+				{
+					usesLeft = 0;
+					releaseVariable(this);
+					if(onRelease != null) onRelease.Invoke();
+				}
+			}
+
+			public override void Allocate(int count = 1)
+			{
+				if(isHandle) return;
+
+				if(count < 1) return;
+				if(usesLeft < 0) usesLeft = 0;
+				usesLeft += count;
+			}
+
+			ITmpVariable ITmpVariable.Reserve()
 			{
 				isHandle = true;
 				return this;
 			}
 
-			public void Release()
+			void ITmpVariable.Release()
 			{
-				usesLeft = 0;
-				releaseVariable(this);
-				if(onRelease != null) onRelease.Invoke();
-			}
-
-			public override void Use()
-			{
-				isUsed = true;
-				if(onUse != null) onUse.Invoke();
-				if(isHandle) return;
-
-				usesLeft--;
-				if(usesLeft <= 0) Release();
-			}
-
-			public override void Allocate(int count = 1)
-			{
-				if(count < 1) return;
-				if(usesLeft < 0) usesLeft = 0;
-				usesLeft += count;
+				isHandle = false;
+				Use();
 			}
 
 			public override string ToString()

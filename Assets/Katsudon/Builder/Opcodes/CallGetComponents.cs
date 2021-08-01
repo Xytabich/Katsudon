@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 using Katsudon.Builder.Variables;
 using Katsudon.Info;
+using Katsudon.Utility;
 using UnityEngine;
 using VRC.Udon;
 
@@ -170,10 +171,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			var counter = method.GetTmpVariable(typeof(int)).Reserve();
 			var components = method.GetTmpVariable(typeof(Component[])).Reserve();
-			var componentsIndex = method.GetTmpVariable(typeof(int)).Reserve();
-			var componentsLength = method.GetTmpVariable(typeof(int)).Reserve();
 			var component = method.GetTmpVariable(typeof(Component)).Reserve();
-			var condition = method.GetTmpVariable(typeof(bool)).Reserve();
 
 			ExternCall(method,
 				string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),
@@ -184,61 +182,51 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			method.machine.AddCopy(method.machine.GetConstVariable((int)0), counter);
 
-			method.machine.AddCopy(method.machine.GetConstVariable((int)0), componentsIndex);
-			method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", componentsLength, components.OwnType());
+			using(ForLoop.Array(method, components, out var componentsIndex))
+			{
+				method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
+					component, components.OwnType(), componentsIndex.OwnType());
 
-			var continueLoopLabel = new EmbedAddressLabel();
-			var addToListLabel = new EmbedAddressLabel();
-			var startLoopLabel = new EmbedAddressLabel();
-			method.machine.ApplyLabel(startLoopLabel);
+				var addToListLabel = new EmbedAddressLabel();
 
-			method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, componentsIndex, componentsLength, condition);
+				// if(element.typeId == searchTypeId)
+				var componentGuid = method.GetTmpVariable(typeof(Guid));
+				method.machine.GetVariableExtern(component, AsmTypeInfo.TYPE_ID_NAME, componentGuid);
 
-			var endLabel = new EmbedAddressLabel();
-			method.machine.AddBranch(condition, endLabel);
+				searchType.Allocate();
+				var condition = method.GetTmpVariable(typeof(bool));
+				method.machine.AddExtern(
+					BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
+					condition, componentGuid.OwnType(), searchType.OwnType()
+				);
+				method.machine.AddBranch(condition, addToListLabel);
+				// endif
 
-			method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
-				component, components.OwnType(), componentsIndex.OwnType());
+				// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0)
+				var inherits = method.GetTmpVariable(typeof(Guid[]));
+				method.machine.GetVariableExtern(component, AsmTypeInfo.INHERIT_IDS_NAME, inherits);
 
-			// if(element.typeId != searchTypeId) continue;
-			var componentGuid = method.GetTmpVariable(typeof(Guid));
-			method.machine.GetVariableExtern(component, AsmTypeInfo.TYPE_ID_NAME, componentGuid);
+				var inheritsIndex = method.GetTmpVariable(typeof(int));
+				method.machine.AddExtern("SystemArray.__BinarySearch__SystemArray_SystemObject__SystemInt32",
+					inheritsIndex, inherits.OwnType(), searchType.OwnType());
 
-			searchType.Allocate();
-			method.machine.AddExtern(
-				BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
-				condition,
-				componentGuid.OwnType(),
-				searchType.OwnType()
-			);
-			method.machine.AddBranch(condition, addToListLabel);
-			// endif
+				condition = method.GetTmpVariable(typeof(bool));
+				method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
+				method.machine.AddBranch(condition, addToListLabel);
+				// endif
+				var continueLoopLabel = new EmbedAddressLabel();
+				method.machine.AddJump(continueLoopLabel);
 
-			// if(Array.BinarySearch(element.inherits, searchTypeId) < 0) continue;
-			var inherits = method.GetTmpVariable(typeof(Guid[]));
-			method.machine.GetVariableExtern(component, AsmTypeInfo.INHERIT_IDS_NAME, inherits);
+				method.machine.ApplyLabel(addToListLabel);
+				// components[counter++] = element;
+				method.machine.AddExtern("UnityEngineComponentArray.__Set__SystemInt32_UnityEngineComponent__SystemVoid",
+					components.OwnType(), counter.OwnType(), component.OwnType());
+				method.machine.BinaryOperatorExtern(BinaryOperator.Addition, counter, method.machine.GetConstVariable((int)1), counter);
+				// end
 
-			var inheritsIndex = method.GetTmpVariable(typeof(int));
-			method.machine.AddExtern("SystemArray.__BinarySearch__SystemArray_SystemObject__SystemInt32",
-				inheritsIndex, inherits.OwnType(), searchType.OwnType());
+				method.machine.ApplyLabel(continueLoopLabel);
+			}
 
-			method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
-			method.machine.AddBranch(condition, addToListLabel);
-			method.machine.AddJump(continueLoopLabel);
-			// endif
-
-			method.machine.ApplyLabel(addToListLabel);
-			// components[counter++] = element;
-			method.machine.AddExtern("UnityEngineComponentArray.__Set__SystemInt32_UnityEngineComponent__SystemVoid",
-				components.OwnType(), counter.OwnType(), component.OwnType());
-			method.machine.BinaryOperatorExtern(BinaryOperator.Addition, counter, method.machine.GetConstVariable((int)1), counter);
-			// end
-
-			method.machine.ApplyLabel(continueLoopLabel);
-			method.machine.BinaryOperatorExtern(BinaryOperator.Addition, componentsIndex, method.machine.GetConstVariable((int)1), componentsIndex);
-			method.machine.AddJump(startLoopLabel);
-
-			method.machine.ApplyLabel(endLabel);
 			var udonType = ArrayTypes.GetUdonArrayType(outComponents.type);
 			method.machine.AddExtern(Utils.GetExternName(udonType, "__ctor__SystemInt32__{0}", udonType), outComponents, counter.OwnType());
 			outComponents.Allocate();
@@ -247,10 +235,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			counter.Release();
 			components.Release();
-			componentsIndex.Release();
-			componentsLength.Release();
 			component.Release();
-			condition.Release();
 		}
 
 		private static void ExternCall(IMethodDescriptor method, string name, IVariable targetVariable,

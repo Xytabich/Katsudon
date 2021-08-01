@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
+using Katsudon.Utility;
 using UnityEngine;
 using VRC.Udon;
 
@@ -168,9 +169,6 @@ namespace Katsudon.Builder.AsmOpCodes
 			}
 
 			var components = method.GetTmpVariable(typeof(Component[])).Reserve();
-			var componentsIndex = method.GetTmpVariable(typeof(int)).Reserve();
-			var componentsLength = method.GetTmpVariable(typeof(int)).Reserve();
-			var condition = method.GetTmpVariable(typeof(bool)).Reserve();
 
 			ExternCall(method,
 				string.Format(includeInactive == null ? CallGetComponents.CALL_METHOD_FORMAT : CallGetComponents.CALL_METHOD_INCLUDING_FORMAT, getterName),
@@ -180,61 +178,45 @@ namespace Katsudon.Builder.AsmOpCodes
 			);
 
 			var endSuccessLabel = new EmbedAddressLabel();
+			using(ForLoop.Array(method, components, out var componentsIndex))
+			{
+				method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
+					componentVariable, components.OwnType(), componentsIndex.OwnType());
 
-			method.machine.AddCopy(method.machine.GetConstVariable((int)0), componentsIndex);
-			method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", componentsLength, components.OwnType());
+				// if(element.typeId == searchTypeId) return element;
+				var componentGuid = method.GetTmpVariable(typeof(Guid));
+				componentVariable.Allocate();
+				method.machine.GetVariableExtern(componentVariable, AsmTypeInfo.TYPE_ID_NAME, componentGuid);
 
-			var startComponentsLabel = new EmbedAddressLabel();
-			method.machine.ApplyLabel(startComponentsLabel);
+				searchType.Allocate();
+				var condition = method.GetTmpVariable(typeof(bool));
+				method.machine.AddExtern(
+					BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
+					condition, componentGuid.OwnType(), searchType.OwnType()
+				);
+				method.machine.AddBranch(condition, endSuccessLabel);
+				// endif
 
-			method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, componentsIndex, componentsLength, condition);
-			var endNullLabel = new EmbedAddressLabel();
-			method.machine.AddBranch(condition, endNullLabel);
+				// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0) return element;
+				var inherits = method.GetTmpVariable(typeof(Guid[]));
+				componentVariable.Allocate();
+				method.machine.GetVariableExtern(componentVariable, AsmTypeInfo.INHERIT_IDS_NAME, inherits);
 
-			method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
-				componentVariable, components.OwnType(), componentsIndex.OwnType());
+				var inheritsIndex = method.GetTmpVariable(typeof(int));
+				method.machine.AddExtern("SystemArray.__BinarySearch__SystemArray_SystemObject__SystemInt32",
+					inheritsIndex, inherits.OwnType(), searchType.OwnType());
 
-			// if(element.typeId == searchTypeId) return element;
-			var componentGuid = method.GetTmpVariable(typeof(Guid));
-			componentVariable.Allocate();
-			method.machine.GetVariableExtern(componentVariable, AsmTypeInfo.TYPE_ID_NAME, componentGuid);
-
-			searchType.Allocate();
-			method.machine.AddExtern(
-				BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
-				condition,
-				componentGuid.OwnType(),
-				searchType.OwnType()
-			);
-			method.machine.AddBranch(condition, endSuccessLabel);
-			// endif
-
-			// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0) return element;
-			var inherits = method.GetTmpVariable(typeof(Guid[]));
-			componentVariable.Allocate();
-			method.machine.GetVariableExtern(componentVariable, AsmTypeInfo.INHERIT_IDS_NAME, inherits);
-
-			var inheritsIndex = method.GetTmpVariable(typeof(int));
-			method.machine.AddExtern("SystemArray.__BinarySearch__SystemArray_SystemObject__SystemInt32",
-				inheritsIndex, inherits.OwnType(), searchType.OwnType());
-
-			method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
-			method.machine.AddBranch(condition, endSuccessLabel);
-			// endif
-
-			method.machine.BinaryOperatorExtern(BinaryOperator.Addition, componentsIndex, method.machine.GetConstVariable((int)1), componentsIndex);
-			method.machine.AddJump(startComponentsLabel);
-
-			method.machine.ApplyLabel(endNullLabel);
+				condition = method.GetTmpVariable(typeof(bool));
+				method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
+				method.machine.AddBranch(condition, endSuccessLabel);
+				// endif
+			}
 			componentVariable.Allocate();
 			method.machine.AddCopy(method.machine.GetConstVariable(null), componentVariable);
 
 			method.machine.ApplyLabel(endSuccessLabel);
 
 			components.Release();
-			componentsIndex.Release();
-			componentsLength.Release();
-			condition.Release();
 		}
 
 		private static void ExternCall(IMethodDescriptor method, string name, IVariable targetVariable,
