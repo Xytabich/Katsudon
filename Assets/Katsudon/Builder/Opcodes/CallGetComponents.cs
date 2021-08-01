@@ -168,18 +168,12 @@ namespace Katsudon.Builder.AsmOpCodes
 			}
 			*/
 
-			var counter = method.GetTmpVariable(typeof(int));
-			counter.Reserve();
-			var components = method.GetTmpVariable(typeof(Component[]));
-			components.Reserve();
-			var componentsIndex = method.GetTmpVariable(typeof(int));
-			componentsIndex.Reserve();
-			var componentsLength = method.GetTmpVariable(typeof(int));
-			componentsLength.Reserve();
-			var component = method.GetTmpVariable(typeof(Component));
-			component.Reserve();
-			var condition = method.GetTmpVariable(typeof(bool));
-			condition.Reserve();
+			var counter = method.GetTmpVariable(typeof(int)).Reserve();
+			var components = method.GetTmpVariable(typeof(Component[])).Reserve();
+			var componentsIndex = method.GetTmpVariable(typeof(int)).Reserve();
+			var componentsLength = method.GetTmpVariable(typeof(int)).Reserve();
+			var component = method.GetTmpVariable(typeof(Component)).Reserve();
+			var condition = method.GetTmpVariable(typeof(bool)).Reserve();
 
 			ExternCall(method,
 				string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),

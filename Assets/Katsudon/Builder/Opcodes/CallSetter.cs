@@ -27,6 +27,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			var methodInfo = op.argument as MethodInfo;
 			if(methodInfo.IsAbstract || methodInfo.IsVirtual || methodInfo.IsStatic) return false;
 			if(methodInfo.ReturnType != typeof(void)) return false;
+			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 
 			FieldInfo field = shortcuts.GetSetter(methodInfo);
 			if(field != null)

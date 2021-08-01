@@ -167,14 +167,10 @@ namespace Katsudon.Builder.AsmOpCodes
 				case "GetComponentInChildren": getterName = "GetComponentsInChildren"; break;
 			}
 
-			var components = method.GetTmpVariable(typeof(Component[]));
-			components.Reserve();
-			var componentsIndex = method.GetTmpVariable(typeof(int));
-			componentsIndex.Reserve();
-			var componentsLength = method.GetTmpVariable(typeof(int));
-			componentsLength.Reserve();
-			var condition = method.GetTmpVariable(typeof(bool));
-			condition.Reserve();
+			var components = method.GetTmpVariable(typeof(Component[])).Reserve();
+			var componentsIndex = method.GetTmpVariable(typeof(int)).Reserve();
+			var componentsLength = method.GetTmpVariable(typeof(int)).Reserve();
+			var condition = method.GetTmpVariable(typeof(bool)).Reserve();
 
 			ExternCall(method,
 				string.Format(includeInactive == null ? CallGetComponents.CALL_METHOD_FORMAT : CallGetComponents.CALL_METHOD_INCLUDING_FORMAT, getterName),

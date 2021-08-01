@@ -478,9 +478,10 @@ namespace Katsudon.Builder
 				this.releaseVariable = releaseVariable;
 			}
 
-			public void Reserve()
+			public ITmpVariable Reserve()
 			{
 				isHandle = true;
+				return this;
 			}
 
 			public void Release()
@@ -637,7 +638,7 @@ namespace Katsudon.Builder
 		/// Marks this variable as reserved, i.e. it will not be released until Release is called.
 		/// Use this if a value will be assigned to this variable more than once.
 		/// </summary>
-		void Reserve();
+		ITmpVariable Reserve();
 		/// <summary>
 		/// Releases reserved variable
 		/// </summary>
