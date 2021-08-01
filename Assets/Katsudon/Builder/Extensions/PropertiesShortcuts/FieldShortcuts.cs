@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Katsudon.Builder
+namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 {
+	[StaticBuilderModule]
 	public class FieldShortcuts
 	{
 		private Dictionary<MethodInfo, FieldInfo> getters = new Dictionary<MethodInfo, FieldInfo>();
@@ -108,6 +109,11 @@ namespace Katsudon.Builder
 				}
 			}
 			return null;
+		}
+
+		public static void Register(IModulesContainer modules)
+		{
+			modules.AddModule(new FieldShortcuts());
 		}
 	}
 }

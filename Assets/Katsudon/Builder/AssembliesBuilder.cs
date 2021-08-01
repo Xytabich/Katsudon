@@ -19,7 +19,6 @@ namespace Katsudon.Builder
 	{
 		private UBehMethodBuilder uBehMethodBuilder;
 		private AssembliesInfo assembliesInfo;
-		private FieldShortcuts fieldShortcuts;
 		private VariableBuildersCollection variableBuilders;
 		private CtorDefaultsExtractor defaultsExtractor;
 		private StringBuilder cachedSb = new StringBuilder();
@@ -32,9 +31,16 @@ namespace Katsudon.Builder
 			assembliesInfo = AssembliesInfo.instance;
 			AddModule(assembliesInfo);
 
-			var convertersList = new NumericConvertersList(this);
+			var sortedStaticModules = OrderedTypeUtils.GetOrderedSet<StaticBuilderModuleAttribute>();
+			var ctorArgs = new object[] { this };
+			foreach(var pair in sortedStaticModules)
+			{
+				var method = MethodSearch<ModuleConstructorDelegate>.FindStaticMethod(pair.Value, "Register");
+				Assert.IsNotNull(method, string.Format("Static module with type {0} does not have a Register method", pair.Value));
+				method.Invoke(null, ctorArgs);
+			}
 
-			fieldShortcuts = new FieldShortcuts();
+			var convertersList = new NumericConvertersList(this);
 			uBehMethodBuilder = new UBehMethodBuilder(convertersList);
 
 			var sortedOperationBuilders = OrderedTypeUtils.GetOrderedSet<OperationBuilderAttribute>();
@@ -150,7 +156,6 @@ namespace Katsudon.Builder
 			var externsCollection = new ExternsCollection();
 
 			AddModule(classInfo);
-			AddModule(fieldShortcuts);
 			AddModule(fieldsCollection);
 			AddModule(methodsCollection);
 			for(int i = 0; i < typeOperationBuilders.Count; i++)
@@ -197,7 +202,6 @@ namespace Katsudon.Builder
 				typeOperationBuilders[i].UnRegister(uBehMethodBuilder, this);
 			}
 			RemoveModule<AsmTypeInfo>();
-			RemoveModule<FieldShortcuts>();
 			RemoveModule<FieldsCollection>();
 			RemoveModule<MethodsInstance>();
 
@@ -274,6 +278,17 @@ namespace Katsudon.Builder
 
 	public delegate void OperationBuilderDelegate(IOperationBuildersRegistry registry, IModulesContainer modules);
 
+	public delegate void ModuleConstructorDelegate(IModulesContainer modules);
+
+	/// <summary>
+	/// Registers the type as a module, which is created once before the build.
+	/// The type must contains method `Register` with <see cref="ModuleConstructorDelegate"> structure
+	/// </summary>
+	public sealed class StaticBuilderModuleAttribute : OrderedTypeAttributeBase
+	{
+		public StaticBuilderModuleAttribute(int registerOrder = 0) : base(registerOrder) { }
+	}
+
 	/// <summary>
 	/// Registers a type as an opcode builder.
 	/// The type must contains method `Register` with <see cref="OperationBuilderDelegate"> structure
@@ -284,7 +299,7 @@ namespace Katsudon.Builder
 	}
 
 	/// <summary>
-	/// Registers a type as an opcode builder, but unlike the standard builder, it's created locally for each UdonBehaviour instance.
+	/// Registers a type as an opcode builder, but unlike the standard builder, it's created locally for each UdonProgram instance.
 	/// The type must contains the `Register` and `UnRegister` methods with the <see cref="OperationBuilderDelegate"> structure.
 	/// </summary>
 	public sealed class TypeOperationBuilderAttribute : OrderedTypeAttributeBase

@@ -1,6 +1,5 @@
 ﻿using System.Reflection.Emit;
 
-
 namespace Katsudon.Builder.AsmOpCodes
 {
 	[OperationBuilder]

@@ -22,6 +22,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			if(methodInfo.IsStatic) return false;
+			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 
 			var target = method.PeekStack(methodInfo.GetParameters().Length);
 			if(!(target is ThisVariable))

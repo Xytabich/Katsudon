@@ -20,6 +20,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
+			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 			var info = assembliesInfo.GetMethod(methodInfo.DeclaringType, methodInfo);
 			if(info != null)
 			{

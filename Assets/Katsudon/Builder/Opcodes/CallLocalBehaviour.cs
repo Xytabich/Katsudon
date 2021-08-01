@@ -2,7 +2,6 @@
 using System.Reflection.Emit;
 using Katsudon.Builder.Methods;
 
-
 namespace Katsudon.Builder.AsmOpCodes
 {
 	[TypeOperationBuilder]
@@ -20,6 +19,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
+			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 			if(!method.isStatic)
 			{
 				var target = method.PeekStack(methodInfo.GetParameters().Length);
