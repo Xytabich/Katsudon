@@ -31,7 +31,9 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			var getterName = methodInfo.Name;
-			if((getterName == "GetComponent" || getterName == "GetComponentInParent" || getterName == "GetComponentInChildren") &&
+			if((getterName == nameof(Component.GetComponent) ||
+				getterName == nameof(Component.GetComponentInParent) ||
+				getterName == nameof(Component.GetComponentInChildren)) &&
 				(methodInfo.DeclaringType == typeof(Component) || methodInfo.DeclaringType == typeof(GameObject)))
 			{
 				var parameters = methodInfo.GetParameters();
@@ -163,9 +165,9 @@ namespace Katsudon.Builder.AsmOpCodes
 			*/
 			switch(getterName)
 			{
-				case "GetComponent": getterName = "GetComponents"; break;
-				case "GetComponentInParent": getterName = "GetComponentsInParent"; break;
-				case "GetComponentInChildren": getterName = "GetComponentsInChildren"; break;
+				case nameof(Component.GetComponent): getterName = nameof(Component.GetComponents); break;
+				case nameof(Component.GetComponentInParent): getterName = nameof(Component.GetComponentsInParent); break;
+				case nameof(Component.GetComponentInChildren): getterName = nameof(Component.GetComponentsInChildren); break;
 			}
 
 			var components = method.GetTmpVariable(typeof(Component[])).Reserve();

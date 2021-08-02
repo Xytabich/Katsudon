@@ -14,7 +14,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			var methodName = methodInfo.Name;
-			if(methodName == "Instantiate" && methodInfo.DeclaringType == typeof(UnityEngine.Object))
+			if(methodName == nameof(UnityEngine.Object.Instantiate) && methodInfo.DeclaringType == typeof(UnityEngine.Object))
 			{
 				if(methodInfo.IsGenericMethod)
 				{

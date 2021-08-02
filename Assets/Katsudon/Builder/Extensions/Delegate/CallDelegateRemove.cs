@@ -1,0 +1,167 @@
+﻿using System;
+using System.Reflection;
+using System.Reflection.Emit;
+using Katsudon.Builder.Externs;
+using Katsudon.Utility;
+
+namespace Katsudon.Builder.Extensions.DelegateExtension
+{
+	[OperationBuilder]
+	public class CallDelegateRemove : IOperationBuider
+	{
+		private const int TARGET_OFFSET = 0;
+		private const int METHOD_NAME_OFFSET = 1;
+
+		public int order => 15;
+
+		bool IOperationBuider.Process(IMethodDescriptor method)
+		{
+			var methodInfo = method.currentOp.argument as MethodInfo;
+			if((methodInfo.Name == nameof(Delegate.Remove) || methodInfo.Name == nameof(Delegate.RemoveAll)) &&
+				typeof(Delegate).IsAssignableFrom(methodInfo.DeclaringType))
+			{
+				/*
+				if(removeFrom == null) return null;
+				if(actions == null) return removeFrom;
+				int remainingLength = removeFrom.Length;
+				for(int i = 0; i < actions.Length; i++)
+				{
+					var action = actions[0];
+					for(int j = remainingLength-1; j >= 0; j--)
+					{
+						var evt = removeFrom[j];
+						if(evt[TARGET_OFFSET] != action[TARGET_OFFSET]) continue;
+						if(evt[METHOD_NAME_OFFSET] != action[METHOD_NAME_OFFSET]) continue;
+
+						remainingLength--;
+						Array.Copy(removeFrom, j+1, removeFrom, j, remainingLength-j);
+#if !REMOVE_ALL
+						break;
+#endif
+					}
+				}
+				if(remainingLength == removeFrom.Length) return removeFrom;
+
+				var newEvt = new object[];
+				Array.Copy(removeFrom, newEvt, remainingLength);
+				return newEvt;
+				*/
+				var actions = method.PopStack();
+				var removeFrom = method.PopStack();
+
+				var endLabel = new EmbedAddressLabel();
+				var checkActionsLabel = new EmbedAddressLabel();
+				var countLabel = new EmbedAddressLabel();
+				var buildLabel = new EmbedAddressLabel();
+
+				var outVariable = method.GetTmpVariable(typeof(object[]));
+				outVariable.Allocate();
+				outVariable.Reserve();
+
+				var condition = method.GetTmpVariable(typeof(bool));
+				removeFrom.Allocate();
+				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
+					condition, removeFrom.OwnType(), method.machine.GetConstVariable(null).OwnType());
+				method.machine.AddBranch(condition, checkActionsLabel);
+				method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
+				method.machine.AddJump(endLabel);
+
+				method.machine.ApplyLabel(checkActionsLabel);
+				condition = method.GetTmpVariable(typeof(bool));
+				actions.Allocate();
+				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
+					condition, actions.OwnType(), method.machine.GetConstVariable(null).OwnType());
+				method.machine.AddBranch(condition, countLabel);
+				removeFrom.Allocate();
+				method.machine.AddCopy(removeFrom, outVariable);
+				method.machine.AddJump(endLabel);
+
+				method.machine.ApplyLabel(countLabel);
+				var remainingLength = method.GetTmpVariable(typeof(int)).Reserve();
+				removeFrom.Allocate();
+				method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", remainingLength, removeFrom.OwnType());
+				actions.Allocate();
+				using(ForLoop.Array(method, actions, out var actionIndex))
+				{
+					var action = method.GetTmpVariable(typeof(object)).Reserve();
+					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", action, actions.OwnType(), actionIndex.OwnType());
+					using(ReverseForLoop.Length(method, remainingLength, out var index, out var breakLabel))
+					{
+						var evt = method.GetTmpVariable(typeof(object)).Reserve();
+						removeFrom.Allocate();
+						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", evt, removeFrom.OwnType(), index.OwnType());
+
+						var continueLabel = new EmbedAddressLabel();
+
+						// if(evt[TARGET_OFFSET] != action[TARGET_OFFSET]) continue;
+						var valueA = method.GetTmpVariable(typeof(object));
+						var valueB = method.GetTmpVariable(typeof(object));
+						condition = method.GetTmpVariable(typeof(bool));
+						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(TARGET_OFFSET).OwnType());
+						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(TARGET_OFFSET).OwnType());
+						method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, valueA.OwnType(), valueB.OwnType());
+						method.machine.AddBranch(condition, continueLabel);
+
+						// if(evt[METHOD_NAME_OFFSET] != action[METHOD_NAME_OFFSET]) continue;
+						valueA = method.GetTmpVariable(typeof(object));
+						valueB = method.GetTmpVariable(typeof(object));
+						condition = method.GetTmpVariable(typeof(bool));
+						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(METHOD_NAME_OFFSET).OwnType());
+						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(METHOD_NAME_OFFSET).OwnType());
+						method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, valueA.OwnType(), valueB.OwnType());
+						method.machine.AddBranch(condition, continueLabel);
+
+						//remainingLength--;
+						method.machine.BinaryOperatorExtern(BinaryOperator.Subtraction, remainingLength, method.machine.GetConstVariable((int)1), remainingLength);
+
+						//Array.Copy(removeFrom, j+1, removeFrom, j, remainingLength-j);
+						removeFrom.Allocate(2);
+						var copyFrom = method.GetTmpVariable(typeof(int));
+						var copyCount = method.GetTmpVariable(typeof(int));
+						method.machine.BinaryOperatorExtern(BinaryOperator.Addition, index, method.machine.GetConstVariable((int)1), copyFrom);
+						method.machine.BinaryOperatorExtern(BinaryOperator.Subtraction, remainingLength, index, copyCount);
+						method.machine.AddExtern("SystemArray.__Copy__SystemArray_SystemInt32_SystemArray_SystemInt32_SystemInt32__SystemVoid",
+							removeFrom.OwnType(), copyFrom.OwnType(), removeFrom.OwnType(), index.OwnType(), copyCount.OwnType());
+
+						if(methodInfo.Name != nameof(Delegate.RemoveAll))
+						{
+							method.machine.AddJump(breakLabel);
+						}
+						method.machine.ApplyLabel(continueLabel);
+					}
+				}
+
+				//if(remainingLength == removeFrom.Length) return removeFrom;
+				var length = method.GetTmpVariable(typeof(int));
+				removeFrom.Allocate();
+				method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", length, removeFrom.OwnType());
+				condition = method.GetTmpVariable(typeof(bool));
+				method.machine.BinaryOperatorExtern(BinaryOperator.Equality, remainingLength, length, condition);
+				method.machine.AddBranch(condition, buildLabel);
+				removeFrom.Allocate();
+				method.machine.AddCopy(removeFrom, outVariable);
+				method.machine.AddJump(endLabel);
+
+				method.machine.ApplyLabel(buildLabel);
+				method.machine.AddExtern("SystemObjectArray.__ctor__SystemInt32__SystemObjectArray", outVariable, remainingLength.OwnType());
+				method.machine.AddExtern("SystemArray.__Copy__SystemArray_SystemArray_SystemInt32__SystemVoid",
+					removeFrom.OwnType(), outVariable.OwnType(), remainingLength.OwnType());
+
+				remainingLength.Release();
+
+				method.machine.ApplyLabel(endLabel);
+				outVariable.Release();
+				method.PushStack(outVariable);
+				return true;
+			}
+			return false;
+		}
+
+		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
+		{
+			var builder = new CallDelegateRemove();
+			container.RegisterOpBuilder(OpCodes.Call, builder);
+			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
+		}
+	}
+}

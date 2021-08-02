@@ -31,6 +31,8 @@ public class TUBeh : TBase, TInt
 
 	private Type t = typeof(int);
 
+	private event Func<int, string, bool> evt;
+
 	public void Start()
 	{
 		/*var abc = Image.Type.Filled;
@@ -51,13 +53,13 @@ public class TUBeh : TBase, TInt
 		// 	tint.TestA(img.name);
 		// 	Test(this);
 
-		//		Debug.Log((abc & ibc) + ":" + (abc | ibc));
-		Debug.Log(GetComponentInChildren<Image>(false));
-		Debug.Log("C:" + GetComponents<Image>().Length);
-		Debug.Log("C:" + GetComponentsInChildren(typeof(TuTuBeh), true).Length);
-		Debug.Log("C:" + GetComponentsInParent<TuTuBeh>(true).Length);
-		Debug.Log(GetComponentInParent<TuTuBeh>());
-		Debug.Log(GetComponentInParent<Image>());
+		// 		Debug.Log((abc & ibc) + ":" + (abc | ibc));
+		// Debug.Log(GetComponentInChildren<Image>(false));
+		// Debug.Log("C:" + GetComponents<Image>().Length);
+		// Debug.Log("C:" + GetComponentsInChildren(typeof(TuTuBeh), true).Length);
+		// Debug.Log("C:" + GetComponentsInParent<TuTuBeh>(true).Length);
+		// Debug.Log(GetComponentInParent<TuTuBeh>());
+		// Debug.Log(GetComponentInParent<Image>());
 
 		/*uint[,,] abc = new uint[1, 2, 3];
 		Debug.Log(abc.Length);*/
@@ -69,6 +71,18 @@ public class TUBeh : TBase, TInt
 		/*UnityEngine.Debug.Log(test);
 		other.Test(this);
 		UnityEngine.Debug.Log(test);*/
+
+		evt += TstEvt;
+		Debug.Log(evt.Invoke(0, "0"));
+		evt -= TstEvt;
+		evt -= null;
+		evt += null;
+		Debug.Log(evt);
+	}
+
+	private bool TstEvt(int a, string b)
+	{
+		return a.ToString() == b;
 	}
 
 	void Update()

@@ -98,7 +98,7 @@ namespace Katsudon.Builder
 						variables.Remove(variable);
 					}
 				}
-				UnityEngine.Debug.LogError(string.Format("Method '{0}' in type {1} has unreleased tmp variables ({2}):\n{3}", methodName, classType, variables.Count, string.Join("\n", variables)));
+				throw new Exception(string.Format("Method '{0}' in type {1} has unreleased tmp variables ({2}):\n{3}", methodName, classType, variables.Count, string.Join("\n", variables)));
 			}
 		}
 

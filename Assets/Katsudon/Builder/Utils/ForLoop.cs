@@ -49,4 +49,67 @@ namespace Katsudon.Utility
 			return new ForLoop(method, indexVariable, length);
 		}
 	}
+	
+	public struct ReverseForLoop : IDisposable
+	{
+		private IMethodDescriptor method;
+		private ITmpVariable indexVariable;
+		private IEmbedAddressLabel enterLabel;
+		private IEmbedAddressLabel exitLabel;
+
+		private ReverseForLoop(IMethodDescriptor method, ITmpVariable indexVariable)
+		{
+			this.method = method;
+			this.indexVariable = indexVariable;
+
+			enterLabel = new EmbedAddressLabel();
+			exitLabel = new EmbedAddressLabel();
+
+			method.machine.ApplyLabel(enterLabel);
+			var condition = method.GetTmpVariable(typeof(bool));
+			method.machine.BinaryOperatorExtern(BinaryOperator.GreaterThanOrEqual, indexVariable, method.machine.GetConstVariable((int)0), condition);
+			method.machine.AddBranch(condition, exitLabel);
+		}
+
+		public void Dispose()
+		{
+			method.machine.BinaryOperatorExtern(BinaryOperator.Subtraction, indexVariable, method.machine.GetConstVariable((int)1), indexVariable);
+			method.machine.AddJump(enterLabel);
+			method.machine.ApplyLabel(exitLabel);
+
+			indexVariable.Release();
+		}
+
+		public static ReverseForLoop Array(IMethodDescriptor method, IVariable array, out IVariable index)
+		{
+			var indexVariable = method.GetTmpVariable(typeof(int)).Reserve();
+			method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", indexVariable, array.OwnType());
+			method.machine.BinaryOperatorExtern(BinaryOperator.Subtraction, indexVariable, method.machine.GetConstVariable((int)1), indexVariable);
+
+			index = indexVariable;
+			return new ReverseForLoop(method, indexVariable);
+		}
+
+		public static ReverseForLoop Length(IMethodDescriptor method, IVariable length, out IVariable index)
+		{
+			var indexVariable = method.GetTmpVariable(typeof(int)).Reserve();
+			method.machine.AddCopy(length, indexVariable);
+			method.machine.BinaryOperatorExtern(BinaryOperator.Subtraction, indexVariable, method.machine.GetConstVariable((int)1), indexVariable);
+
+			index = indexVariable;
+			return new ReverseForLoop(method, indexVariable);
+		}
+
+		public static ReverseForLoop Length(IMethodDescriptor method, IVariable length, out IVariable index, out IAddressLabel breakLabel)
+		{
+			var indexVariable = method.GetTmpVariable(typeof(int)).Reserve();
+			method.machine.AddCopy(length, indexVariable);
+			method.machine.BinaryOperatorExtern(BinaryOperator.Subtraction, indexVariable, method.machine.GetConstVariable((int)1), indexVariable);
+
+			index = indexVariable;
+			var loop = new ReverseForLoop(method, indexVariable);
+			breakLabel = loop.exitLabel;
+			return loop;
+		}
+	}
 }
