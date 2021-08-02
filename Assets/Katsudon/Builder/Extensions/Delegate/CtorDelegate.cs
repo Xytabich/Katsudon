@@ -40,13 +40,13 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				method.PopStack();
 				var target = method.PopStack();
 
-				var actions = method.GetTmpVariable(typeof(object[]));
+				var actions = method.GetTmpVariable(typeof(Delegate));
 				method.machine.AddExtern("SystemObjectArray.__ctor__SystemInt32__SystemObjectArray", actions, method.machine.GetConstVariable((int)1).OwnType());
 
 				var action = method.GetTmpVariable(typeof(object));
-				action.Allocate();
 				method.machine.AddExtern("SystemArray.__Clone__SystemObject", action,
 					method.machine.GetConstVariable(new MethodPattern(asmMethod)).OwnType());
+				action.Allocate();
 				method.machine.AddExtern("SystemObjectArray.__Set__SystemInt32_SystemObject__SystemVoid", action.OwnType(),
 					method.machine.GetConstVariable((int)0).OwnType(), target.OwnType());
 

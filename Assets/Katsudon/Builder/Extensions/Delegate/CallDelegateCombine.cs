@@ -14,8 +14,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
-			if((methodInfo.Name == nameof(Delegate.Remove) || methodInfo.Name == nameof(Delegate.RemoveAll)) &&
-				typeof(Delegate).IsAssignableFrom(methodInfo.DeclaringType))
+			if(methodInfo.Name == nameof(Delegate.Combine) && typeof(Delegate).IsAssignableFrom(methodInfo.DeclaringType))
 			{
 				var parameters = methodInfo.GetParameters();
 				if(parameters.Length == 1)
@@ -26,7 +25,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					{
 						if(delegates[i] != null) counter += delegates[i].Length;
 					}
-					if(counter <= 0) return null;
+					if(counter == 0) return null;
 					var newEvt = new object[counter];
 					counter = 0;
 					for(int i = 0; i < delegates.Length; i++)
@@ -41,9 +40,12 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					return newEvt;
 					*/
 					var delegates = method.PopStack();
+					
+					var endLabel = new EmbedAddressLabel();
+					var buildLabel = new EmbedAddressLabel();
 
 					IVariable condition;
-					var outVariable = method.GetTmpVariable(typeof(object[]));
+					var outVariable = method.GetTmpVariable(typeof(Delegate));
 					outVariable.Allocate();
 					outVariable.Reserve();
 
@@ -75,10 +77,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 						method.machine.ApplyLabel(continueLabel);
 					}
 
-					var endLabel = new EmbedAddressLabel();
 					condition = method.GetTmpVariable(typeof(bool));
-					method.machine.BinaryOperatorExtern(BinaryOperator.LessThanOrEqual, counter, method.machine.GetConstVariable((int)0), condition);
-					var buildLabel = new EmbedAddressLabel();
+					method.machine.BinaryOperatorExtern(BinaryOperator.Equality, counter, method.machine.GetConstVariable((int)0), condition);
 					method.machine.AddBranch(condition, buildLabel);
 					method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
 					method.machine.AddJump(endLabel);
@@ -138,7 +138,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					var checkALabel = new EmbedAddressLabel();
 					var buildNewLabel = new EmbedAddressLabel();
 
-					var outVariable = method.GetTmpVariable(typeof(object[]));
+					var outVariable = method.GetTmpVariable(typeof(Delegate));
 					outVariable.Allocate();
 					outVariable.Reserve();
 

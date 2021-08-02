@@ -145,7 +145,7 @@ namespace Katsudon.Editor
 								index += 4;
 								cachedSb3.Clear();
 								AppendObjectValue(cachedSb3, heap.GetHeapVariable(variableAddress));
-								content = new GUIContent(cachedSb.ToString(), string.Format("0x{0:X8}: {1}", variableAddress, cachedSb3.ToString()));
+								content = new GUIContent(cachedSb.ToString(), string.Format("0x{0:X8}: ({1}) {2}", variableAddress, heap.GetHeapVariableType(variableAddress), cachedSb3.ToString()));
 								break;
 							case OpCode.EXTERN:
 								cachedSb.Append(", \"");

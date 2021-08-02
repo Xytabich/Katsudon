@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
@@ -15,6 +16,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 		public int order => 15;
 
+		private List<ITmpVariable> argumentsCache = null;
+
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
@@ -22,41 +25,56 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			{
 				var parameters = methodInfo.GetParameters();
 
+				int argsCount = parameters.Length;
+				if(argsCount != 0)
+				{
+					if(argumentsCache == null) argumentsCache = new List<ITmpVariable>();
+					var iterator = method.PopMultiple(argsCount);
+					while(iterator.MoveNext())
+					{
+						argumentsCache.Add(method.GetTmpVariable(iterator.Current).Reserve());
+					}
+				}
+
 				//Struct: object[][]{{target, methodName[, ...args][, returnName}}
-				var actions = method.GetTmpVariable(method.PeekStack(parameters.Length)).Reserve();
-				using(ForLoop.Array(method, actions, out var index))
+				var actions = method.GetTmpVariable(method.PopStack()).Reserve();
+
+				var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetOrPushOutVariable(methodInfo.ReturnType);
+
+				using(var loop = ForLoop.Array(method, actions, out var index))
 				{
 					var action = method.GetTmpVariable(typeof(object)).Reserve();
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", action, actions.OwnType(), index.OwnType());
 
 					var target = ElementGetter(method, action, TARGET_OFFSET).Reserve();
 
-					int argsCount = parameters.Length;
-					if(argsCount > 0)
+					if(argsCount != 0)
 					{
-						var iterator = method.PopMultiple(argsCount);
-						int argIndex = 0;
-						while(iterator.MoveNext())
+						for(int i = 0; i < argumentsCache.Count; i++)
 						{
-							method.machine.SetVariableExtern(target, ElementGetter(method, action, argIndex + ARGUMENTS_OFFSET),
-								method.GetTmpVariable(iterator.Current));
-							argIndex++;
+							method.machine.SetVariableExtern(target, ElementGetter(method, action, i + ARGUMENTS_OFFSET), argumentsCache[i]);
 						}
 					}
-					method.PopStack();
 
 					method.machine.SendEventExtern(target, ElementGetter(method, action, METHOD_NAME_OFFSET));
 
-					if(methodInfo.ReturnType != typeof(void))
+					if(outVariable != null)
 					{
-						method.machine.GetVariableExtern(target, ElementGetter(method, action, argsCount + ARGUMENTS_OFFSET),
-							() => method.GetOrPushOutVariable(methodInfo.ReturnType));
+						method.machine.GetVariableExtern(target, ElementGetter(method, action, argsCount + ARGUMENTS_OFFSET), outVariable);
 					}
 
 					action.Release();
 					target.Release();
 				}
 				actions.Release();
+				if(argsCount != 0)
+				{
+					for(int i = 0; i < argumentsCache.Count; i++)
+					{
+						argumentsCache[i].Release();
+					}
+					argumentsCache.Clear();
+				}
 
 				return true;
 			}

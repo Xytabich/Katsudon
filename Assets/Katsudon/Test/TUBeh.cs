@@ -31,7 +31,7 @@ public class TUBeh : TBase, TInt
 
 	private Type t = typeof(int);
 
-	private event Func<int, string, bool> evt;
+	//private event Func<int, string, bool> evt;
 
 	public void Start()
 	{
@@ -72,16 +72,20 @@ public class TUBeh : TBase, TInt
 		other.Test(this);
 		UnityEngine.Debug.Log(test);*/
 
+		Func<int, string, bool> evt = TstEvt;
 		evt += TstEvt;
-		Debug.Log(evt.Invoke(0, "0"));
+		evt += TstEvt;
+		evt.Invoke(0, "0");
 		evt -= TstEvt;
 		evt -= null;
 		evt += null;
 		Debug.Log(evt);
+		evt.Invoke(1, "0");
 	}
 
 	private bool TstEvt(int a, string b)
 	{
+		Debug.Log(counter++);
 		return a.ToString() == b;
 	}
 

@@ -40,6 +40,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 #endif
 					}
 				}
+				if(remainingLength == 0) return null;
 				if(remainingLength == removeFrom.Length) return removeFrom;
 
 				var newEvt = new object[];
@@ -52,9 +53,10 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				var endLabel = new EmbedAddressLabel();
 				var checkActionsLabel = new EmbedAddressLabel();
 				var countLabel = new EmbedAddressLabel();
+				var checkLengthLabel = new EmbedAddressLabel();
 				var buildLabel = new EmbedAddressLabel();
 
-				var outVariable = method.GetTmpVariable(typeof(object[]));
+				var outVariable = method.GetTmpVariable(typeof(Delegate));
 				outVariable.Allocate();
 				outVariable.Reserve();
 
@@ -85,7 +87,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				{
 					var action = method.GetTmpVariable(typeof(object)).Reserve();
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", action, actions.OwnType(), actionIndex.OwnType());
-					using(ReverseForLoop.Length(method, remainingLength, out var index, out var breakLabel))
+					using(var loop = ReverseForLoop.Length(method, remainingLength, out var index))
 					{
 						var evt = method.GetTmpVariable(typeof(object)).Reserve();
 						removeFrom.Allocate();
@@ -125,12 +127,23 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 						if(methodInfo.Name != nameof(Delegate.RemoveAll))
 						{
-							method.machine.AddJump(breakLabel);
+							method.machine.AddJump(loop.breakLabel);
 						}
 						method.machine.ApplyLabel(continueLabel);
+
+						evt.Release();
 					}
+					action.Release();
 				}
 
+				//if(remainingLength == 0) return null;
+				condition = method.GetTmpVariable(typeof(bool));
+				method.machine.BinaryOperatorExtern(BinaryOperator.Equality, remainingLength, method.machine.GetConstVariable((int)0), condition);
+				method.machine.AddBranch(condition, checkLengthLabel);
+				method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
+				method.machine.AddJump(endLabel);
+
+				method.machine.ApplyLabel(checkLengthLabel);
 				//if(remainingLength == removeFrom.Length) return removeFrom;
 				var length = method.GetTmpVariable(typeof(int));
 				removeFrom.Allocate();
