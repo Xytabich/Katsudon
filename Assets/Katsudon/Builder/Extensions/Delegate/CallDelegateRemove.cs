@@ -21,7 +21,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				typeof(Delegate).IsAssignableFrom(methodInfo.DeclaringType))
 			{
 				/*
-				if(removeFrom == null) return null;
+				if(removeFrom == null || actions == removeFrom) return null;
 				if(actions == null) return removeFrom;
 				int remainingLength = removeFrom.Length;
 				for(int i = 0; i < actions.Length; i++)
@@ -51,6 +51,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				var removeFrom = method.PopStack();
 
 				var endLabel = new EmbedAddressLabel();
+				var checkSelfLabel = new EmbedAddressLabel();
 				var checkActionsLabel = new EmbedAddressLabel();
 				var countLabel = new EmbedAddressLabel();
 				var checkLengthLabel = new EmbedAddressLabel();
@@ -64,6 +65,15 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				removeFrom.Allocate();
 				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
 					condition, removeFrom.OwnType(), method.machine.GetConstVariable(null).OwnType());
+				method.machine.AddBranch(condition, checkSelfLabel);
+				method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
+				method.machine.AddJump(endLabel);
+
+				method.machine.ApplyLabel(checkSelfLabel);
+				condition = method.GetTmpVariable(typeof(bool));
+				removeFrom.Allocate();
+				actions.Allocate();
+				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, removeFrom.OwnType(), actions.OwnType());
 				method.machine.AddBranch(condition, checkActionsLabel);
 				method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
 				method.machine.AddJump(endLabel);

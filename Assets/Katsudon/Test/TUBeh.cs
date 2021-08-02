@@ -75,12 +75,15 @@ public class TUBeh : TBase, TInt
 		Func<int, string, bool> evt = TstEvt;
 		evt += TstEvt;
 		evt += TstEvt;
-		evt.Invoke(0, "0");
+		Debug.Log(evt.Invoke(0, "0"));
 		evt -= TstEvt;
 		evt -= null;
 		evt += null;
 		Debug.Log(evt);
-		evt.Invoke(1, "0");
+		evt += evt;
+		Debug.Log(evt.Invoke(1, "0"));
+		evt -= evt;
+		Debug.Log(evt);
 	}
 
 	private bool TstEvt(int a, string b)
