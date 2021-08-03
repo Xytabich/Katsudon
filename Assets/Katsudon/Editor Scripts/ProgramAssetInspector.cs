@@ -95,11 +95,13 @@ namespace Katsudon.Editor
 								cachedSb2.Append("[export] ");
 								cachedSb4.Append("[export] ");
 							}
+							cachedSb2.AppendFormat("{0} ", heapDump[i].objectType);
 							cachedSb2.AppendLine(symbol);
 							cachedSb4.Append(symbol);
 						}
 						else
 						{
+							cachedSb2.AppendFormat("{0} ", heapDump[i].objectType);
 							cachedSb2.AppendLine("[Unknown]");
 							cachedSb4.Append("[Unknown]");
 						}
@@ -174,7 +176,7 @@ namespace Katsudon.Editor
 						}
 						cachedSb2.AppendFormat("0x{0:X8}\n", address);
 						disassembly.Add(content);
-						
+
 						//cachedSb4.AppendFormat("0x{0:X8}\n", address);
 						//cachedSb4.Append(' ', 64 - cachedSb4.Length);
 						cachedSb4.Append(content.text);
@@ -316,7 +318,7 @@ namespace Katsudon.Editor
 			return script;
 		}
 
-		private static void AppendObjectValue(StringBuilder sb, object value)
+		public static void AppendObjectValue(StringBuilder sb, object value)
 		{
 			if(value is Array array)
 			{

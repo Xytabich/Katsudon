@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 using VRC.Udon;
@@ -15,6 +16,7 @@ namespace Katsudon.Editor
 		private FieldInfo programField = typeof(UdonBehaviour).GetField("_program", BindingFlags.NonPublic | BindingFlags.Instance);
 		private Vector2 scroll = Vector2.zero;
 		private List<(uint address, IStrongBox strongBoxedObject, Type objectType)> heapDump = new List<(uint address, IStrongBox strongBoxedObject, Type objectType)>();
+		private StringBuilder cachedSb = new StringBuilder();
 
 		void OnGUI()
 		{
@@ -61,7 +63,9 @@ namespace Katsudon.Editor
 			for(var i = 0; i < heapDump.Count; i++)
 			{
 				var value = heapDump[i];
-				GUILayout.Label(string.Format("{0}", value.strongBoxedObject.Value));
+				cachedSb.Clear();
+				ProgramAssetInspector.AppendObjectValue(cachedSb, value.strongBoxedObject.Value);
+				GUILayout.Label(cachedSb.ToString());
 			}
 			GUILayout.EndVertical();
 			GUILayout.BeginVertical();

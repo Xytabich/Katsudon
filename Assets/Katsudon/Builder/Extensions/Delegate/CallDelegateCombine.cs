@@ -40,7 +40,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					return newEvt;
 					*/
 					var delegates = method.PopStack();
-					
+
 					var endLabel = new EmbedAddressLabel();
 					var buildLabel = new EmbedAddressLabel();
 
@@ -133,59 +133,60 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					*/
 					var b = method.PopStack();
 					var a = method.PopStack();
-
-					var endLabel = new EmbedAddressLabel();
-					var checkALabel = new EmbedAddressLabel();
-					var buildNewLabel = new EmbedAddressLabel();
-
-					var outVariable = method.GetTmpVariable(typeof(Delegate));
-					outVariable.Allocate();
-					outVariable.Reserve();
-
-					var condition = method.GetTmpVariable(typeof(bool));
-					b.Allocate();
-					method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-						condition, b.OwnType(), method.machine.GetConstVariable(null).OwnType());
-					method.machine.AddBranch(condition, checkALabel);
-					a.Allocate();
-					method.machine.AddCopy(a, outVariable);
-					method.machine.AddJump(endLabel);
-
-					method.machine.ApplyLabel(checkALabel);
-					condition = method.GetTmpVariable(typeof(bool));
-					a.Allocate();
-					method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-						condition, a.OwnType(), method.machine.GetConstVariable(null).OwnType());
-					method.machine.AddBranch(condition, buildNewLabel);
-					b.Allocate();
-					method.machine.AddCopy(b, outVariable);
-					method.machine.AddJump(endLabel);
-
-					method.machine.ApplyLabel(buildNewLabel);
-					var length = method.GetTmpVariable(typeof(int)).Reserve();
-					a.Allocate();
-					method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", length, a.OwnType());
-					var fullLen = method.GetTmpVariable(typeof(int)).Reserve();
-					b.Allocate();
-					method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", fullLen, b.OwnType());
-
-					method.machine.BinaryOperatorExtern(BinaryOperator.Addition, length, fullLen, fullLen);
-					method.machine.AddExtern("SystemObjectArray.__ctor__SystemInt32__SystemObjectArray", outVariable, fullLen.OwnType());
-					method.machine.AddExtern("SystemArray.__CopyTo__SystemArray_SystemInt32__SystemVoid",
-						a.OwnType(), outVariable.OwnType(), method.machine.GetConstVariable((int)0).OwnType());
-					method.machine.AddExtern("SystemArray.__CopyTo__SystemArray_SystemInt32__SystemVoid",
-						b.OwnType(), outVariable.OwnType(), length.OwnType());
-
-					length.Release();
-					fullLen.Release();
-
-					method.machine.ApplyLabel(endLabel);
-					outVariable.Release();
-					method.PushStack(outVariable);
+					var outVariable = method.GetOrPushOutVariable(typeof(Delegate));
+					Build(method, a, b, outVariable);
 				}
 				return true;
 			}
 			return false;
+		}
+
+		public static void Build(IMethodDescriptor method, IVariable a, IVariable b, IVariable outVariable)
+		{
+			var endLabel = new EmbedAddressLabel();
+			var checkALabel = new EmbedAddressLabel();
+			var buildNewLabel = new EmbedAddressLabel();
+
+			var condition = method.GetTmpVariable(typeof(bool));
+			b.Allocate();
+			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
+				condition, b.OwnType(), method.machine.GetConstVariable(null).OwnType());
+			method.machine.AddBranch(condition, checkALabel);
+			a.Allocate();
+			outVariable.Allocate();
+			method.machine.AddCopy(a, outVariable);
+			method.machine.AddJump(endLabel);
+
+			method.machine.ApplyLabel(checkALabel);
+			condition = method.GetTmpVariable(typeof(bool));
+			a.Allocate();
+			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
+				condition, a.OwnType(), method.machine.GetConstVariable(null).OwnType());
+			method.machine.AddBranch(condition, buildNewLabel);
+			b.Allocate();
+			outVariable.Allocate();
+			method.machine.AddCopy(b, outVariable);
+			method.machine.AddJump(endLabel);
+
+			method.machine.ApplyLabel(buildNewLabel);
+			var length = method.GetTmpVariable(typeof(int)).Reserve();
+			a.Allocate();
+			method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", length, a.OwnType());
+			var fullLen = method.GetTmpVariable(typeof(int)).Reserve();
+			b.Allocate();
+			method.machine.AddExtern("SystemArray.__get_Length__SystemInt32", fullLen, b.OwnType());
+
+			method.machine.BinaryOperatorExtern(BinaryOperator.Addition, length, fullLen, fullLen);
+			method.machine.AddExtern("SystemObjectArray.__ctor__SystemInt32__SystemObjectArray", outVariable, fullLen.OwnType());
+			outVariable.Allocate();
+			method.machine.AddExtern("SystemArray.__CopyTo__SystemArray_SystemInt32__SystemVoid", a.OwnType(), outVariable.OwnType(), method.machine.GetConstVariable((int)0).OwnType());
+			outVariable.Allocate();
+			method.machine.AddExtern("SystemArray.__CopyTo__SystemArray_SystemInt32__SystemVoid", b.OwnType(), outVariable.OwnType(), length.OwnType());
+
+			length.Release();
+			fullLen.Release();
+
+			method.machine.ApplyLabel(endLabel);
 		}
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
