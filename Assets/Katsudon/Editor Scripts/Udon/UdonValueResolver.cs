@@ -14,40 +14,50 @@ namespace Katsudon.Editor
 			resolvers.Add(new BehaviourTypes());
 		}
 
-		public object ConvertToUdon(object value)
+		public bool TryConvertToUdon(object value, out object outValue)
 		{
-			if(value == null) return null;
+			outValue = value;
+			if(value == null) return true;
 			foreach(var resolver in resolvers)
 			{
-				if(resolver.TryConvertToUdon(value, out var outValue)) return outValue;
+				if(resolver.TryConvertToUdon(value, out outValue))
+				{
+					return true;
+				}
 			}
 			if(Utils.IsUdonType(value.GetType()))
 			{
-				return value;
+				outValue = value;
+				if(value == null) return true;
 			}
-			throw new Exception("Type is not supported: " + value.GetType());
+			return true;
 		}
 
-		public object ConvertFromUdon(object value, Type type)
+		public bool TryConvertFromUdon(object value, Type type, out object outValue)
 		{
-			if(value == null) return null;
+			outValue = value;
+			if(value == null) return true;
 			if(value.GetType() == type)
 			{
-				return value;
+				return true;
 			}
 			foreach(var resolver in resolvers)
 			{
-				if(resolver.TryConvertFromUdon(value, type, out var outValue)) return outValue;
+				if(resolver.TryConvertFromUdon(value, type, out outValue))
+				{
+					return true;
+				}
 			}
 			if(Utils.IsUdonType(value.GetType()))
 			{
 				if(!type.IsAssignableFrom(value.GetType()))
 				{
-					throw new Exception(string.Format("{0} cannot be converted to {1}", value.GetType(), type));
+					return false;
 				}
-				return value;
+				outValue = value;
+				return true;
 			}
-			throw new Exception("Type is not supported: " + type);
+			return false;
 		}
 
 		int IComparer<IValueConverter>.Compare(IValueConverter x, IValueConverter y)

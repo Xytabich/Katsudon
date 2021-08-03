@@ -106,9 +106,9 @@ namespace Katsudon.Editor.Udon
 					foreach(var symbol in symbols.GetExportedSymbols())
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null)
+						if(field != null && valueResolver.TryConvertToUdon(field.GetValue(proxy), out var converted))
 						{
-							behaviour.SetProgramVariable(symbol, valueResolver.ConvertToUdon(field.GetValue(proxy)));
+							behaviour.SetProgramVariable(symbol, converted);
 						}
 					}
 				}
@@ -118,9 +118,9 @@ namespace Katsudon.Editor.Udon
 					foreach(var symbol in symbols.GetExportedSymbols())
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null)
+						if(field != null && valueResolver.TryConvertToUdon(field.GetValue(proxy), out var converted))
 						{
-							behaviour.publicVariables.TrySetVariableValue(symbol, valueResolver.ConvertToUdon(field.GetValue(proxy)));
+							behaviour.publicVariables.TrySetVariableValue(symbol, converted);
 						}
 					}
 				}
@@ -139,9 +139,9 @@ namespace Katsudon.Editor.Udon
 					if(behaviour.TryGetProgramVariable(symbol, out var value))
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null)
+						if(field != null && valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted))
 						{
-							field.SetValue(proxy, valueResolver.ConvertFromUdon(value, field.FieldType));
+							field.SetValue(proxy, converted);
 						}
 					}
 				}
@@ -153,9 +153,9 @@ namespace Katsudon.Editor.Udon
 					if(behaviour.publicVariables.TryGetVariableValue(symbol, out var value))
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null)
+						if(field != null && valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted))
 						{
-							field.SetValue(proxy, valueResolver.ConvertFromUdon(value, field.FieldType));
+							field.SetValue(proxy, converted);
 						}
 					}
 				}

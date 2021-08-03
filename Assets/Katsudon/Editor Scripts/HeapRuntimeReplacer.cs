@@ -200,7 +200,10 @@ namespace Katsudon.Editor
 
 			public void Set(MonoBehaviour proxy, object value)
 			{
-				setter.Invoke(proxy, ProxyUtils.valueResolver.ConvertFromUdon(value, type));
+				if(ProxyUtils.valueResolver.TryConvertFromUdon(value, type, out var converted))
+				{
+					setter.Invoke(proxy, converted);
+				}
 			}
 		}
 	}
