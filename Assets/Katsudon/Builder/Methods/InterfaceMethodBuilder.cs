@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
-using Katsudon.Builder.Helpers;
 using VRC.Udon.VM.Common;
 
 namespace Katsudon.Builder.Methods
@@ -10,14 +9,14 @@ namespace Katsudon.Builder.Methods
 		int ProgramBlock.IMethodBuilder.order => 100;
 
 		private IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap;
-		private UBehMethodBuilder uBehMethodBuilder;
+		private MethodBodyBuilder bodyBuilder;
 		private MethodsInstance methodsContainer;
 
 		public InterfaceMethodBuilder(IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap,
-			UBehMethodBuilder uBehMethodBuilder, MethodsInstance methodsContainer)
+			MethodBodyBuilder bodyBuilder, MethodsInstance methodsContainer)
 		{
 			this.methodsMap = methodsMap;
-			this.uBehMethodBuilder = uBehMethodBuilder;
+			this.bodyBuilder = bodyBuilder;
 			this.methodsContainer = methodsContainer;
 		}
 
@@ -60,7 +59,8 @@ namespace Katsudon.Builder.Methods
 				}
 				else
 				{
-					return uBehMethodBuilder.BuildMethodBody(classMethod, null, uBehMethod, udonMachine, properties);
+					bodyBuilder.Build(classMethod, uBehMethod.arguments, uBehMethod.ret, UdonMachine.endProgramAddress, udonMachine, properties);
+					return true;
 				}
 			}
 			return false;

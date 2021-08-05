@@ -17,8 +17,9 @@ namespace Katsudon.Builder
 {
 	public class AssembliesBuilder : IModulesContainer
 	{
-		private UBehMethodBuilder uBehMethodBuilder;
 		private AssembliesInfo assembliesInfo;
+		private MethodBodyBuilder methodBodyBuilder;
+		private BehaviourMethodBuilder behaviourMethodBuilder;
 		private VariableBuildersCollection variableBuilders;
 		private CtorDefaultsExtractor defaultsExtractor;
 		private StringBuilder cachedSb = new StringBuilder();
@@ -41,10 +42,13 @@ namespace Katsudon.Builder
 			}
 
 			var convertersList = new NumericConvertersList(this);
-			uBehMethodBuilder = new UBehMethodBuilder(convertersList);
+			methodBodyBuilder = new MethodBodyBuilder(convertersList);
+			AddModule(methodBodyBuilder);
+
+			behaviourMethodBuilder = new BehaviourMethodBuilder(methodBodyBuilder);
 
 			var sortedOperationBuilders = OrderedTypeUtils.GetOrderedSet<OperationBuilderAttribute>();
-			var builderArgs = new object[] { uBehMethodBuilder, this };
+			var builderArgs = new object[] { methodBodyBuilder, this };
 			foreach(var pair in sortedOperationBuilders)
 			{
 				var method = MethodSearch<OperationBuilderDelegate>.FindStaticMethod(pair.Value, "Register");
@@ -160,12 +164,12 @@ namespace Katsudon.Builder
 			AddModule(methodsCollection);
 			for(int i = 0; i < typeOperationBuilders.Count; i++)
 			{
-				typeOperationBuilders[i].Register(uBehMethodBuilder, this);
+				typeOperationBuilders[i].Register(methodBodyBuilder, this);
 			}
 
 			var programBlock = new ProgramBlock(new UdonMachine(classType, constCollection, externsCollection, fieldsCollection), propertiesBlock, executionOrder);
-			programBlock.AddMethodBuilder(uBehMethodBuilder);
-			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, uBehMethodBuilder, methodsCollection));
+			programBlock.AddMethodBuilder(behaviourMethodBuilder);
+			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, methodBodyBuilder, methodsCollection));
 			builder.AddBlock(programBlock);
 
 			Action<MethodInfo> addMethodCallback = (method) => {
@@ -199,7 +203,7 @@ namespace Katsudon.Builder
 
 			for(int i = typeOperationBuilders.Count - 1; i >= 0; i--)
 			{
-				typeOperationBuilders[i].UnRegister(uBehMethodBuilder, this);
+				typeOperationBuilders[i].UnRegister(methodBodyBuilder, this);
 			}
 			RemoveModule<AsmTypeInfo>();
 			RemoveModule<FieldsCollection>();

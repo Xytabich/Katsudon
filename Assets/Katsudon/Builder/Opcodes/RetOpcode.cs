@@ -14,7 +14,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			{
 				method.machine.AddCopy(method.PopStack(), retVariable, retVariable.type);
 			}
-			method.machine.AddJump(method.GetReturnAddressVariable());
+			method.machine.AddJump(method.GetReturnAddress());
 			return true;
 		}
 

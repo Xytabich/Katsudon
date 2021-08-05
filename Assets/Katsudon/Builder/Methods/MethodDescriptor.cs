@@ -14,15 +14,13 @@ namespace Katsudon.Builder
 
 		public IUdonMachine machine { get; private set; }
 
-		public Type classType { get; private set; }
-
 		#region info
 		private string methodName;
-		private List<Operation> operations;
-		private IVariable[] arguments;
-		private IVariable returnVariable;
-		private IVariable returnAddress;
+		private IList<Operation> operations;
+		private IList<IVariable> arguments;
 		private IList<IVariable> locals;
+		private IVariable returnVariable;
+		private IAddressLabel returnAddress;
 
 		private Func<uint> machineAddressGetter = null;
 		private Dictionary<int, uint> methodToMachineAddress = null;
@@ -36,22 +34,18 @@ namespace Katsudon.Builder
 		private Dictionary<Type, Stack<TmpVariable>> releasedVariables = new Dictionary<Type, Stack<TmpVariable>>();
 		private List<MachineAddressLabel> initAddresses = new List<MachineAddressLabel>();
 
-		public MethodDescriptor(UBehMethodInfo uBehMethod, bool isStatic, Type type,
-			List<Operation> operations, IList<IVariable> locals,
-			UdonMachine udonMachine, NumericConvertersList convertersList)
+		public MethodDescriptor(bool isStatic, IList<IVariable> arguments, IVariable returnVariable, IAddressLabel returnAddress,
+			IList<Operation> operations, IList<IVariable> locals, UdonMachine udonMachine, NumericConvertersList convertersList)
 		{
-			this.methodName = uBehMethod.name;
 			this.isStatic = isStatic;
-			this.classType = type;
 			this.operations = operations;
-			this.arguments = uBehMethod.arguments;
-			this.returnVariable = uBehMethod.ret;
+			this.arguments = arguments;
+			this.returnVariable = returnVariable;
+			this.returnAddress = returnAddress;
 			this.locals = locals;
 			this.index = -1;
 
 			this.machine = new UdonMachineBuilder(udonMachine, this, convertersList);
-
-			returnAddress = new UnnamedSignificantVariable("returnAddress", typeof(uint), UdonMachine.LAST_ALIGNED_ADDRESS);
 		}
 
 		public void PreBuild(UdonMachine udonMachine)
@@ -67,10 +61,10 @@ namespace Katsudon.Builder
 				initAddresses[i].address = methodToMachineAddress[initAddresses[i].offset];
 			}
 			//TODO: debug define
-			if(states.Count > 0) throw new Exception("States remained on the stack, a state was not freed somewhere. Method: " + methodName);
+			if(states.Count > 0) throw new Exception("States remained on the stack, a state was not freed somewhere.");
 			if(stack.Count > 0)
 			{
-				throw new Exception(string.Format("Values remained on the stack, a value was not used somewhere.\nMethod: {0}\nStack: {1}", methodName, string.Join(", ", stack)));
+				throw new Exception(string.Format("Values remained on the stack, a value was not used somewhere.\nStack: {1}", string.Join(", ", stack)));
 			}
 			int releasedCounter = 0;
 			foreach(var item in releasedVariables)
@@ -98,7 +92,7 @@ namespace Katsudon.Builder
 						variables.Remove(variable);
 					}
 				}
-				throw new Exception(string.Format("Method '{0}' in type {1} has unreleased tmp variables ({2}):\n{3}", methodName, classType, variables.Count, string.Join("\n", variables)));
+				throw new Exception(string.Format("Method has unreleased tmp variables ({2}):\n{3}", variables.Count, string.Join("\n", variables)));
 			}
 		}
 
@@ -119,7 +113,6 @@ namespace Katsudon.Builder
 
 		public void ApplyProperties(PropertiesBlock properties)
 		{
-			properties.AddVariable(returnAddress);
 			if(returnVariable != null) properties.AddVariable(returnVariable);
 			foreach(var variable in arguments)
 			{
@@ -216,7 +209,7 @@ namespace Katsudon.Builder
 			}
 		}
 
-		IVariable IMethodVariables.GetReturnAddressVariable()//TODO: make a jump to an exit point instead of a variable jump. the exit point code is already defined by the method builder
+		IAddressLabel IMethodDescriptor.GetReturnAddress()
 		{
 			return returnAddress;
 		}
@@ -527,8 +520,6 @@ namespace Katsudon.Builder
 	{
 		bool isStatic { get; }
 
-		Type classType { get; }
-
 		IUdonMachine machine { get; }
 
 		/// <summary>
@@ -542,6 +533,8 @@ namespace Katsudon.Builder
 		ITmpVariable GetTmpVariable(IVariable variable);
 
 		IAddressLabel GetMachineAddressLabel(int methodAddress);
+
+		IAddressLabel GetReturnAddress();
 	}
 
 	public interface IUdonMachine : IUdonProgramBuilder
@@ -599,8 +592,6 @@ namespace Katsudon.Builder
 
 	public interface IMethodVariables
 	{
-		IVariable GetReturnAddressVariable();
-
 		IVariable GetReturnVariable();
 
 		IVariable GetArgumentVariable(int index);
