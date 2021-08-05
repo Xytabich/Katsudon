@@ -4,14 +4,14 @@ using System.Reflection;
 using System.Text;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.Experimental.UIElements;
-using UnityEngine.Experimental.UIElements;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEditor.Compilation;
 using Katsudon.Builder;
 
 using AssemblyBuilder = UnityEditor.Compilation.AssemblyBuilder;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 
 namespace Katsudon.Editor
 {
@@ -57,7 +57,7 @@ namespace Katsudon.Editor
 
 		void OnEnable()
 		{
-			var root = this.GetRootVisualContainer();
+			var root = this.rootVisualElement;
 			root.Clear();
 
 			var asmAttrib = typeof(UdonAsmAttribute);
@@ -68,7 +68,7 @@ namespace Katsudon.Editor
 			types.TrimExcess();
 
 			var list = new PopupField<Type>(types, typeof(void));
-			list.OnValueChanged(OnListChanged);
+			list.RegisterValueChangedCallback(OnListChanged);
 			root.Add(list);
 
 			text = new TextElement();
