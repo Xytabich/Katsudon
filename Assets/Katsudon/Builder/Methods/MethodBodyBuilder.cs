@@ -84,7 +84,7 @@ namespace Katsudon.Builder
 					}
 					catch
 					{
-						UnityEngine.Debug.LogErrorFormat("Exception during building opcode on position 0x{2:X}", methodDescriptor.currentOp.offset);
+						UnityEngine.Debug.LogErrorFormat("Exception during building opcode on position 0x{0:X}", methodDescriptor.currentOp.offset);
 						throw;
 					}
 				}
