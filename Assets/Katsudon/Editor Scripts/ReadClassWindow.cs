@@ -85,10 +85,10 @@ namespace Katsudon.Editor
 
 		private void BuildTypeStruct(Type type)
 		{
-			var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+			var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
 
 			StringBuilder sb = new StringBuilder();
-			var fields = type.GetFields(flags | BindingFlags.Static);
+			var fields = type.GetFields(flags);
 
 			HashSet<FieldInfo> ignoreFields = new HashSet<FieldInfo>();
 			HashSet<MethodInfo> ignoreMethods = new HashSet<MethodInfo>();
