@@ -38,8 +38,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 				if(target is ThisVariable)
 				{
-					var variable = method.GetTmpVariable(field.FieldType).Reserve();
 					var fieldVariable = fieldsCollection.GetField(field);
+					var variable = method.GetTmpVariable(field.FieldType).Reserve();
 					CallDelegateRemove.Build(method, false, fieldVariable, action, variable);
 					method.machine.AddCopy(variable, fieldVariable);
 					variable.Release();

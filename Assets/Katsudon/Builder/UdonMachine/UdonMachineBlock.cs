@@ -59,9 +59,8 @@ namespace Katsudon.Builder
 
 		public ITmpVariable GetTmpVariable(Type type)
 		{
-			Stack<TmpVariable> list;
 			TmpVariable variable;
-			if(releasedVariables.TryGetValue(type, out list) && list.Count > 0)
+			if(releasedVariables.TryGetValue(type, out var list) && list.Count > 0)
 			{
 				variable = list.Pop();
 				variable.usesLeft = 1;
@@ -329,6 +328,7 @@ namespace Katsudon.Builder
 				usesLeft--;
 				if(usesLeft <= 0)
 				{
+					if(usesLeft < 0) throw new Exception("Variable has no allocated uses");
 					usesLeft = 0;
 					releaseVariable(this);
 					if(onRelease != null) onRelease.Invoke();

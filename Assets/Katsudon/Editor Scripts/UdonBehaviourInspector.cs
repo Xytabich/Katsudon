@@ -240,7 +240,7 @@ namespace Katsudon.Editor
 			Rect textPosition = new Rect(iconPosition.xMax + 20f, iconPosition.y, 100f, iconPosition.height);
 			Rect rectangle = activeArea;
 			rectangle.x -= 18f;
-			textPosition.xMax = utils.DrawEditorHeaderItems(rectangle, editor.proxies).xMin - 2f;
+			textPosition.xMax = utils.DrawEditorHeaderItems(rectangle, editor.proxies, 0f).xMin - 2f;
 			if(current.type == EventType.Repaint)
 			{
 				Texture2D miniThumbnail = AssetPreview.GetMiniThumbnail(editor.proxies[0]);
@@ -767,7 +767,7 @@ namespace Katsudon.Editor
 			public readonly Func<UnityEngine.Object, string, bool> IsPropertyCandidate;
 			public readonly Func<UnityEngine.Object[], bool, DragAndDropVisualMode> InspectorWindowDrag;
 			public readonly Action<SerializedProperty, SerializedProperty, GenericMenu> DoPropertyContextMenu;
-			public readonly Func<Rect, UnityEngine.Object[], Rect> DrawEditorHeaderItems;
+			public readonly Func<Rect, UnityEngine.Object[], float, Rect> DrawEditorHeaderItems;
 
 			private Func<GUIStyle> _overrideMargin;
 			private Func<GUIStyle> _inspectorTitlebar;
@@ -797,7 +797,7 @@ namespace Katsudon.Editor
 				IsPropertyCandidate = CreateFunc<UnityEngine.Object, string, bool>(typeof(AnimationMode), "IsPropertyCandidate");
 				InspectorWindowDrag = CreateFunc<UnityEngine.Object[], bool, DragAndDropVisualMode>(typeof(InternalEditorUtility), "InspectorWindowDrag");
 				DoPropertyContextMenu = CreateAction<SerializedProperty, SerializedProperty, GenericMenu>(typeof(EditorGUI), "DoPropertyContextMenu");
-				DrawEditorHeaderItems = CreateFunc<Rect, UnityEngine.Object[], Rect>(typeof(EditorGUIUtility), "DrawEditorHeaderItems");
+				DrawEditorHeaderItems = CreateFunc<Rect, UnityEngine.Object[], float, Rect>(typeof(EditorGUIUtility), "DrawEditorHeaderItems");
 			}
 
 			public GUIContent TempContent(Texture texture)
@@ -828,6 +828,11 @@ namespace Katsudon.Editor
 			private static Func<TIn0, TIn1, TOut> CreateFunc<TIn0, TIn1, TOut>(Type type, string name)
 			{
 				return (Func<TIn0, TIn1, TOut>)(object)Delegate.CreateDelegate(typeof(Func<TIn0, TIn1, TOut>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1) }, null));
+			}
+
+			private static Func<TIn0, TIn1, TIn2, TOut> CreateFunc<TIn0, TIn1, TIn2, TOut>(Type type, string name)
+			{
+				return (Func<TIn0, TIn1, TIn2, TOut>)(object)Delegate.CreateDelegate(typeof(Func<TIn0, TIn1, TIn2, TOut>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1), typeof(TIn2) }, null));
 			}
 
 			private static Action<TIn0, TIn1, TIn2> CreateAction<TIn0, TIn1, TIn2>(Type type, string name)
