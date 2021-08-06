@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Variables
 	{
 		public int order => 100;
 
-		public bool TryConvert(IMachineBlock block, in IVariable value, Type toType, out IVariable converted)
+		public bool TryConvert(IUdonProgramBlock block, in IVariable value, Type toType, out IVariable converted)
 		{
 			var toCode = Type.GetTypeCode(toType);
 			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
@@ -81,7 +81,7 @@ namespace Katsudon.Builder.Variables
 			}
 		}
 
-		private static IVariable BuildConverter(IMachineBlock block, IVariable value, Type toType,
+		private static IVariable BuildConverter(IUdonProgramBlock block, IVariable value, Type toType,
 			IVariable unsignedBitsConst, IVariable fromSignBit, IVariable toSignBit)
 		{
 			// converted = Convert.To{toType}(value & unsignedBitsConst);

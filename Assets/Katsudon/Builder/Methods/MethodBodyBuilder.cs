@@ -32,7 +32,7 @@ namespace Katsudon.Builder
 		}
 
 		public void Build(MethodInfo method, IList<IVariable> arguments, IVariable returnVariable,
-			IAddressLabel returnAddress, IMachineBlock machineBlock, PropertiesBlock properties)
+			IAddressLabel returnAddress, IUdonProgramBlock machineBlock, PropertiesBlock properties)
 		{
 			var locals = method.GetMethodBody().LocalVariables;
 			var localVars = new List<IVariable>(locals.Count);//FIX: cache
@@ -50,7 +50,7 @@ namespace Katsudon.Builder
 		}
 
 		public void Build(MethodInfo method, IList<IVariable> arguments, IList<IVariable> locals,
-			IVariable returnVariable, IAddressLabel returnAddress, IMachineBlock machineBlock)
+			IVariable returnVariable, IAddressLabel returnAddress, IUdonProgramBlock machineBlock)
 		{
 			List<Operation> operations = new List<Operation>();//FIX: cache
 			foreach(var op in new MethodReader(method, null))

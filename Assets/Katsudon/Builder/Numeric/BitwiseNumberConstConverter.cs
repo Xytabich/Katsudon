@@ -10,7 +10,7 @@ namespace Katsudon.Builder.Variables
 	{
 		public int order => 90;
 
-		public bool TryConvert(IMachineBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
 		{
 			if(!(variable is IConstVariable constVariable))
 			{

@@ -21,7 +21,7 @@ namespace Katsudon.Builder
 		private IVariable returnVariable;
 		private IAddressLabel returnAddress;
 
-		private IMachineBlock machineBlock;
+		private IUdonProgramBlock machineBlock;
 		#endregion
 
 		private int index;
@@ -32,7 +32,7 @@ namespace Katsudon.Builder
 		private List<MachineAddressLabel> initAddresses = new List<MachineAddressLabel>();
 
 		public MethodDescriptor(bool isStatic, IList<IVariable> arguments, IVariable returnVariable, IAddressLabel returnAddress,
-			IList<Operation> operations, IList<IVariable> locals, IMachineBlock block)
+			IList<Operation> operations, IList<IVariable> locals, IUdonProgramBlock block)
 		{
 			this.isStatic = isStatic;
 			this.operations = operations;
@@ -122,7 +122,7 @@ namespace Katsudon.Builder
 			stack.RemoveRange(index, count);
 		}
 
-		ITmpVariable IMachineBlock.GetTmpVariable(Type type)
+		ITmpVariable IUdonProgramBlock.GetTmpVariable(Type type)
 		{
 			var tmp = machineBlock.GetTmpVariable(type);
 			//TODO: debug define
@@ -130,7 +130,7 @@ namespace Katsudon.Builder
 			return tmp;
 		}
 
-		ITmpVariable IMachineBlock.GetTmpVariable(IVariable variable)
+		ITmpVariable IUdonProgramBlock.GetTmpVariable(IVariable variable)
 		{
 			var tmp = machineBlock.GetTmpVariable(variable);
 			//TODO: debug define
@@ -177,7 +177,7 @@ namespace Katsudon.Builder
 		}
 	}
 
-	public interface IMethodDescriptor : IMethodProgram, IMethodStack, IMethodVariables, IMachineBlock
+	public interface IMethodDescriptor : IMethodProgram, IMethodStack, IMethodVariables, IUdonProgramBlock
 	{
 		bool isStatic { get; }
 

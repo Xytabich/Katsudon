@@ -76,9 +76,9 @@ namespace Katsudon.Builder
 	{
 		IVariable GetValueVariable();
 
-		void LoadValue(IMachineBlock block);
+		void LoadValue(IUdonProgramBlock block);
 
-		void StoreValue(IMachineBlock block);
+		void StoreValue(IUdonProgramBlock block);
 	}
 
 	public class NamedVariable : IVariable

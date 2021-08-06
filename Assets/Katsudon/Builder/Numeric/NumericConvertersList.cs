@@ -33,7 +33,7 @@ namespace Katsudon.Builder
 		/// Tries to convert the original numeric value to any other type.
 		/// Constants are converted immediately, but udon code is built for variables. 
 		/// </summary>
-		public bool TryConvert(IMachineBlock block, IVariable value, Type toType, out IVariable converted)
+		public bool TryConvert(IUdonProgramBlock block, IVariable value, Type toType, out IVariable converted)
 		{
 			if(value.type == toType)
 			{
@@ -62,7 +62,7 @@ namespace Katsudon.Builder
 	{
 		int order { get; }
 
-		bool TryConvert(IMachineBlock block, in IVariable value, Type toType, out IVariable converted);
+		bool TryConvert(IUdonProgramBlock block, in IVariable value, Type toType, out IVariable converted);
 	}
 
 	public delegate void NumberConverterDelegate(NumericConvertersList container, IModulesContainer modules);

@@ -30,7 +30,7 @@ namespace Katsudon.Builder.Methods
 			MachineUtility.AddCopy(udonMachine, udonMachine.GetConstVariable(UdonMachine.LAST_ALIGNED_ADDRESS).Used(), udonMachine.GetReturnAddressGlobal());
 			var returnLabel = new EmbedAddressLabel();
 
-			var machineBlock = new UdonMachineBlock(udonMachine, convertersList);
+			var machineBlock = new UdonProgramBlock(udonMachine, convertersList);
 			bodyBuilder.Build(method, uBehMethod.arguments, uBehMethod.ret, returnLabel, machineBlock, properties);
 			machineBlock.CheckVariables();
 

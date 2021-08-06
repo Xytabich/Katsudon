@@ -4,14 +4,14 @@ using VRC.Udon.VM.Common;
 
 namespace Katsudon.Builder
 {
-	public class UdonMachineBlock : IMachineBlock
+	public class UdonProgramBlock : IUdonProgramBlock
 	{
 		public IUdonMachine machine { get; private set; }
 
 		private Dictionary<Type, Stack<TmpVariable>> releasedVariables = new Dictionary<Type, Stack<TmpVariable>>();
 		private HashSet<TmpVariable> variablesInUse = new HashSet<TmpVariable>();
 
-		public UdonMachineBlock(UdonMachine udonMachine, NumericConvertersList convertersList)
+		public UdonProgramBlock(UdonMachine udonMachine, NumericConvertersList convertersList)
 		{
 			this.machine = new UdonBlockBuilder(udonMachine, this, convertersList);
 		}
@@ -95,12 +95,12 @@ namespace Katsudon.Builder
 		private class UdonBlockBuilder : IUdonMachine
 		{
 			private UdonMachine udonMachine;
-			private IMachineBlock block;
+			private IUdonProgramBlock block;
 			private NumericConvertersList convertersList;
 
 			private Stack<IReferenceVariable> referencesStack = new Stack<IReferenceVariable>();
 
-			public UdonBlockBuilder(UdonMachine udonMachine, IMachineBlock block, NumericConvertersList convertersList)
+			public UdonBlockBuilder(UdonMachine udonMachine, IUdonProgramBlock block, NumericConvertersList convertersList)
 			{
 				this.udonMachine = udonMachine;
 				this.block = block;
@@ -303,9 +303,9 @@ namespace Katsudon.Builder
 			public event Action onUse;
 			public event Action onRelease;
 
-			private UdonMachineBlock block;
+			private UdonProgramBlock block;
 
-			public TmpVariable(string prefix, Type type, UdonMachineBlock block) : base(prefix, type)
+			public TmpVariable(string prefix, Type type, UdonProgramBlock block) : base(prefix, type)
 			{
 				this.block = block;
 			}
@@ -405,7 +405,7 @@ namespace Katsudon.Builder
 		void AddBranch(IVariable condition, IAddressLabel labelIfFalse);
 	}
 
-	public interface IMachineBlock
+	public interface IUdonProgramBlock
 	{
 		IUdonMachine machine { get; }
 

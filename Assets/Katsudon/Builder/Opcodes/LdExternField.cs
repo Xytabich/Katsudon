@@ -87,12 +87,12 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			public IVariable GetValueVariable() { return tmpVariable; }
 
-			public void LoadValue(IMachineBlock block)
+			public void LoadValue(IUdonProgramBlock block)
 			{
 				block.machine.AddExtern(loadName, tmpVariable, targetVariable.OwnType());
 			}
 
-			public void StoreValue(IMachineBlock block)
+			public void StoreValue(IUdonProgramBlock block)
 			{
 				block.machine.AddExtern(storeName, targetVariable.Mode(VariableMeta.UsageMode.Out), tmpVariable.OwnType());
 			}
