@@ -8,8 +8,8 @@ namespace Katsudon.Builder
 	{
 		public IUdonMachine machine { get; private set; }
 
-		private List<TmpVariable> tmpVariables = new List<TmpVariable>();
 		private Dictionary<Type, Stack<TmpVariable>> releasedVariables = new Dictionary<Type, Stack<TmpVariable>>();
+		private HashSet<TmpVariable> variablesInUse = new HashSet<TmpVariable>();
 
 		public UdonMachineBlock(UdonMachine udonMachine, NumericConvertersList convertersList)
 		{
@@ -19,41 +19,24 @@ namespace Katsudon.Builder
 		//TODO: debug define
 		public void CheckVariables()
 		{
-			int releasedCounter = 0;
-			foreach(var item in releasedVariables)
+			if(variablesInUse.Count > 0)
 			{
-				foreach(var variable in item.Value)
+				variablesInUse.RemoveWhere(UnusedVariablesFilter);
+				if(variablesInUse.Count > 0)
 				{
-					releasedCounter++;
+					throw new Exception(string.Format("Method has unreleased tmp variables ({2}):\n{3}", variablesInUse.Count, string.Join("\n", variablesInUse)));
 				}
-			}
-			foreach(var variable in tmpVariables)
-			{
-				if(variable.isUsed) releasedCounter--;
-			}
-			if(releasedCounter < 0)
-			{
-				var variables = new HashSet<TmpVariable>();
-				foreach(var variable in tmpVariables)
-				{
-					if(variable.isUsed) variables.Add(variable);
-				}
-				foreach(var item in releasedVariables)
-				{
-					foreach(var variable in item.Value)
-					{
-						variables.Remove(variable);
-					}
-				}
-				throw new Exception(string.Format("Method has unreleased tmp variables ({2}):\n{3}", variables.Count, string.Join("\n", variables)));
 			}
 		}
 
 		public void ApplyProperties(PropertiesBlock properties)
 		{
-			foreach(var variable in tmpVariables)
+			foreach(var pair in releasedVariables)
 			{
-				if(variable.isUsed) properties.AddVariable(variable);
+				foreach(var variable in pair.Value)
+				{
+					properties.AddVariable(variable);
+				}
 			}
 		}
 
@@ -68,9 +51,10 @@ namespace Katsudon.Builder
 			}
 			else
 			{
-				variable = new TmpVariable("tmp", type, ReleaseVariable);
-				tmpVariables.Add(variable);
+				variable = new TmpVariable("tmp", type, this);
 			}
+			//TODO: debug define
+			if(!variablesInUse.Add(variable)) throw new Exception("This variable is already in use");
 			return variable;
 		}
 
@@ -89,15 +73,23 @@ namespace Katsudon.Builder
 			}
 		}
 
-		private void ReleaseVariable(TmpVariable value)
+		private void ReleaseVariable(TmpVariable variable)
 		{
+			//TODO: debug define
+			if(!variablesInUse.Remove(variable)) throw new Exception("This variable is not used");
+
 			Stack<TmpVariable> list;
-			if(!releasedVariables.TryGetValue(value.type, out list))
+			if(!releasedVariables.TryGetValue(variable.type, out list))
 			{
 				list = new Stack<TmpVariable>();
-				releasedVariables[value.type] = list;
+				releasedVariables[variable.type] = list;
 			}
-			list.Push(value);
+			list.Push(variable);
+		}
+
+		private static bool UnusedVariablesFilter(TmpVariable variable)
+		{
+			return !variable.isUsed;
 		}
 
 		private class UdonBlockBuilder : IUdonMachine
@@ -311,11 +303,11 @@ namespace Katsudon.Builder
 			public event Action onUse;
 			public event Action onRelease;
 
-			private System.Action<TmpVariable> releaseVariable;
+			private UdonMachineBlock block;
 
-			public TmpVariable(string prefix, Type type, System.Action<TmpVariable> releaseVariable) : base(prefix, type)
+			public TmpVariable(string prefix, Type type, UdonMachineBlock block) : base(prefix, type)
 			{
-				this.releaseVariable = releaseVariable;
+				this.block = block;
 			}
 
 			public override void Use()
@@ -326,11 +318,10 @@ namespace Katsudon.Builder
 				if(onUse != null) onUse.Invoke();
 
 				usesLeft--;
-				if(usesLeft <= 0)
+				if(usesLeft < 0) throw new Exception("Variable has no allocated uses\n" + this);
+				if(usesLeft == 0)
 				{
-					if(usesLeft < 0) throw new Exception("Variable has no allocated uses");
-					usesLeft = 0;
-					releaseVariable(this);
+					block.ReleaseVariable(this);
 					if(onRelease != null) onRelease.Invoke();
 				}
 			}

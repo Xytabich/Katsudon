@@ -28,7 +28,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					if(method.currentOp.opCode == OpCodes.Ldflda && !string.IsNullOrEmpty(nameInfo.setterName))
 					{
 						method.PushStack(new ReferenceExternVariable(nameInfo.getterName, nameInfo.setterName,
-							method.GetTmpVariable(target), method.GetTmpVariable(field.FieldType)));
+							method.GetTmpVariable(target).Reserve(), method.GetTmpVariable(field.FieldType)));
 					}
 					else
 					{
@@ -57,39 +57,31 @@ namespace Katsudon.Builder.AsmOpCodes
 			private string loadName;
 			private string storeName;
 			private ITmpVariable tmpVariable;
-			private IVariable targetVariable;
+			private ITmpVariable targetVariable;
 
-			public ReferenceExternVariable(string loadName, string storeName, IVariable targetVariable, ITmpVariable tmpVariable)
+			public ReferenceExternVariable(string loadName, string storeName, ITmpVariable targetVariable, ITmpVariable tmpVariable)
 			{
 				this.loadName = loadName;
 				this.storeName = storeName;
 				this.tmpVariable = tmpVariable;
 				this.targetVariable = targetVariable;
 
-				tmpVariable.onUse += OnValueUse;
 				tmpVariable.onRelease += ReleaseValue;
 			}
 
 			public void Use()
 			{
-				targetVariable.Use();
 				tmpVariable.Use();
-			}
-
-			private void OnValueUse()
-			{
-				targetVariable.Use();
 			}
 
 			private void ReleaseValue()
 			{
-				tmpVariable.onUse -= OnValueUse;
 				tmpVariable.onRelease -= ReleaseValue;
+				targetVariable.Release();
 			}
 
 			public void Allocate(int count = 1)
 			{
-				targetVariable.Allocate(count);
 				tmpVariable.Allocate(count);
 			}
 

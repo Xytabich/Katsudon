@@ -75,6 +75,8 @@ public class TUBeh : TBase, TInt
 
 		self = this;
 
+		Debug.Log(TSCall(3, 8));
+
 		self.evt = TstEvt;
 		self.evt += TstEvt;
 		self.evt += TstEvt;
@@ -184,6 +186,12 @@ public class TUBeh : TBase, TInt
 	int TInt.TestB(int abs)
 	{
 		return abs;
+	}
+
+	private static int TSCall(int a, int b)
+	{
+		int c = b * a;
+		return a + c;
 	}
 }
 

@@ -22,8 +22,10 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			{
 				var actions = method.PopStack();
 				var removeFrom = method.PopStack();
-				var outVariable = method.GetOrPushOutVariable(typeof(Delegate));
-				Build(method, methodInfo.Name == nameof(Delegate.RemoveAll), removeFrom, actions, outVariable);
+				var variable = method.GetTmpVariable(typeof(Delegate)).Reserve();
+				Build(method, methodInfo.Name == nameof(Delegate.RemoveAll), removeFrom, actions, variable);
+				method.machine.AddCopy(variable, method.GetOrPushOutVariable(typeof(Delegate), 1));
+				variable.Release();
 				return true;
 			}
 			return false;
