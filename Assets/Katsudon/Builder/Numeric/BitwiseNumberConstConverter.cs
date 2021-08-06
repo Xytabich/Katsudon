@@ -10,7 +10,7 @@ namespace Katsudon.Builder.Variables
 	{
 		public int order => 90;
 
-		public bool TryConvert(IMethodDescriptor method, in IVariable variable, Type toType, out IVariable converted)
+		public bool TryConvert(IMachineBlock block, in IVariable variable, Type toType, out IVariable converted)
 		{
 			if(!(variable is IConstVariable constVariable))
 			{
@@ -58,11 +58,11 @@ namespace Katsudon.Builder.Variables
 						case TypeCode.UInt64: outValue = (ulong)value; break;
 					}
 				}
-				converted = method.machine.GetConstVariable(outValue);
+				converted = block.machine.GetConstVariable(outValue);
 			}
 			else
 			{
-				converted = method.machine.GetConstVariable(Convert.ChangeType(constVariable.value, toType));
+				converted = block.machine.GetConstVariable(Convert.ChangeType(constVariable.value, toType));
 			}
 			return true;
 		}

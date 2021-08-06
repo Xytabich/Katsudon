@@ -11,13 +11,15 @@ namespace Katsudon.Builder.Methods
 		private IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap;
 		private MethodBodyBuilder bodyBuilder;
 		private MethodsInstance methodsContainer;
+		private NumericConvertersList convertersList;
 
-		public InterfaceMethodBuilder(IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap,
-			MethodBodyBuilder bodyBuilder, MethodsInstance methodsContainer)
+		public InterfaceMethodBuilder(IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap, MethodBodyBuilder bodyBuilder,
+			NumericConvertersList convertersList, MethodsInstance methodsContainer)
 		{
 			this.methodsMap = methodsMap;
 			this.bodyBuilder = bodyBuilder;
 			this.methodsContainer = methodsContainer;
+			this.convertersList = convertersList;
 		}
 
 		public bool BuildMethod(MethodInfo method, UBehMethodInfo uBehMethod, UdonMachine udonMachine, PropertiesBlock properties)
@@ -59,7 +61,16 @@ namespace Katsudon.Builder.Methods
 				}
 				else
 				{
-					bodyBuilder.Build(classMethod, uBehMethod.arguments, uBehMethod.ret, UdonMachine.endProgramAddress, udonMachine, properties);
+					var machineBlock = new UdonMachineBlock(udonMachine, convertersList);
+					bodyBuilder.Build(classMethod, uBehMethod.arguments, uBehMethod.ret, UdonMachine.endProgramAddress, machineBlock, properties);
+					machineBlock.CheckVariables();
+
+					if(uBehMethod.ret != null) properties.AddVariable(uBehMethod.ret);
+					foreach(var variable in uBehMethod.arguments)
+					{
+						properties.AddVariable(variable);
+					}
+					machineBlock.ApplyProperties(properties);
 					return true;
 				}
 			}

@@ -85,14 +85,14 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			public IVariable GetValueVariable() { return tmpVariable; }
 
-			public void LoadValue(IMethodDescriptor method)
+			public void LoadValue(IMachineBlock block)
 			{
-				method.machine.AddExtern(loadName, tmpVariable, arrayVariable.OwnType(), indexVariable.UseType(typeof(int)));
+				block.machine.AddExtern(loadName, tmpVariable, arrayVariable.OwnType(), indexVariable.UseType(typeof(int)));
 			}
 
-			public void StoreValue(IMethodDescriptor method)
+			public void StoreValue(IMachineBlock block)
 			{
-				method.machine.AddExtern(storeName, arrayVariable.OwnType(), indexVariable.UseType(typeof(int)), tmpVariable.OwnType());
+				block.machine.AddExtern(storeName, arrayVariable.OwnType(), indexVariable.UseType(typeof(int)), tmpVariable.OwnType());
 			}
 
 			void IVariable.SetAddress(uint address)

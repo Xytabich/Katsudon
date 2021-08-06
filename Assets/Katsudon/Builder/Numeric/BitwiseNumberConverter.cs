@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Variables
 	{
 		public int order => 100;
 
-		public bool TryConvert(IMethodDescriptor method, in IVariable value, Type toType, out IVariable converted)
+		public bool TryConvert(IMachineBlock block, in IVariable value, Type toType, out IVariable converted)
 		{
 			var toCode = Type.GetTypeCode(toType);
 			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
@@ -32,15 +32,15 @@ namespace Katsudon.Builder.Variables
 			{
 				if(fromUnsigned || !toUnsigned)// unsigned>signed, signed>signed, unsigned>unsigned
 				{
-					converted = method.GetTmpVariable(toType);
-					method.machine.ConvertExtern(fromVariable, converted);
+					converted = block.GetTmpVariable(toType);
+					block.machine.ConvertExtern(fromVariable, converted);
 					return true;
 				}
 				else
 				{
 					fromCode = NumberCodeUtils.ToSigned(toCode);
-					fromVariable = method.GetTmpVariable(NumberCodeUtils.ToType(fromCode));
-					method.machine.ConvertExtern(value, fromVariable);
+					fromVariable = block.GetTmpVariable(NumberCodeUtils.ToType(fromCode));
+					block.machine.ConvertExtern(value, fromVariable);
 					fromSize = NumberCodeUtils.GetSize(fromCode);
 				}
 			}
@@ -50,62 +50,62 @@ namespace Katsudon.Builder.Variables
 				{
 					IVariable outVariable = null;
 					var fromType = fromVariable.type;
-					method.machine.BinaryOperatorExtern(
+					block.machine.BinaryOperatorExtern(
 						BinaryOperator.LogicalAnd, fromVariable,
-						method.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toCode), fromType)),
-						fromType, () => (outVariable = method.GetTmpVariable(fromType))
+						block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toCode), fromType)),
+						fromType, () => (outVariable = block.GetTmpVariable(fromType))
 					);
-					converted = method.GetTmpVariable(toType);
-					method.machine.ConvertExtern(outVariable, converted);
+					converted = block.GetTmpVariable(toType);
+					block.machine.ConvertExtern(outVariable, converted);
 					return true;
 				}
 			}
 
 			if(fromUnsigned) // unsigned -> signed
 			{
-				converted = BuildConverter(method, fromVariable, toType,
-					method.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toCode), fromVariable.type)),
-					method.machine.GetConstVariable(Convert.ChangeType(1u << (toSize * 8 - 1), fromVariable.type)),
-					method.machine.GetConstVariable(NumberCodeUtils.GetMinValue(toCode))
+				converted = BuildConverter(block, fromVariable, toType,
+					block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toCode), fromVariable.type)),
+					block.machine.GetConstVariable(Convert.ChangeType(1u << (toSize * 8 - 1), fromVariable.type)),
+					block.machine.GetConstVariable(NumberCodeUtils.GetMinValue(toCode))
 				);
 				return true;
 			}
 			else // signed -> unsigned
 			{
-				converted = BuildConverter(method, fromVariable, toType,
-					method.machine.GetConstVariable(NumberCodeUtils.GetMaxValue(fromCode)),
-					method.machine.GetConstVariable(NumberCodeUtils.GetMinValue(fromCode)),
-					method.machine.GetConstVariable(Convert.ChangeType(1u << (fromSize * 8 - 1), toType))
+				converted = BuildConverter(block, fromVariable, toType,
+					block.machine.GetConstVariable(NumberCodeUtils.GetMaxValue(fromCode)),
+					block.machine.GetConstVariable(NumberCodeUtils.GetMinValue(fromCode)),
+					block.machine.GetConstVariable(Convert.ChangeType(1u << (fromSize * 8 - 1), toType))
 				);
 				return true;
 			}
 		}
 
-		private static IVariable BuildConverter(IMethodDescriptor method, IVariable value, Type toType,
+		private static IVariable BuildConverter(IMachineBlock block, IVariable value, Type toType,
 			IVariable unsignedBitsConst, IVariable fromSignBit, IVariable toSignBit)
 		{
 			// converted = Convert.To{toType}(value & unsignedBitsConst);
 			// if((value & fromSignBit) != 0) converted |= toSignBit;
 
-			IVariable tmp = method.GetTmpVariable(value.type);
+			IVariable tmp = block.GetTmpVariable(value.type);
 			tmp.Allocate();
 			value.Allocate();
-			method.machine.BinaryOperatorExtern(BinaryOperator.LogicalAnd, value, unsignedBitsConst, tmp);
-			var converted = method.GetTmpVariable(toType);
+			block.machine.BinaryOperatorExtern(BinaryOperator.LogicalAnd, value, unsignedBitsConst, tmp);
+			var converted = block.GetTmpVariable(toType);
 			converted.Allocate();
-			method.machine.ConvertExtern(tmp, converted);
+			block.machine.ConvertExtern(tmp, converted);
 
-			method.machine.BinaryOperatorExtern(BinaryOperator.LogicalAnd, value, fromSignBit, tmp);
-			var condition = method.GetTmpVariable(typeof(bool));
-			method.machine.BinaryOperatorExtern(
+			block.machine.BinaryOperatorExtern(BinaryOperator.LogicalAnd, value, fromSignBit, tmp);
+			var condition = block.GetTmpVariable(typeof(bool));
+			block.machine.BinaryOperatorExtern(
 				BinaryOperator.Inequality, tmp,
-				method.machine.GetConstVariable(Convert.ChangeType(0, value.type)),
+				block.machine.GetConstVariable(Convert.ChangeType(0, value.type)),
 				condition
 			);
 			var exitLabel = new EmbedAddressLabel();
-			method.machine.AddBranch(condition, exitLabel);
-			method.machine.BinaryOperatorExtern(BinaryOperator.LogicalOr, converted, toSignBit, converted);
-			method.machine.ApplyLabel(exitLabel);
+			block.machine.AddBranch(condition, exitLabel);
+			block.machine.BinaryOperatorExtern(BinaryOperator.LogicalOr, converted, toSignBit, converted);
+			block.machine.ApplyLabel(exitLabel);
 
 			return converted;
 		}

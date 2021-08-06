@@ -23,8 +23,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var op = method.currentOp;
-			var methodInfo = op.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.IsAbstract || methodInfo.IsVirtual || methodInfo.IsStatic) return false;
 			if(methodInfo.ReturnType != typeof(void)) return false;
 			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;

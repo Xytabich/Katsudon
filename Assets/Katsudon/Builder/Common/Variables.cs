@@ -76,16 +76,23 @@ namespace Katsudon.Builder
 	{
 		IVariable GetValueVariable();
 
-		void LoadValue(IMethodDescriptor method);
+		void LoadValue(IMachineBlock block);
 
-		void StoreValue(IMethodDescriptor method);
+		void StoreValue(IMachineBlock block);
 	}
 
 	public class NamedVariable : IVariable
 	{
 		public string name { get; private set; }
 		public Type type { get; private set; }
-		public uint address => _address.Value;
+		public uint address
+		{
+			get
+			{
+				if(!_address.HasValue) UnityEngine.Debug.Log("Named variable has no address:" + type + ":" + name);
+				return _address.Value;
+			}
+		}
 
 		private uint? _address = null;
 
@@ -116,7 +123,14 @@ namespace Katsudon.Builder
 			}
 		}
 		public Type type { get; private set; }
-		public uint address => _address.Value;
+		public uint address
+		{
+			get
+			{
+				if(!_address.HasValue) UnityEngine.Debug.Log("Unnamed variable has no address:" + type + ":" + prefix);
+				return _address.Value;
+			}
+		}
 
 		bool IDeferredVariableName.hasName => _name != null;
 

@@ -23,6 +23,7 @@ namespace Katsudon.Builder
 		private VariableBuildersCollection variableBuilders;
 		private CtorDefaultsExtractor defaultsExtractor;
 		private StringBuilder cachedSb = new StringBuilder();
+		private NumericConvertersList convertersList;
 
 		private Dictionary<Type, object> modules = new Dictionary<Type, object>();
 		private List<TypeOpCodeBuider> typeOperationBuilders;
@@ -41,11 +42,12 @@ namespace Katsudon.Builder
 				method.Invoke(null, ctorArgs);
 			}
 
-			var convertersList = new NumericConvertersList(this);
-			methodBodyBuilder = new MethodBodyBuilder(convertersList);
+			convertersList = new NumericConvertersList(this);
+
+			methodBodyBuilder = new MethodBodyBuilder();
 			AddModule(methodBodyBuilder);
 
-			behaviourMethodBuilder = new BehaviourMethodBuilder(methodBodyBuilder);
+			behaviourMethodBuilder = new BehaviourMethodBuilder(methodBodyBuilder, convertersList);
 
 			var sortedOperationBuilders = OrderedTypeUtils.GetOrderedSet<OperationBuilderAttribute>();
 			var builderArgs = new object[] { methodBodyBuilder, this };
@@ -167,9 +169,9 @@ namespace Katsudon.Builder
 				typeOperationBuilders[i].Register(methodBodyBuilder, this);
 			}
 
-			var programBlock = new ProgramBlock(new UdonMachine(classType, constCollection, externsCollection, fieldsCollection), propertiesBlock, executionOrder);
+			var programBlock = new ProgramBlock(new UdonMachine(constCollection, externsCollection, fieldsCollection), propertiesBlock, executionOrder);
 			programBlock.AddMethodBuilder(behaviourMethodBuilder);
-			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, methodBodyBuilder, methodsCollection));
+			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, methodBodyBuilder, convertersList, methodsCollection));
 			builder.AddBlock(programBlock);
 
 			Action<MethodInfo> addMethodCallback = (method) => {

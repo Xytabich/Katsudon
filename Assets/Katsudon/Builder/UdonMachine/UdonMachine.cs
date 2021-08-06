@@ -11,8 +11,6 @@ namespace Katsudon.Builder
 		public const uint LAST_ALIGNED_ADDRESS = 0xFFFFFFFC;
 		public static readonly IAddressLabel endProgramAddress = new EndAddressLabel();
 
-		public Type classType { get; private set; }
-
 		private ExternsCollection externsCollection;
 		private ConstCollection constCollection;
 		private FieldsCollection fieldsCollection;
@@ -25,9 +23,8 @@ namespace Katsudon.Builder
 		private IVariable transformVariable = null;
 		private IVariable gameObjectVariable = null;
 
-		public UdonMachine(Type classType, ConstCollection constCollection, ExternsCollection externsCollection, FieldsCollection fieldsCollection)
+		public UdonMachine(ConstCollection constCollection, ExternsCollection externsCollection, FieldsCollection fieldsCollection)
 		{
-			this.classType = classType;
 			this.constCollection = constCollection;
 			this.externsCollection = externsCollection;
 			this.fieldsCollection = fieldsCollection;

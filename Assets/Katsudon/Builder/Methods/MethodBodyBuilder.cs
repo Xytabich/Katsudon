@@ -9,13 +9,6 @@ namespace Katsudon.Builder
 	{
 		private SortedSet<IOperationBuider>[] builders = new SortedSet<IOperationBuider>[384];
 
-		private NumericConvertersList convertersList;
-
-		public MethodBodyBuilder(NumericConvertersList convertersList)
-		{
-			this.convertersList = convertersList;
-		}
-
 		public void RegisterOpBuilder(OpCode code, IOperationBuider builder)
 		{
 			SortedSet<IOperationBuider> list;
@@ -39,7 +32,7 @@ namespace Katsudon.Builder
 		}
 
 		public void Build(MethodInfo method, IList<IVariable> arguments, IVariable returnVariable,
-			IAddressLabel returnAddress, UdonMachine udonMachine, PropertiesBlock properties)
+			IAddressLabel returnAddress, IMachineBlock machineBlock, PropertiesBlock properties)
 		{
 			var locals = method.GetMethodBody().LocalVariables;
 			var localVars = new List<IVariable>(locals.Count);//FIX: cache
@@ -48,17 +41,26 @@ namespace Katsudon.Builder
 				localVars.Add(new UnnamedVariable("loc", locals[i].LocalType));
 			}
 
+			Build(method, arguments, localVars, returnVariable, returnAddress, machineBlock);
+
+			foreach(var variable in localVars)
+			{
+				properties.AddVariable(variable);
+			}
+		}
+
+		public void Build(MethodInfo method, IList<IVariable> arguments, IList<IVariable> locals,
+			IVariable returnVariable, IAddressLabel returnAddress, IMachineBlock machineBlock)
+		{
 			List<Operation> operations = new List<Operation>();//FIX: cache
 			foreach(var op in new MethodReader(method, null))
 			{
 				operations.Add(op);
 			}
 
-			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, localVars, udonMachine, convertersList);
+			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, locals, machineBlock);
 			try
 			{
-				methodDescriptor.PreBuild(udonMachine);
-
 				SortedSet<IOperationBuider> list;
 				while(methodDescriptor.Next())
 				{
@@ -88,12 +90,12 @@ namespace Katsudon.Builder
 						throw;
 					}
 				}
-				methodDescriptor.PostBuild();
-				methodDescriptor.ApplyProperties(properties);
+				methodDescriptor.CheckState();
+				methodDescriptor.ApplyProperties();
 			}
 			catch
 			{
-				UnityEngine.Debug.LogErrorFormat("Exception during building method {1} from {0}", udonMachine.classType, method);
+				UnityEngine.Debug.LogErrorFormat("Exception during building method {1} from {0}", method.DeclaringType, method);
 				throw;
 			}
 		}

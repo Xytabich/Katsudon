@@ -7,14 +7,14 @@ namespace Katsudon.Builder.Variables
 	{
 		public int order => 80;
 
-		public bool TryConvert(IMethodDescriptor method, in IVariable variable, Type toType, out IVariable converted)
+		public bool TryConvert(IMachineBlock block, in IVariable variable, Type toType, out IVariable converted)
 		{
 			if(toType != typeof(bool) || !(variable is IConstVariable constVariable))
 			{
 				converted = null;
 				return false;
 			}
-			converted = method.machine.GetConstVariable(Convert.ToBoolean(constVariable.value));
+			converted = block.machine.GetConstVariable(Convert.ToBoolean(constVariable.value));
 			return true;
 		}
 

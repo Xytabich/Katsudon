@@ -7,7 +7,7 @@ namespace Katsudon.Builder.Extensions.EnumExtension
 	{
 		public int order => 50;
 
-		public bool TryConvert(IMethodDescriptor method, in IVariable variable, Type toType, out IVariable converted)
+		public bool TryConvert(IMachineBlock block, in IVariable variable, Type toType, out IVariable converted)
 		{
 			if(!(variable is IConstVariable constVariable))
 			{
@@ -20,7 +20,7 @@ namespace Katsudon.Builder.Extensions.EnumExtension
 				return false;
 			}
 
-			converted = method.machine.GetConstVariable(Enum.ToObject(toType, constVariable.value));
+			converted = block.machine.GetConstVariable(Enum.ToObject(toType, constVariable.value));
 			return true;
 		}
 
