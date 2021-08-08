@@ -117,8 +117,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					counter.Release();
 					method.machine.ApplyLabel(endLabel);
 
-					method.machine.AddCopy(outVariable, method.GetOrPushOutVariable(typeof(Delegate), 1));
 					outVariable.Release();
+					method.PushStack(outVariable);
 				}
 				else
 				{
@@ -133,10 +133,14 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					*/
 					var b = method.PopStack();
 					var a = method.PopStack();
-					var variable = method.GetTmpVariable(typeof(Delegate)).Reserve();
-					Build(method, a, b, variable);
-					method.machine.AddCopy(variable, method.GetOrPushOutVariable(typeof(Delegate), 1));
-					variable.Release();
+					var outVariable = method.GetTmpVariable(typeof(Delegate));
+					outVariable.Allocate();
+					outVariable.Reserve();
+
+					Build(method, a, b, outVariable);
+
+					outVariable.Release();
+					method.PushStack(outVariable);
 				}
 				return true;
 			}
