@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.Udon;
@@ -75,6 +76,7 @@ public class TUBeh : TBase, TInt
 
 		self = this;
 
+		Debug.Log(TstEvt(0, "0"));
 		Debug.Log(TSCall(3, 8));
 
 		self.evt = TstEvt;
@@ -91,6 +93,7 @@ public class TUBeh : TBase, TInt
 		Debug.Log(evt);
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private bool TstEvt(int a, string b)
 	{
 		Debug.Log(counter++);

@@ -1,28 +1,35 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Katsudon.Builder.Extensions.Inlining
+namespace Katsudon.Builder.AsmOpCodes
 {
 	[OperationBuilder]
-	public class InlineStaticMethod : IOperationBuider
+	public class InlineLocalCall : IOperationBuider
 	{
-		int IOperationBuider.order => 15;
+		public int order => 80;
 
 		private MethodBodyBuilder bodyBuilder;
 
 		private List<IVariable> argumentsCache = new List<IVariable>();//TODO: cache
 		private List<IVariable> localsCache = new List<IVariable>();
 
-		public InlineStaticMethod(MethodBodyBuilder bodyBuilder)
+		public InlineLocalCall(MethodBodyBuilder bodyBuilder)
 		{
 			this.bodyBuilder = bodyBuilder;
 		}
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = (MethodInfo)method.currentOp.argument;
-			if(!methodInfo.IsStatic || !Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
+			var methodInfo = method.currentOp.argument as MethodInfo;
+			if(methodInfo.IsStatic || !Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
+			if((methodInfo.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) == 0) return false;
+
+			var target = method.PeekStack(methodInfo.GetParameters().Length);
+			if(!(target is ThisVariable))
+			{
+				return false;
+			}
 
 			var parameters = methodInfo.GetParameters();
 
@@ -35,6 +42,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 					argumentsCache.Add(method.GetTmpVariable(iterator.Current).Reserve());
 				}
 			}
+			method.PopStack();
 
 			var locals = methodInfo.GetMethodBody().LocalVariables;
 			for(var i = 0; i < locals.Count; i++)
@@ -71,8 +79,9 @@ namespace Katsudon.Builder.Extensions.Inlining
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var builder = new InlineStaticMethod(modules.GetModule<MethodBodyBuilder>());
+			var builder = new InlineLocalCall(modules.GetModule<MethodBodyBuilder>());
 			container.RegisterOpBuilder(OpCodes.Call, builder);
+			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 		}
 	}
 }

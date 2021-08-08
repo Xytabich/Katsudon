@@ -52,7 +52,7 @@ namespace Katsudon.Builder
 			if(states.Count > 0) throw new Exception("States remained on the stack, a state was not freed somewhere.");
 			if(stack.Count > 0)
 			{
-				throw new Exception(string.Format("Values remained on the stack, a value was not used somewhere.\nStack: {1}", string.Join(", ", stack)));
+				throw new Exception(string.Format("Values remained on the stack, a value was not used somewhere.\nStack: {0}", string.Join(", ", stack)));
 			}
 		}
 
