@@ -174,12 +174,23 @@ namespace Katsudon.Editor
 		{
 			int controlID = GUIUtility.GetControlID(utils.titlebarHash, FocusType.Keyboard, position);
 			GUIStyle baseStyle = utils.inspectorTitlebar;
-			GUIStyle inspectorTitlebarText = utils.inspectorTitlebarText;
-			Vector2 vector = utils.iconButton.CalcSize(utils.titleSettingsIcon);
-			Rect iconPosition = new Rect(position.x + baseStyle.padding.left, position.y + baseStyle.padding.top, 16f, 16f);
-			Rect activeArea = new Rect(position.xMax - baseStyle.padding.right - 2f - 16f, iconPosition.y, vector.x, vector.y);
+			GUIStyle textStyle = utils.inspectorTitlebarText;
+			Vector2 buttonIconSize = utils.iconButton.CalcSize(utils.titleSettingsIcon);
+			Rect iconPosition = new Rect(position.x + baseStyle.padding.left, position.y + (baseStyle.fixedHeight - 16f) * 0.5f + baseStyle.padding.top, 16f, 16f);
+			Rect settingsPosition = new Rect(position.xMax - baseStyle.padding.right - 4f - 16f, position.y + (baseStyle.fixedHeight - buttonIconSize.y) * 0.5f + baseStyle.padding.top, buttonIconSize.x, buttonIconSize.y);
+			Rect textPosition = new Rect(iconPosition.xMax + 4f + 4f + 16f, position.y + (baseStyle.fixedHeight - textStyle.fixedHeight) * 0.5f + baseStyle.padding.top, 100f, textStyle.fixedHeight);
+			textPosition.xMax = settingsPosition.xMin - 4f;
+
 			Event current = Event.current;
+			bool isActive = GUIUtility.hotControl == controlID;
+			bool hasKeyboardFocus = GUIUtility.keyboardControl == controlID;
+			bool isHover = position.Contains(current.mousePosition);
+			if(current.type == EventType.Repaint)
+			{
+				baseStyle.Draw(position, GUIContent.none, isHover, isActive, foldout, hasKeyboardFocus);
+			}
 			int enabledState = -1;
+
 			foreach(var behaviour in editor.behaviours)
 			{
 				int objectEnabled = EditorUtility.GetObjectEnabled(behaviour);
@@ -215,7 +226,7 @@ namespace Katsudon.Editor
 					GUI.backgroundColor = animationColor;
 				}
 				Rect togglePosition = iconPosition;
-				togglePosition.x = iconPosition.xMax + 2f;
+				togglePosition.x = iconPosition.xMax + 4f;
 				enabled = EditorGUI.Toggle(togglePosition, enabled);
 				if(isAnimated)
 				{
@@ -237,10 +248,9 @@ namespace Katsudon.Editor
 					current.Use();
 				}
 			}
-			Rect textPosition = new Rect(iconPosition.xMax + 20f, iconPosition.y, 100f, iconPosition.height);
-			Rect rectangle = activeArea;
-			rectangle.x -= 18f;
-			textPosition.xMax = utils.DrawEditorHeaderItems(rectangle, editor.proxies, 0f).xMin - 2f;
+			Rect rectangle = settingsPosition;
+			rectangle.x -= 20f;
+			textPosition.xMax = utils.DrawEditorHeaderItems(rectangle, editor.proxies, 4f).xMin - 4f;
 			if(current.type == EventType.Repaint)
 			{
 				Texture2D miniThumbnail = AssetPreview.GetMiniThumbnail(editor.proxies[0]);
@@ -249,23 +259,21 @@ namespace Katsudon.Editor
 
 			bool guiEnabled = GUI.enabled;
 			GUI.enabled = true;
-			switch(current.type)
+			switch(current.GetTypeForControl(controlID))
 			{
 				case EventType.MouseDown:
-					if(activeArea.Contains(current.mousePosition))
+					if(settingsPosition.Contains(current.mousePosition))
 					{
-						DisplayObjectContextMenu(activeArea, editor);
+						DisplayObjectContextMenu(settingsPosition, editor);
 						current.Use();
 					}
 					break;
 				case EventType.Repaint:
 					bool flag = GUIUtility.hotControl == controlID;
-					EditorStyles.foldout.Draw(new Rect(position.x + 3f, position.y + 3f, 16f, 16f), flag, flag, foldout, false);
+					utils.titlebarFoldout.Draw(new Rect(position.x + utils.titlebarFoldout.margin.left + 1f, position.y + (position.height - 13f) * 0.5f + baseStyle.padding.top, 13f, 13f), flag, flag, foldout, false);
 
-					baseStyle.Draw(position, GUIContent.none, controlID, foldout);
-					position = baseStyle.padding.Remove(position);
-					inspectorTitlebarText.Draw(textPosition, utils.TempContent(ObjectNames.GetInspectorTitle(editor.proxies[0])), controlID, foldout);
-					utils.iconButton.Draw(activeArea, utils.titleSettingsIcon, controlID, foldout);
+					textStyle.Draw(textPosition, utils.TempContent(ObjectNames.GetInspectorTitle(editor.proxies[0])), isHover, isActive, foldout, hasKeyboardFocus);
+					utils.iconButton.Draw(settingsPosition, utils.titleSettingsIcon, controlID, foldout, settingsPosition.Contains(Event.current.mousePosition));
 					break;
 			}
 			GUI.enabled = guiEnabled;
@@ -609,7 +617,7 @@ namespace Katsudon.Editor
 					DrawProxyComponentBackground(proxyRect);
 
 					bool isExpanded = InternalEditorUtility.GetIsInspectorExpanded(info.proxies[0]);
-					bool newExpanded = InspectorTitlebar(GUILayoutUtility.GetRect(GUIContent.none, "IN Title"), isExpanded, info);
+					bool newExpanded = InspectorTitlebar(GUILayoutUtility.GetRect(GUIContent.none, utils.inspectorTitlebar), isExpanded, info);
 					if(newExpanded != isExpanded)
 					{
 						isExpanded = newExpanded;
@@ -758,6 +766,7 @@ namespace Katsudon.Editor
 
 			public GUIStyle overrideMargin => _overrideMargin();
 			public GUIStyle inspectorTitlebar => _inspectorTitlebar();
+			public GUIStyle titlebarFoldout => _titlebarFoldout();
 			public GUIStyle inspectorTitlebarText => _inspectorTitlebarText();
 			public GUIStyle iconButton => _iconButton();
 
@@ -771,6 +780,7 @@ namespace Katsudon.Editor
 
 			private Func<GUIStyle> _overrideMargin;
 			private Func<GUIStyle> _inspectorTitlebar;
+			private Func<GUIStyle> _titlebarFoldout;
 			private Func<GUIStyle> _inspectorTitlebarText;
 			private Func<GUIStyle> _iconButton;
 
@@ -785,6 +795,7 @@ namespace Katsudon.Editor
 
 				_overrideMargin = CreatePropertyGetter<GUIStyle>(typeof(EditorStyles), "overrideMargin");
 				_inspectorTitlebar = CreatePropertyGetter<GUIStyle>(typeof(EditorStyles), "inspectorTitlebar");
+				_titlebarFoldout = CreatePropertyGetter<GUIStyle>(typeof(EditorStyles), "titlebarFoldout");
 				_inspectorTitlebarText = CreatePropertyGetter<GUIStyle>(typeof(EditorStyles), "inspectorTitlebarText");
 				_iconButton = CreatePropertyGetter<GUIStyle>(typeof(EditorStyles), "iconButton");
 
