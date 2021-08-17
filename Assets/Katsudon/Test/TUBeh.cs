@@ -34,6 +34,7 @@ public class TUBeh : TBase, TInt
 
 	private event Func<int, string, bool> evt;
 	private TUBeh self;
+	private byte bt;
 
 	public void Start()
 	{
@@ -73,6 +74,18 @@ public class TUBeh : TBase, TInt
 		/*UnityEngine.Debug.Log(test);
 		other.Test(this);
 		UnityEngine.Debug.Log(test);*/
+
+		bt = 1;
+		int cb = ~(int)bt;
+		unchecked
+		{
+			Debug.Log((byte)cb + ":" + (~(byte)1));
+		}
+
+		foreach(var p in b)
+		{
+			Debug.Log(p);
+		}
 
 		self = this;
 
