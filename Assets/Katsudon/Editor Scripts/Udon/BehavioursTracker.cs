@@ -409,11 +409,14 @@ namespace Katsudon.Editor.Udon
 			private ReferencesContainer GetOrCreateContainer(GameObject obj)
 			{
 				var container = obj.GetComponent<ReferencesContainer>();
-				if(container != null) return container;
+				if(container != null && container.id >= 0) return container;
 
+				if(container == null)
+				{
+					container = obj.AddComponent<ReferencesContainer>();
+					container.hideFlags = SERVICE_OBJECT_FLAGS;
+				}
 				int id = PickContainerId();
-				container = obj.AddComponent<ReferencesContainer>();
-				container.hideFlags = SERVICE_OBJECT_FLAGS;
 				container.Init(id, OnRemoveContainer, RemoveBehaviour);
 				containers[id] = container;
 				Undo.ClearUndo(container);

@@ -16,7 +16,7 @@ namespace Katsudon.Utility
 		public int pairsCount => behaviours.Count;
 		public int id => _id;
 
-		private int _id;
+		private int _id = -1;
 		private Action<int> onRemoveContaienr;
 		private Action<UdonBehaviour> onRemovePair;
 
