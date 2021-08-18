@@ -17,6 +17,7 @@ All classes are compiled and stored directly in SerializedUdonProgramAsset, bypa
 - The compiler does not yet have a normal "user protection", so in case of an error raw exceptions may be thrown
 - If there are errors referring to `UdonPartsCache.cs` just delete this file
 - For optimization, use the `-checked` option at compilation, since the `unchecked` context is not provided in udon and is emulated by several operations, which affects performance. If you need bitwise conversion, specify explicitly that the context is `unchecked`. A folder created with `Create/UDON Assembly Folder` uses the `checked` context by default.
+- Arithmetic operations always use the `unchecked` context
 - All default values declared for the class fields are assigned at the time of the build, for example: `private DateTime startTime = DateTime.Now;` will have a value at the time of the build, and not at the time of loading the UdonBehaviour, so such things should be assigned in Start or other methods.
 
 [![Trello](https://img.shields.io/badge/Trello-Katsudon%20Board-yellow?style=flat&logo=trello)](https://trello.com/b/jyjguAFA) - What has been done and what is planned
