@@ -35,7 +35,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 		{
 			var parameters = method.GetParameters();
 			if(parameters.Length != 1 || method.GetMethodBody().LocalVariables.Count > 0) return null;
-			if(parameters[0].IsOut || parameters[0].ParameterType.IsByRef) return null;
+			if(parameters[0].ParameterType.IsByRef) return null;
 
 			FieldInfo field = null;
 			var reader = new MethodReader(method, null);

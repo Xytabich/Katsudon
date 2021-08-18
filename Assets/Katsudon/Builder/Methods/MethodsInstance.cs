@@ -55,7 +55,8 @@ namespace Katsudon.Builder.Methods
 			var argNames = nameInfo.parametersName;
 			for(var i = 0; i < parameters.Length; i++)
 			{
-				args[i] = new NamedVariable(argNames[i], parameters[i].ParameterType);
+				var type = parameters[i].ParameterType;
+				args[i] = new NamedVariable(argNames[i], type.IsByRef ? type.GetElementType() : type);
 			}
 			if(method.ReturnType != typeof(void))
 			{

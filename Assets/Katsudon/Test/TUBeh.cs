@@ -35,6 +35,7 @@ public class TUBeh : TBase, TInt
 	private event Func<int, string, bool> evt;
 	private TUBeh self;
 	private byte bt;
+	private int refVariable = 10;
 
 	public void Start()
 	{
@@ -87,6 +88,7 @@ public class TUBeh : TBase, TInt
 			Debug.Log(p);
 		}
 
+		TstEvt(refVariable);
 		self = this;
 
 		Debug.Log(TstEvt(0, "0"));
@@ -111,6 +113,14 @@ public class TUBeh : TBase, TInt
 	{
 		Debug.Log(counter++);
 		return a.ToString() == b;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private void TstEvt(in int a)
+	{
+		Debug.Log(a);
+		refVariable = 1000;
+		Debug.Log(a);
 	}
 
 	void Update()

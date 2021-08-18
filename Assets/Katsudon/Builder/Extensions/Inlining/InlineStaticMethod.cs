@@ -12,6 +12,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 		private MethodBodyBuilder bodyBuilder;
 
 		private List<IVariable> argumentsCache = new List<IVariable>();//TODO: cache
+		private List<IVariable> reservedCache = new List<IVariable>();
 		private List<IVariable> localsCache = new List<IVariable>();
 
 		public InlineStaticMethod(MethodBodyBuilder bodyBuilder)
@@ -30,9 +31,17 @@ namespace Katsudon.Builder.Extensions.Inlining
 			if(argsCount != 0)
 			{
 				var iterator = method.PopMultiple(argsCount);
+				int index = 0;
 				while(iterator.MoveNext())
 				{
-					argumentsCache.Add(method.GetTmpVariable(iterator.Current).Reserve());
+					var parameter = iterator.Current;
+					if(!parameters[index].ParameterType.IsByRef)
+					{
+						parameter = method.GetTmpVariable(parameter).Reserve();
+						reservedCache.Add(parameter);
+					}
+					argumentsCache.Add(parameter);
+					index++;
 				}
 			}
 
@@ -55,11 +64,12 @@ namespace Katsudon.Builder.Extensions.Inlining
 				outVariable.Release();
 			}
 
-			for(int i = 0; i < argumentsCache.Count; i++)
-			{
-				((ITmpVariable)argumentsCache[i]).Release();
-			}
 			argumentsCache.Clear();
+			for(int i = 0; i < reservedCache.Count; i++)
+			{
+				((ITmpVariable)reservedCache[i]).Release();
+			}
+			reservedCache.Clear();
 
 			for(int i = 0; i < localsCache.Count; i++)
 			{
