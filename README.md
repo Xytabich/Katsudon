@@ -15,6 +15,7 @@ All classes are compiled and stored directly in SerializedUdonProgramAsset, bypa
 ### Notes
 - At the moment, this utility is under development, so many things may not be implemented, as well as optimizations are not implemented everywhere
 - The compiler does not yet have a normal "user protection", so in case of an error raw exceptions may be thrown
+- If there are errors referring to UdonPartsCache.cs just delete this file
 - All default values declared for the class fields are assigned at the time of the build, for example: `private DateTime startTime = DateTime.Now;` will have a value at the time of the build, and not at the time of loading the UdonBehaviour, so such things should be assigned in Start or other methods.
 
 [![Trello](https://img.shields.io/badge/Trello-Katsudon%20Board-yellow?style=flat&logo=trello)](https://trello.com/b/jyjguAFA) - What has been done and what is planned
