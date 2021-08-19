@@ -12,7 +12,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 		private MethodBodyBuilder bodyBuilder;
 
 		private List<IVariable> argumentsCache = new List<IVariable>();//TODO: cache
-		private List<IVariable> reservedCache = new List<IVariable>();
+		private List<ITmpVariable> reservedCache = new List<ITmpVariable>();
 		private List<IVariable> localsCache = new List<IVariable>();
 
 		public InlineStaticMethod(MethodBodyBuilder bodyBuilder)
@@ -38,7 +38,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 					if(!parameters[index].ParameterType.IsByRef)
 					{
 						parameter = method.GetTmpVariable(parameter).Reserve();
-						reservedCache.Add(parameter);
+						reservedCache.Add((ITmpVariable)parameter);
 					}
 					argumentsCache.Add(parameter);
 					index++;
@@ -67,7 +67,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 			argumentsCache.Clear();
 			for(int i = 0; i < reservedCache.Count; i++)
 			{
-				((ITmpVariable)reservedCache[i]).Release();
+				reservedCache[i].Release();
 			}
 			reservedCache.Clear();
 

@@ -28,6 +28,14 @@ namespace Katsudon.Builder.Externs
 			);
 		}
 
+		public static void SetVariableExtern(this IUdonMachine machine, IVariable targetVariable, IVariable name, VariableMeta valueVariable)
+		{
+			machine.AddExtern(
+				"VRCUdonCommonInterfacesIUdonEventReceiver.__SetProgramVariable__SystemString_SystemObject__SystemVoid",
+				targetVariable.OwnType(), name.OwnType(), valueVariable
+			);
+		}
+
 		public static void GetVariableExtern(this IUdonMachine machine, IVariable targetVariable, string name, Func<IVariable> outVariableCtor)
 		{
 			machine.AddExtern(

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Reflection.Emit;
-using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.AsmOpCodes
 {
@@ -27,7 +26,8 @@ namespace Katsudon.Builder.AsmOpCodes
 			method.machine.AddExtern(
 				"SystemUInt32Array.__Get__SystemInt32__SystemUInt32",
 				() => (addressVariable = method.GetTmpVariable(typeof(uint))),
-				new LabelList(method.machine.GetConstCollection(), Array.ConvertAll(addresses, a => method.GetMachineAddressLabel(a))).OwnType(),
+				new LabelList((method.machine as IRawUdonMachine).mainMachine.GetConstCollection(),
+					Array.ConvertAll(addresses, a => method.GetMachineAddressLabel(a))).OwnType(),
 				indexVariable.UseType(typeof(int))
 			);
 			method.machine.AddJump(addressVariable);

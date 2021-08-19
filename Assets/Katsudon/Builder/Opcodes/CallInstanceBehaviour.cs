@@ -30,6 +30,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					target.Allocate();
 				}
 
+				var parameters = methodInfo.GetParameters();
 				int popCount = info.parametersName.Length;
 				if(popCount > 0)
 				{
@@ -38,7 +39,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					int argIndex = 0;
 					while(iterator.MoveNext())
 					{
-						method.machine.SetVariableExtern(target, info.parametersName[argIndex], iterator.Current);
+						method.machine.SetVariableExtern(target, info.parametersName[argIndex], iterator.Current.UseType(parameters[argIndex].ParameterType));
 						argIndex++;
 					}
 				}

@@ -92,8 +92,10 @@ namespace Katsudon.Builder
 			return !variable.isUsed;
 		}
 
-		private class UdonBlockBuilder : IUdonMachine
+		private class UdonBlockBuilder : IUdonMachine, IRawUdonMachine
 		{
+			public UdonMachine mainMachine => udonMachine;
+
 			private UdonMachine udonMachine;
 			private IUdonProgramBlock block;
 			private NumericConvertersList convertersList;
@@ -110,16 +112,6 @@ namespace Katsudon.Builder
 			public IVariable CreateLabelVariable()
 			{
 				return udonMachine.CreateLabelVariable();
-			}
-
-			public ConstCollection GetConstCollection()
-			{
-				return udonMachine.GetConstCollection();
-			}
-
-			public FieldsCollection GetFieldsCollection()
-			{
-				return udonMachine.GetFieldsCollection();
 			}
 
 			public IVariable GetConstVariable(object value)
@@ -153,7 +145,7 @@ namespace Katsudon.Builder
 			}
 
 			#region opcodes
-			private void AddPush(VariableMeta variableInfo)
+			public void AddPush(VariableMeta variableInfo)
 			{
 				var variable = variableInfo.variable;
 				if((variableInfo.usageMode & VariableMeta.UsageMode.Out) != 0)
@@ -185,7 +177,7 @@ namespace Katsudon.Builder
 				udonMachine.AddOpcode(OpCode.PUSH, variable.Used());
 			}
 
-			private void ApplyReferences()
+			public void ApplyReferences()
 			{
 				while(referencesStack.Count > 0)
 				{
@@ -277,7 +269,7 @@ namespace Katsudon.Builder
 
 			public void AddJump(IVariable variable)
 			{
-				if(variable.type != typeof(uint)) throw new InvalidOperationException("The variable must be an unsigned 32-bit integer");
+				if(!variable.type.IsAssignableFrom(typeof(uint))) throw new InvalidOperationException("The variable must be an unsigned 32-bit integer");
 				udonMachine.AddOpcode(OpCode.JUMP_INDIRECT, variable);
 			}
 
@@ -355,12 +347,17 @@ namespace Katsudon.Builder
 		}
 	}
 
+	public interface IRawUdonMachine : IUdonMachine
+	{
+		UdonMachine mainMachine { get; }
+
+		void AddPush(VariableMeta variableInfo);
+
+		void ApplyReferences();
+	}
+
 	public interface IUdonMachine : IUdonProgramBuilder
 	{
-		ConstCollection GetConstCollection();
-
-		FieldsCollection GetFieldsCollection();
-
 		IVariable GetReturnAddressGlobal();
 
 		IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour);

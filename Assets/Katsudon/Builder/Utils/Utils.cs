@@ -109,7 +109,7 @@ namespace Katsudon
 							FieldInfo field;
 							if(ILUtils.TryGetStfld(method.currentOp, out field))
 							{
-								variable = method.machine.GetFieldsCollection().GetField(field);
+								variable = (method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
 								method.DropState();
 								return true;
 							}
@@ -122,7 +122,7 @@ namespace Katsudon
 					FieldInfo field;
 					if(ILUtils.TryGetStfld(op, out field))
 					{
-						variable = method.machine.GetFieldsCollection().GetField(field);
+						variable =(method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
 						method.DropState();
 						method.PopStack().Use();
 						return true;
