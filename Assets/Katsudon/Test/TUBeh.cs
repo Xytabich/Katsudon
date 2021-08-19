@@ -83,10 +83,12 @@ public class TUBeh : TBase, TInt
 			Debug.Log((byte)cb + ":" + (~(byte)1));
 		}
 
-		foreach(var p in b)
+		foreach(var p in "abcd")
 		{
 			Debug.Log(p);
 		}
+
+		Debug.Log("abcd"[0]);
 
 		TstEvt(refVariable);
 		self = this;
