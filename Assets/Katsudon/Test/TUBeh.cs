@@ -32,7 +32,7 @@ public class TUBeh : TBase, TInt
 
 	private Type t = typeof(int);
 
-	private event Func<int, string, bool> evt;
+	private event Func<string, int> evt;
 	private TUBeh self;
 	private byte bt;
 	private int refVariable = 10;
@@ -93,28 +93,28 @@ public class TUBeh : TBase, TInt
 		TstEvt(refVariable);
 		self = this;
 
-		Debug.Log(TstEvt(0, "0"));
+		Debug.Log(TstEvt("1"));
 		Debug.Log(TSCall(3, 8));
 
-		self.evt = TstEvt;
-		self.evt += TstEvt;
-		self.evt += TstEvt;
-		Debug.Log(self.evt.Invoke(0, "0"));
-		self.evt -= TstEvt;
-		self.evt -= null;
-		self.evt += null;
-		Debug.Log(self.evt);
-		evt += evt;
-		Debug.Log(evt.Invoke(1, "0"));
-		evt -= evt;
+		self.evt = Convert.ToInt32;
+		Debug.Log(self.evt.Invoke("0"));
+		self.evt += Convert.ToInt32;
+		evt -= Convert.ToInt32;
+		Debug.Log(evt.Invoke("1"));
+		evt -= Convert.ToInt32;
+		evt += TstEvt;
+		Debug.Log(evt.Invoke("0"));
+		evt += Convert.ToInt32;
+		Debug.Log(evt.Invoke("0"));
+		evt -= Convert.ToInt32;
+		evt -= TstEvt;
 		Debug.Log(evt);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool TstEvt(int a, string b)
+	private int TstEvt(string b)
 	{
-		Debug.Log(counter++);
-		return a.ToString() == b;
+		return b == "1" ? 1 : 0;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

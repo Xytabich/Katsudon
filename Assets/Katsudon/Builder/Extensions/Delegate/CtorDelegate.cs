@@ -24,40 +24,56 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			if(!typeof(Delegate).IsAssignableFrom(ctorInfo.DeclaringType)) return false;
 
 			var methodPtr = (MethodInfoPtr)method.PeekStack(0);
-			if(methodPtr.method.IsStatic) return false;
-			if(!Utils.IsUdonAsm(methodPtr.method.DeclaringType)) return false;
-
-			AsmMethodInfo asmMethod = null;
-			var methodInfo = methodPtr.method;
-			var info = assemblies.GetTypeInfo(methodInfo.DeclaringType);
-			if(methodPtr.isVirtual)
+			if(Utils.IsUdonAsm(methodPtr.method.DeclaringType))
 			{
-				asmMethod = info.GetFamilyMethod(methodInfo);
+				if(methodPtr.method.IsStatic) return false;
+
+				AsmMethodInfo asmMethod = null;
+				var methodInfo = methodPtr.method;
+				var info = assemblies.GetTypeInfo(methodInfo.DeclaringType);
+				if(methodPtr.isVirtual)
+				{
+					asmMethod = info.GetFamilyMethod(methodInfo);
+				}
+				if(asmMethod == null) asmMethod = info.GetMethod(methodInfo);
+				if(asmMethod != null)
+				{
+					method.PopStack();
+					var target = method.PopStack();
+					BuildDelegate(method, method.machine.GetConstVariable(new UdonMethodPattern(asmMethod)), target);
+					return true;
+				}
 			}
-			if(asmMethod == null) asmMethod = info.GetMethod(methodInfo);
-			if(asmMethod != null)
+			else
 			{
 				method.PopStack();
 				var target = method.PopStack();
-
-				var actions = method.GetTmpVariable(typeof(Delegate));
-				method.machine.AddExtern("SystemObjectArray.__ctor__SystemInt32__SystemObjectArray", actions, method.machine.GetConstVariable((int)1).OwnType());
-
-				var action = method.GetTmpVariable(typeof(object));
-				method.machine.AddExtern("SystemArray.__Clone__SystemObject", action,
-					method.machine.GetConstVariable(new MethodPattern(asmMethod)).OwnType());
-				action.Allocate();
-				method.machine.AddExtern("SystemObjectArray.__Set__SystemInt32_SystemObject__SystemVoid", action.OwnType(),
-					method.machine.GetConstVariable((int)0).OwnType(), target.OwnType());
-
-				actions.Allocate();
-				method.machine.AddExtern("SystemObjectArray.__Set__SystemInt32_SystemObject__SystemVoid", actions.OwnType(),
-					method.machine.GetConstVariable((int)0).OwnType(), action.OwnType());
-
-				method.PushStack(actions);
+				BuildDelegate(method, method.machine.GetConstVariable(new ExternMethodPattern(methodPtr.method)), target);
 				return true;
 			}
 			return false;
+		}
+
+		private static void BuildDelegate(IMethodDescriptor method, IVariable pattern, IVariable target = null)
+		{
+			var actions = method.GetTmpVariable(typeof(Delegate));
+			method.machine.AddExtern("SystemObjectArray.__ctor__SystemInt32__SystemObjectArray", actions, method.machine.GetConstVariable((int)1).OwnType());
+
+			var action = method.GetTmpVariable(typeof(object));
+			method.machine.AddExtern("SystemArray.__Clone__SystemObject", action, pattern.OwnType());
+
+			if(target != null)
+			{
+				action.Allocate();
+				method.machine.AddExtern("SystemObjectArray.__Set__SystemInt32_SystemObject__SystemVoid", action.OwnType(),
+					method.machine.GetConstVariable((int)DelegateUtility.TARGET_OFFSET).OwnType(), target.OwnType());
+			}
+
+			actions.Allocate();
+			method.machine.AddExtern("SystemObjectArray.__Set__SystemInt32_SystemObject__SystemVoid", actions.OwnType(),
+				method.machine.GetConstVariable((int)0).OwnType(), action.OwnType());
+
+			method.PushStack(actions);
 		}
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)

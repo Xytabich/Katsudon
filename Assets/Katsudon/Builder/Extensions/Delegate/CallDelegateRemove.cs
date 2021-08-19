@@ -9,9 +9,6 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 	[OperationBuilder]
 	public class CallDelegateRemove : IOperationBuider
 	{
-		private const int TARGET_OFFSET = 0;
-		private const int METHOD_NAME_OFFSET = 1;
-
 		public int order => 15;
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
@@ -122,8 +119,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					var valueA = method.GetTmpVariable(typeof(object));
 					var valueB = method.GetTmpVariable(typeof(object));
 					condition = method.GetTmpVariable(typeof(bool));
-					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(TARGET_OFFSET).OwnType());
-					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(TARGET_OFFSET).OwnType());
+					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(DelegateUtility.TARGET_OFFSET).OwnType());
+					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(DelegateUtility.TARGET_OFFSET).OwnType());
 					method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, valueA.OwnType(), valueB.OwnType());
 					method.machine.AddBranch(condition, continueLabel);
 
@@ -131,8 +128,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					valueA = method.GetTmpVariable(typeof(object));
 					valueB = method.GetTmpVariable(typeof(object));
 					condition = method.GetTmpVariable(typeof(bool));
-					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(METHOD_NAME_OFFSET).OwnType());
-					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(METHOD_NAME_OFFSET).OwnType());
+					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(DelegateUtility.METHOD_NAME_OFFSET).OwnType());
+					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(DelegateUtility.METHOD_NAME_OFFSET).OwnType());
 					method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, valueA.OwnType(), valueB.OwnType());
 					method.machine.AddBranch(condition, continueLabel);
 

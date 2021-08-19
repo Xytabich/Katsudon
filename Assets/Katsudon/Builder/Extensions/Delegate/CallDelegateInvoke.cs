@@ -10,13 +10,10 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 	[OperationBuilder]
 	public class CallDelegateInvoke : IOperationBuider
 	{
-		private const int TARGET_OFFSET = 0;
-		private const int METHOD_NAME_OFFSET = 1;
-		private const int ARGUMENTS_OFFSET = 2;
-
 		public int order => 15;
 
-		private List<ITmpVariable> argumentsCache = null;//TODO: cache
+		private List<VariableMeta> argumentsCache = new List<VariableMeta>();//TODO: cache
+		private List<ITmpVariable> reservedCache = new List<ITmpVariable>();
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
@@ -28,15 +25,24 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				int argsCount = parameters.Length;
 				if(argsCount != 0)
 				{
-					if(argumentsCache == null) argumentsCache = new List<ITmpVariable>();
 					var iterator = method.PopMultiple(argsCount);
+					int index = 0;
 					while(iterator.MoveNext())
 					{
-						argumentsCache.Add(method.GetTmpVariable(iterator.Current).Reserve());
+						var parameter = iterator.Current;
+						var type = parameters[index].ParameterType;
+						if(type.IsByRef) type = type.GetElementType();
+						else
+						{
+							parameter = method.GetTmpVariable(parameter).Reserve();
+							reservedCache.Add((ITmpVariable)parameter);
+						}
+						argumentsCache.Add(parameter.UseType(type));
+						index++;
 					}
 				}
 
-				//Struct: object[][]{{target, methodName[, ...args][, returnName}}
+				//Struct: object[][]{{target, methodName, delegateType[, ...args][, returnName]}}
 				var actions = method.GetTmpVariable(method.PopStack()).Reserve();
 
 				var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetOrPushOutVariable(methodInfo.ReturnType);
@@ -46,39 +52,95 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					var action = method.GetTmpVariable(typeof(object)).Reserve();
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", action, actions.OwnType(), index.OwnType());
 
-					var target = ElementGetter(method, action, TARGET_OFFSET).Reserve();
+					var udonCallLabel = new EmbedAddressLabel();
+					var externLabel = new EmbedAddressLabel();
+					var externStaticLabel = new EmbedAddressLabel();
 
-					if(argsCount != 0)
+					var startLabel = method.machine.CreateLabelVariable();
+					var jumpAddress = ElementGetter(method, action, DelegateUtility.DELEGATE_TYPE_OFFSET).Reserve();
+					AddAddressOperation(method.machine, BinaryOperator.Multiplication, jumpAddress, method.machine.GetConstVariable((uint)sizeof(uint)));
+					AddAddressOperation(method.machine, BinaryOperator.Addition, jumpAddress, startLabel);
+					method.machine.AddJump(jumpAddress);
+					jumpAddress.Release();
+					(startLabel as IEmbedAddressLabel).Apply();
+					method.machine.AddJump(udonCallLabel);// DelegateUtility.TYPE_UDON_BEHAVIOUR
+					method.machine.AddJump(externLabel);// DelegateUtility.TYPE_EXTERN
+					method.machine.AddJump(externStaticLabel);// DelegateUtility.TYPE_STATIC_EXTERN
+
+					var endLabel = new EmbedAddressLabel();
+					#region udon method call
 					{
-						for(int i = 0; i < argumentsCache.Count; i++)
+						method.machine.ApplyLabel(udonCallLabel);
+						var target = ElementGetter(method, action, DelegateUtility.TARGET_OFFSET).Reserve();
+						for(int i = 0; i < argsCount; i++)
 						{
-							method.machine.SetVariableExtern(target, ElementGetter(method, action, i + ARGUMENTS_OFFSET), argumentsCache[i]);
+							method.machine.SetVariableExtern(target, ElementGetter(method, action, i + DelegateUtility.ARGUMENTS_OFFSET), argumentsCache[i]);
 						}
+
+						method.machine.SendEventExtern(target, ElementGetter(method, action, DelegateUtility.METHOD_NAME_OFFSET));
+
+						if(outVariable != null)
+						{
+							method.machine.GetVariableExtern(target, ElementGetter(method, action, argsCount + DelegateUtility.ARGUMENTS_OFFSET), outVariable);
+						}
+						target.Release();
+						method.machine.AddJump(endLabel);
 					}
-
-					method.machine.SendEventExtern(target, ElementGetter(method, action, METHOD_NAME_OFFSET));
-
-					if(outVariable != null)
+					#endregion
+					#region extern method call
 					{
-						method.machine.GetVariableExtern(target, ElementGetter(method, action, argsCount + ARGUMENTS_OFFSET), outVariable);
-					}
+						method.machine.ApplyLabel(externLabel);
 
+						var rawMachine = method.machine as IRawUdonMachine;
+
+						var target = ElementGetter(method, action, DelegateUtility.TARGET_OFFSET).Reserve();
+						rawMachine.AddPush(target.OwnType());
+
+						method.machine.ApplyLabel(externStaticLabel);
+
+						for(int i = 0; i < argsCount; i++)
+						{
+							rawMachine.AddPush(argumentsCache[i]);
+						}
+
+						if(outVariable != null)
+						{
+							outVariable.Allocate();
+							rawMachine.AddPush(outVariable.OwnType());
+						}
+
+						var nameVariable = ElementGetter(method, action, DelegateUtility.METHOD_NAME_OFFSET);
+						nameVariable.Use();
+						rawMachine.mainMachine.AddOpcode(VRC.Udon.VM.Common.OpCode.EXTERN, nameVariable);
+
+						rawMachine.ApplyReferences();
+						target.Release();
+					}
+					#endregion
+
+					method.machine.ApplyLabel(endLabel);
 					action.Release();
-					target.Release();
 				}
 				actions.Release();
 				if(argsCount != 0)
 				{
-					for(int i = 0; i < argumentsCache.Count; i++)
-					{
-						argumentsCache[i].Release();
-					}
 					argumentsCache.Clear();
+					for(int i = 0; i < reservedCache.Count; i++)
+					{
+						reservedCache[i].Release();
+					}
+					reservedCache.Clear();
 				}
 
 				return true;
 			}
 			return false;
+		}
+
+		private static void AddAddressOperation(IUdonMachine machine, BinaryOperator op, IVariable inOutVariable, IVariable rightVariable)
+		{
+			machine.AddExtern(BinaryOperatorExtension.GetExternName(op, typeof(uint), typeof(uint), typeof(uint)),
+				inOutVariable, inOutVariable.OwnType(), rightVariable.OwnType());
 		}
 
 		private static ITmpVariable ElementGetter(IMethodDescriptor method, IVariable action, int index)

@@ -6,33 +6,31 @@ using Katsudon.Info;
 namespace Katsudon.Builder.Extensions.DelegateExtension
 {
 	[VariableBuilder]
-	public class MethodPatternBuilder : IVariableBuilder
+	public class UdonMethodPatternBuilder : IVariableBuilder
 	{
-		private const int METHOD_NAME_OFFSET = 1;
-		private const int ARGUMENTS_OFFSET = 2;
-
 		int IVariableBuilder.order => 50;
 
 		bool IVariableBuilder.TryBuildVariable(IVariable variable, VariablesTable table)
 		{
 			var type = variable.type;
-			if(typeof(MethodPattern).IsAssignableFrom(type))
+			if(typeof(UdonMethodPattern).IsAssignableFrom(type))
 			{
 				if(variable is ISignificantVariable significant)
 				{
-					var info = ((MethodPattern)significant.value).method;
-					var pattern = new object[2 + info.parametersName.Length + (string.IsNullOrEmpty(info.returnName) ? 0 : 1)];
-					pattern[METHOD_NAME_OFFSET] = info.name;
+					var info = ((UdonMethodPattern)significant.value).method;
+					var pattern = new object[3 + info.parametersName.Length + (string.IsNullOrEmpty(info.returnName) ? 0 : 1)];
+					pattern[DelegateUtility.METHOD_NAME_OFFSET] = info.name;
+					pattern[DelegateUtility.DELEGATE_TYPE_OFFSET] = (uint)DelegateUtility.TYPE_UDON_BEHAVIOUR;
 
 					string[] parameters = info.parametersName;
 					for(int i = 0; i < parameters.Length; i++)
 					{
-						pattern[ARGUMENTS_OFFSET + i] = parameters[i];
+						pattern[DelegateUtility.ARGUMENTS_OFFSET + i] = parameters[i];
 					}
 
 					if(!string.IsNullOrEmpty(info.returnName))
 					{
-						pattern[ARGUMENTS_OFFSET + parameters.Length] = info.returnName;
+						pattern[DelegateUtility.ARGUMENTS_OFFSET + parameters.Length] = info.returnName;
 					}
 
 					table.AddVariable(TypedSignificantVariable.From(variable, typeof(object[]), pattern));
@@ -53,22 +51,22 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)
 		{
-			container.AddBuilder(new MethodPatternBuilder());
+			container.AddBuilder(new UdonMethodPatternBuilder());
 		}
 	}
 
-	public struct MethodPattern
+	public struct UdonMethodPattern
 	{
 		public readonly AsmMethodInfo method;
 
-		public MethodPattern(AsmMethodInfo method)
+		public UdonMethodPattern(AsmMethodInfo method)
 		{
 			this.method = method;
 		}
 
 		public override bool Equals(object obj)
 		{
-			return obj is MethodPattern pattern && method == pattern.method;
+			return obj is UdonMethodPattern pattern && method == pattern.method;
 		}
 
 		public override int GetHashCode()
