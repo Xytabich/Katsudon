@@ -20,7 +20,7 @@ namespace Katsudon.Builder.Variables
 			var type = variable.type;
 			if(typeof(Type).IsAssignableFrom(type))
 			{
-				if(variable is ISignificantVariable significant)
+				if(variable is ISignificantVariable significant && significant.value != null)
 				{
 					if(Utils.IsUdonAsm((Type)significant.value))
 					{
@@ -28,6 +28,10 @@ namespace Katsudon.Builder.Variables
 					}
 					else
 					{
+						if(!Utils.IsUdonType((Type)significant.value))
+						{
+							throw new Exception(string.Format("Type {0} is not supported by Udon", significant.value));
+						}
 						table.AddVariable(TypedSignificantVariable.From(variable, typeof(Type), significant.value));
 					}
 				}

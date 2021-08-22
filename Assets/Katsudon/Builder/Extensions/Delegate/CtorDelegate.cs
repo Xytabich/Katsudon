@@ -44,6 +44,13 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					return true;
 				}
 			}
+			else if(typeof(Delegate).IsAssignableFrom(methodPtr.method.DeclaringType))
+			{
+				method.PopStack();
+				var target = method.PopStack();
+				method.machine.AddExtern("SystemArray.__Clone__SystemObject", () => method.GetOrPushOutVariable(typeof(Delegate)), target.OwnType());
+				return true;
+			}
 			else
 			{
 				method.PopStack();
