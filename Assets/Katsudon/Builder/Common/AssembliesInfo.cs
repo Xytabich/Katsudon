@@ -128,7 +128,7 @@ namespace Katsudon.Info
 			this.parametersName = new string[parameters.Length];
 			for(var i = 0; i < parameters.Length; i++)
 			{
-				this.parametersName[i] = string.Format("{0}__{1}", name, Utils.PrepareMemberName(parameters[i].Name));
+				this.parametersName[i] = string.Format("{0}__parameter_{1}", name, i);
 			}
 			if(method.ReturnType != typeof(void))
 			{
@@ -167,16 +167,15 @@ namespace Katsudon.Info
 		{
 			None,
 			Export = 0x01,
-			Network = 0x02,
 			/// <summary>
 			/// Unique methods can only use their own name; therefore, there cannot be more than one method with this name in one declaring type.
 			/// Moreover, if there is a method with this name in the base class, it will become private.
 			/// </summary>
-			Unique = 0x04,
+			Unique = 0x02,
 			/// <summary>
 			/// Family methods can override methods with the same structure from base types, i.e. use method and parameter names.
 			/// </summary>
-			Family = 0x08
+			Family = 0x04
 		}
 	}
 

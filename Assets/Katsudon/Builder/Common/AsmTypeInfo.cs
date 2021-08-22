@@ -89,15 +89,16 @@ namespace Katsudon.Info
 					}
 					else
 					{
+						// First method always has a declared name, the rest are named uniquely
 						var retName = method.returnName;
-						if(retName != null) PickFieldName(retName);
+						if(retName != null) PickFieldName(retName, false);
 
 						var paramNames = new string[method.parametersName.Length];
 						for(int i = 0; i < paramNames.Length; i++)
 						{
-							paramNames[i] = PickFieldName(method.parametersName[i]);
+							paramNames[i] = PickFieldName(method.parametersName[i], false);
 						}
-						method = new AsmMethodInfo(PickMethodName(method.name), paramNames, retName, method);
+						method = new AsmMethodInfo(PickMethodName(method.name, false), paramNames, retName, method);
 					}
 				}
 				(familyMethods ?? (familyMethods = new Dictionary<MethodNameId, AsmMethodInfo>())).Add(id, method);
@@ -222,9 +223,10 @@ namespace Katsudon.Info
 			return info;
 		}
 
-		private string PickFieldName(string name)
+		private string PickFieldName(string name, bool unique = true)
 		{
-			return string.Format(INTERNAL_NAME_FORMAT, GetCounter(true, name).PickNumber(), name);
+			int counter = GetCounter(true, name).PickNumber();
+			return unique || counter > 0 ? string.Format(INTERNAL_NAME_FORMAT, counter, name) : name;
 		}
 
 		private void SetUniqueFieldName(string name)
@@ -235,9 +237,10 @@ namespace Katsudon.Info
 			}
 		}
 
-		private string PickMethodName(string name)
+		private string PickMethodName(string name, bool unique = true)
 		{
-			return string.Format(INTERNAL_NAME_FORMAT, GetCounter(false, name).PickNumber(), name);
+			int counter = GetCounter(false, name).PickNumber();
+			return unique || counter > 0 ? string.Format(INTERNAL_NAME_FORMAT, counter, name) : name;
 		}
 
 		private void SetUniqueMethodName(string name)
