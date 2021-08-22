@@ -13,12 +13,6 @@ namespace Katsudon.Builder.AsmOpCodes
 	[OperationBuilder]
 	public class CallGetComponents : IOperationBuider
 	{
-		public const string CALL_METHOD_FORMAT = "UnityEngineComponent.__{0}__SystemType__UnityEngineComponentArray";
-		public const string CALL_METHOD_INCLUDING_FORMAT = "UnityEngineComponent.__{0}__SystemType_SystemBoolean__UnityEngineComponentArray";
-
-		private const string CALL_GENERIC_FORMAT = "UnityEngineComponent.__{0}__TArray";
-		private const string CALL_GENERIC_INCLUDING_FORMAT = "UnityEngineComponent.__{0}__SystemBoolean__TArray";
-
 		public int order => 15;
 
 		private AssembliesInfo assemblies;
@@ -54,13 +48,15 @@ namespace Katsudon.Builder.AsmOpCodes
 				}
 				IVariable typeVariable;
 
+				bool isGameObject = methodInfo.DeclaringType == typeof(GameObject);
+
 				if(methodInfo.IsGenericMethod)
 				{
 					var searchType = methodInfo.GetGenericArguments()[0];
 					if(Utils.IsUdonAsm(searchType))
 					{
 						var targetVariable = method.PopStack();
-						BuildGetUdonComponents(method, targetVariable, getterName,
+						BuildGetUdonComponents(method, targetVariable, isGameObject, getterName,
 							method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
 							includeInactive,
 							method.GetOrPushOutVariable(searchType.MakeArrayType())
@@ -71,7 +67,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					{
 						var targetVariable = method.PopStack();
 						ExternCall(method,
-							string.Format(includeInactive == null ? CALL_GENERIC_FORMAT : CALL_GENERIC_INCLUDING_FORMAT, getterName),
+							GetGenericExternName(isGameObject, includeInactive == null, getterName),
 							targetVariable, method.machine.GetConstVariable(searchType, typeof(Type)),
 							true, includeInactive,
 							method.GetOrPushOutVariable(searchType.MakeArrayType())
@@ -95,13 +91,14 @@ namespace Katsudon.Builder.AsmOpCodes
 					{
 						if(Utils.IsUdonAsm((Type)constVariable.value))
 						{
-							BuildGetUdonComponents(method, targetVariable, getterName, typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component[])));
+							BuildGetUdonComponents(method, targetVariable, isGameObject, getterName,
+								typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component[])));
 							return true;
 						}
 						else
 						{
 							ExternCall(method,
-								string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),
+								GetExternName(isGameObject, includeInactive == null, getterName),
 								targetVariable, typeVariable,
 								false, includeInactive,
 								method.GetOrPushOutVariable(typeof(Component[]))
@@ -130,7 +127,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 						typeVariable.Allocate();
 						ExternCall(method,
-							string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),
+							GetExternName(isGameObject, includeInactive == null, getterName),
 							targetVariable, typeVariable,
 							false, includeInactive,
 							outVariable
@@ -139,7 +136,7 @@ namespace Katsudon.Builder.AsmOpCodes
 						method.machine.AddJump(endLabel);
 
 						method.machine.ApplyLabel(guidSearchLabel);
-						BuildGetUdonComponents(method, targetVariable, getterName, typeVariable, includeInactive, outVariable);
+						BuildGetUdonComponents(method, targetVariable, isGameObject, getterName, typeVariable, includeInactive, outVariable);
 
 						method.machine.ApplyLabel(endLabel);
 						return true;
@@ -149,7 +146,24 @@ namespace Katsudon.Builder.AsmOpCodes
 			return false;
 		}
 
-		private static void BuildGetUdonComponents(IMethodDescriptor method, IVariable targetVariable, string getterName, IVariable searchType, IVariable includeInactive, IVariable outComponents)
+		public static string GetExternName(bool gameObject, bool includeInactive, string getterName)
+		{
+			const string CALL_METHOD_FORMAT = "{0}.__{1}__SystemType__UnityEngineComponentArray";
+			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemType_SystemBoolean__UnityEngineComponentArray";
+			return string.Format(includeInactive ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
+				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
+		}
+
+		private static string GetGenericExternName(bool gameObject, bool includeInactive, string getterName)
+		{
+			const string CALL_METHOD_FORMAT = "{0}.__{1}__TArray";
+			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemBoolean__TArray";
+			return string.Format(includeInactive ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
+				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
+		}
+
+		private static void BuildGetUdonComponents(IMethodDescriptor method, IVariable targetVariable,
+			bool isGameObject, string getterName, IVariable searchType, IVariable includeInactive, IVariable outComponents)
 		{
 			/*
 			Component[] GetUdonComponents(Guid searchTypeId)
@@ -176,7 +190,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			var component = method.GetTmpVariable(typeof(Component)).Reserve();
 
 			ExternCall(method,
-				string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),
+				GetExternName(isGameObject, includeInactive == null, getterName),
 				targetVariable, method.machine.GetConstVariable(typeof(UdonBehaviour), typeof(Type)),
 				false, includeInactive,
 				components

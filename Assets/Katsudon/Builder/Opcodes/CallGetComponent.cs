@@ -12,12 +12,6 @@ namespace Katsudon.Builder.AsmOpCodes
 	[OperationBuilder]
 	public class CallGetComponent : IOperationBuider
 	{
-		private const string CALL_GENERIC_FORMAT = "UnityEngineComponent.__{0}__T";
-		private const string CALL_GENERIC_INCLUDING_FORMAT = "UnityEngineComponent.__{0}__SystemBoolean__T";
-
-		private const string CALL_METHOD_FORMAT = "UnityEngineComponent.__{0}__SystemType__UnityEngineComponent";
-		private const string CALL_METHOD_INCLUDING_FORMAT = "UnityEngineComponent.__{0}__SystemType_SystemBoolean__UnityEngineComponent";
-
 		public int order => 15;
 
 		private AssembliesInfo assemblies;
@@ -53,13 +47,15 @@ namespace Katsudon.Builder.AsmOpCodes
 				}
 				IVariable typeVariable;
 
+				bool isGameObject = methodInfo.DeclaringType == typeof(GameObject);
+
 				if(methodInfo.IsGenericMethod)
 				{
 					var searchType = methodInfo.GetGenericArguments()[0];
 					if(Utils.IsUdonAsm(searchType))
 					{
 						var targetVariable = method.PopStack();
-						BuildGetUdonComponent(method, targetVariable, getterName,
+						BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
 							method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
 							includeInactive, method.GetOrPushOutVariable(searchType)
 						);
@@ -69,7 +65,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					{
 						var targetVariable = method.PopStack();
 						ExternCall(method,
-							string.Format(includeInactive == null ? CALL_GENERIC_FORMAT : CALL_GENERIC_INCLUDING_FORMAT, getterName),
+							GetGenericExternName(isGameObject, includeInactive == null, getterName),
 							targetVariable, method.machine.GetConstVariable(searchType, typeof(Type)),
 							true, includeInactive,
 							method.GetOrPushOutVariable(searchType)
@@ -93,13 +89,14 @@ namespace Katsudon.Builder.AsmOpCodes
 					{
 						if(Utils.IsUdonAsm((Type)constVariable.value))
 						{
-							BuildGetUdonComponent(method, targetVariable, getterName, typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component)));
+							BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
+								typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component)));
 							return true;
 						}
 						else
 						{
 							ExternCall(method,
-								string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),
+								GetExternName(isGameObject, includeInactive == null, getterName),
 								targetVariable, typeVariable,
 								false, includeInactive,
 								method.GetOrPushOutVariable(typeof(Component))
@@ -122,13 +119,14 @@ namespace Katsudon.Builder.AsmOpCodes
 						typeVariable.Allocate();
 						method.machine.AddExtern("SystemObject.__GetType__SystemType", typeOfType, typeVariable.OwnType());
 						var guidCondition = method.GetTmpVariable(typeof(bool));
-						method.machine.BinaryOperatorExtern(BinaryOperator.Inequality, typeOfType, method.machine.GetConstVariable(typeof(Guid), typeof(Type)), guidCondition);
+						method.machine.BinaryOperatorExtern(BinaryOperator.Inequality, typeOfType,
+							method.machine.GetConstVariable(typeof(Guid), typeof(Type)), guidCondition);
 						var guidSearchLabel = new EmbedAddressLabel();
 						method.machine.AddBranch(guidCondition, guidSearchLabel);
 
 						typeVariable.Allocate();
 						ExternCall(method,
-							string.Format(includeInactive == null ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT, getterName),
+							GetExternName(isGameObject, includeInactive == null, getterName),
 							targetVariable, typeVariable,
 							false, includeInactive,
 							outVariable
@@ -137,7 +135,7 @@ namespace Katsudon.Builder.AsmOpCodes
 						method.machine.AddJump(endLabel);
 
 						method.machine.ApplyLabel(guidSearchLabel);
-						BuildGetUdonComponent(method, targetVariable, getterName, typeVariable, includeInactive, outVariable);
+						BuildGetUdonComponent(method, targetVariable, isGameObject, getterName, typeVariable, includeInactive, outVariable);
 
 						method.machine.ApplyLabel(endLabel);
 						return true;
@@ -147,7 +145,24 @@ namespace Katsudon.Builder.AsmOpCodes
 			return false;
 		}
 
-		private static void BuildGetUdonComponent(IMethodDescriptor method, IVariable targetVariable, string getterName, IVariable searchType, IVariable includeInactive, IVariable componentVariable)
+		private static string GetExternName(bool gameObject, bool includeInactive, string getterName)
+		{
+			const string CALL_METHOD_FORMAT = "{0}.__{1}__SystemType__UnityEngineComponent";
+			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemType_SystemBoolean__UnityEngineComponent";
+			return string.Format(includeInactive ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
+				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
+		}
+
+		private static string GetGenericExternName(bool gameObject, bool includeInactive, string getterName)
+		{
+			const string CALL_METHOD_FORMAT = "{0}.__{1}__T";
+			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemBoolean__T";
+			return string.Format(includeInactive ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
+				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
+		}
+
+		private static void BuildGetUdonComponent(IMethodDescriptor method, IVariable targetVariable,
+			bool isGameObject, string getterName, IVariable searchType, IVariable includeInactive, IVariable componentVariable)
 		{
 			//FIX: small search optimization - if the type is interface or abstract, the guid comparison step can be skipped
 			/*
@@ -173,7 +188,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			var components = method.GetTmpVariable(typeof(Component[])).Reserve();
 
 			ExternCall(method,
-				string.Format(includeInactive == null ? CallGetComponents.CALL_METHOD_FORMAT : CallGetComponents.CALL_METHOD_INCLUDING_FORMAT, getterName),
+				CallGetComponents.GetExternName(isGameObject, includeInactive == null, getterName),
 				targetVariable, method.machine.GetConstVariable(typeof(UdonBehaviour), typeof(Type)),
 				false, includeInactive,
 				components
