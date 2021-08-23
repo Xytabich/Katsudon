@@ -112,6 +112,8 @@ namespace Katsudon.Info
 
 	public sealed class AsmMethodInfo
 	{
+		public const string PARAMETER_FORMAT = "{0}__parameter_{1}";
+
 		public readonly Flags flags;
 		public readonly string name;
 		public readonly string[] parametersName;
@@ -128,7 +130,7 @@ namespace Katsudon.Info
 			this.parametersName = new string[parameters.Length];
 			for(var i = 0; i < parameters.Length; i++)
 			{
-				this.parametersName[i] = string.Format("{0}__parameter_{1}", name, i);
+				this.parametersName[i] = string.Format(PARAMETER_FORMAT, name, i);
 			}
 			if(method.ReturnType != typeof(void))
 			{
