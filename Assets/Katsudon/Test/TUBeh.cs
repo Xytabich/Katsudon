@@ -76,39 +76,41 @@ public class TUBeh : TBase, TInt
 		other.Test(this);
 		UnityEngine.Debug.Log(test);*/
 
-		bt = 1;
-		int cb = ~(int)bt;
-		unchecked
-		{
-			Debug.Log((byte)cb + ":" + (~(byte)1));
-		}
+		// bt = 1;
+		// int cb = ~(int)bt;
+		// unchecked
+		// {
+		// 	Debug.Log((byte)cb + ":" + (~(byte)1));
+		// }
 
-		foreach(var p in "abcd")
-		{
-			Debug.Log(p);
-		}
+		// foreach(var p in "abcd")
+		// {
+		// 	Debug.Log(p);
+		// }
 
-		Debug.Log("abcd"[0]);
+		// Debug.Log("abcd"[0]);
 
-		TstEvt(refVariable);
-		self = this;
+		// TstEvt(refVariable);
+		// self = this;
 
-		Debug.Log(TstEvt("1"));
-		Debug.Log(TSCall(3, 8));
+		// Debug.Log(TstEvt("1"));
+		// Debug.Log(TSCall(3, 8));
 
-		self.evt = Convert.ToInt32;
-		Debug.Log(self.evt.Invoke("0"));
-		self.evt += Convert.ToInt32;
-		evt -= Convert.ToInt32;
-		Debug.Log(evt.Invoke("1"));
-		evt -= Convert.ToInt32;
-		evt += TstEvt;
-		Debug.Log(evt.Invoke("0"));
-		evt += Convert.ToInt32;
-		Debug.Log(evt.Invoke("0"));
-		evt -= Convert.ToInt32;
-		evt -= TstEvt;
-		Debug.Log(evt);
+		// self.evt = Convert.ToInt32;
+		// Debug.Log(self.evt.Invoke("0"));
+		// self.evt += Convert.ToInt32;
+		// evt -= Convert.ToInt32;
+		// Debug.Log(evt.Invoke("1"));
+		// evt -= Convert.ToInt32;
+		// evt += TstEvt;
+		// Debug.Log(evt.Invoke("0"));
+		// evt += Convert.ToInt32;
+		// Debug.Log(evt.Invoke("0"));
+		// evt -= Convert.ToInt32;
+		// evt -= TstEvt;
+		// Debug.Log(evt);
+
+		this.SendCustomEvent("TestMessage");
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -117,12 +119,9 @@ public class TUBeh : TBase, TInt
 		return b == "1" ? 1 : 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private void TstEvt(in int a)
+	private void TestMessage()
 	{
-		Debug.Log(a);
-		refVariable = 1000;
-		Debug.Log(a);
+		Debug.Log("Message!");
 	}
 
 	void Update()

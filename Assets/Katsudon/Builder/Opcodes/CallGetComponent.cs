@@ -145,19 +145,19 @@ namespace Katsudon.Builder.AsmOpCodes
 			return false;
 		}
 
-		private static string GetExternName(bool gameObject, bool includeInactive, string getterName)
+		private static string GetExternName(bool gameObject, bool defaultCall, string getterName)
 		{
 			const string CALL_METHOD_FORMAT = "{0}.__{1}__SystemType__UnityEngineComponent";
 			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemType_SystemBoolean__UnityEngineComponent";
-			return string.Format(includeInactive ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
+			return string.Format(defaultCall ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
 				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
 		}
 
-		private static string GetGenericExternName(bool gameObject, bool includeInactive, string getterName)
+		private static string GetGenericExternName(bool gameObject, bool defaultCall, string getterName)
 		{
 			const string CALL_METHOD_FORMAT = "{0}.__{1}__T";
 			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemBoolean__T";
-			return string.Format(includeInactive ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
+			return string.Format(defaultCall ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
 				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
 		}
 

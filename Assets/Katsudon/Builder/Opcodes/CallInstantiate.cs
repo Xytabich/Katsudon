@@ -13,8 +13,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
-			var methodName = methodInfo.Name;
-			if(methodName == nameof(UnityEngine.Object.Instantiate) && methodInfo.DeclaringType == typeof(UnityEngine.Object))
+			if(methodInfo.Name == nameof(UnityEngine.Object.Instantiate) && methodInfo.DeclaringType == typeof(UnityEngine.Object))
 			{
 				if(methodInfo.IsGenericMethod)
 				{
