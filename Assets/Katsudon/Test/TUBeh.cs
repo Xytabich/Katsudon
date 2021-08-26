@@ -37,6 +37,8 @@ public class TUBeh : TBase, TInt
 	private byte bt;
 	private int refVariable = 10;
 
+	private MethodImplOptions enumVar;
+
 	public void Start()
 	{
 		/*var abc = Image.Type.Filled;
@@ -115,6 +117,14 @@ public class TUBeh : TBase, TInt
 
 		int v = (int)img.fillMethod;
 		Debug.Log(v.ToString());
+
+		enumVar = MethodImplOptions.ForwardRef;
+		enumVar |= MethodImplOptions.AggressiveInlining;
+		switch(enumVar)
+		{
+			case MethodImplOptions.ForwardRef: Debug.Log(1); break;
+			case MethodImplOptions.AggressiveInlining: Debug.Log(2); break;
+		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

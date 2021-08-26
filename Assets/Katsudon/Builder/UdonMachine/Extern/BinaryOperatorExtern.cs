@@ -70,6 +70,7 @@ namespace Katsudon.Builder.Externs
 						type = NumberCodeUtils.ToType(unsigned.Value ? NumberCodeUtils.ToUnsigned(code) : NumberCodeUtils.ToSigned(code));
 					}
 				}
+				type = NumberCodeUtils.ToPrimitive(type);
 				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(type), type, () => method.GetOrPushOutVariable(type));
 			}
 		}
@@ -132,6 +133,7 @@ namespace Katsudon.Builder.Externs
 				}
 
 				constVariable = null;
+				type = NumberCodeUtils.ToPrimitive(type);
 				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(type), typeof(bool), retVariableCtor);
 			}
 		}
