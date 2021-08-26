@@ -1,5 +1,4 @@
 ﻿using System.Reflection.Emit;
-using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.AsmOpCodes
 {
@@ -17,9 +16,10 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public void ProcessOp(IMethodDescriptor method, IUdonMachine udonMachine, int methodAddress, IVariable condition)
 		{
-			IVariable outVariable = null;
-			udonMachine.UnaryOperatorExtern(UnaryOperator.UnaryNegation, condition.UseType(typeof(bool)), typeof(bool), () => (outVariable = method.GetTmpVariable(typeof(bool))));
-			udonMachine.AddBranch(outVariable, method.GetMachineAddressLabel(methodAddress));
+			var skipLabel = new EmbedAddressLabel();
+			udonMachine.AddBranch(condition, skipLabel);
+			udonMachine.AddJump(method.GetMachineAddressLabel(methodAddress));
+			udonMachine.ApplyLabel(skipLabel);
 		}
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
