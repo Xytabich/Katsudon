@@ -188,5 +188,10 @@ namespace Katsudon
 			}
 			throw new InvalidOperationException("Target is not primitive number");
 		}
+
+		public static Type ToPrimitive(Type type)
+		{
+			return ToType(Type.GetTypeCode(type));
+		}
 	}
 }

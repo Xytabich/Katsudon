@@ -18,8 +18,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var variable = method.PeekStack(0);
-			if(NumberCodeUtils.IsPrimitive(NumberCodeUtils.GetCode(variable.type)) ||
-				NumberCodeUtils.IsPrimitive(NumberCodeUtils.GetCode((Type)method.currentOp.argument)))
+			if(NumberCodeUtils.IsConvertible(variable.type) && NumberCodeUtils.IsPrimitive(NumberCodeUtils.GetCode((Type)method.currentOp.argument)))
 			{
 				if(convertersList.TryConvert(method, variable, (Type)method.currentOp.argument, out var converted))
 				{

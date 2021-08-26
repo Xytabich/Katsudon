@@ -86,7 +86,10 @@ namespace Katsudon.Builder.AsmOpCodes
 			else
 			{
 				if(variable.type == type) method.PushStack(variable);
-				else method.machine.ConvertExtern(variable, type, () => method.GetOrPushOutVariable(type));
+				else
+				{
+					method.machine.ConvertExtern(variable.UseType(NumberCodeUtils.ToPrimitive(variable.type)), type, () => method.GetOrPushOutVariable(type));
+				}
 			}
 			return true;
 		}

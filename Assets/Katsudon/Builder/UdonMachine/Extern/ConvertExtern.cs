@@ -22,6 +22,15 @@ namespace Katsudon.Builder.Externs
 			);
 		}
 
+		public static void ConvertExtern(this IUdonMachine machine, VariableMeta fromVariable, Type outType, Func<IVariable> outVariableCtor)
+		{
+			machine.AddExtern(
+				GetExternName(fromVariable.preferredType, outType),
+				outVariableCtor,
+				fromVariable
+			);
+		}
+
 		public static string GetExternName(Type inType, Type outType)
 		{
 			return Utils.GetExternName(typeof(Convert), "__To" + outType.Name + "__{0}__{1}", inType, outType);

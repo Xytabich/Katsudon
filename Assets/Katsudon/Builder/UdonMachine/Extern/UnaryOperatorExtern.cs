@@ -39,7 +39,8 @@ namespace Katsudon.Builder.Externs
 			}
 			else
 			{
-				method.machine.UnaryOperatorExtern(operationType, value.OwnType(), value.type, () => method.GetOrPushOutVariable(value.type));
+				var type = NumberCodeUtils.ToPrimitive(value.type);
+				method.machine.UnaryOperatorExtern(operationType, value.UseType(type), type, () => method.GetOrPushOutVariable(type));
 			}
 		}
 

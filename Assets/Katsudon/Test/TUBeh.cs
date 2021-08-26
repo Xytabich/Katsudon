@@ -113,7 +113,8 @@ public class TUBeh : TBase, TInt
 		// evt -= TstEvt;
 		// Debug.Log(evt);
 
-		this.SendCustomEvent("TestMessage");
+		int v = (int)img.fillMethod;
+		Debug.Log(v.ToString());
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

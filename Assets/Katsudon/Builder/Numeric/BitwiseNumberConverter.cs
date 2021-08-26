@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Variables
 	{
 		public int order => 100;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable value, Type toType, out IVariable converted)
+		public bool TryConvert(IUdonProgramBlock block, in IVariable inValue, Type toType, out IVariable converted)
 		{
 			var toCode = NumberCodeUtils.GetCode(toType);
 			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
@@ -20,7 +20,15 @@ namespace Katsudon.Builder.Variables
 				return false;
 			}
 
-			var fromCode = NumberCodeUtils.GetCode(value.type);
+			var value = inValue;
+			var fromCode = Type.GetTypeCode(value.type);
+			if(!value.type.IsPrimitive)
+			{
+				var primitiveType = NumberCodeUtils.ToType(fromCode);
+				value = block.GetTmpVariable(primitiveType);
+				block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), primitiveType), value, inValue.OwnType());
+			}
+
 			var fromUnsigned = NumberCodeUtils.IsUnsigned(fromCode);
 			var toUnsigned = NumberCodeUtils.IsUnsigned(toCode);
 

@@ -81,7 +81,7 @@ namespace Katsudon
 		public static IVariable GetOrPushOutVariable(this IMethodDescriptor method, Type type, int addAllocate = 0)
 		{
 			IVariable variable;
-			if(!method.TryGetNextSt(out variable))
+			if(!method.TryGetNextSt(type, out variable))
 			{
 				variable = method.GetTmpVariable(type);
 				if(addAllocate > 0) variable.Allocate(addAllocate);
@@ -90,8 +90,9 @@ namespace Katsudon
 			return variable;
 		}
 
-		public static bool TryGetNextSt(this IMethodDescriptor method, out IVariable variable)
+		public static bool TryGetNextSt(this IMethodDescriptor method, Type targetType, out IVariable variable)
 		{
+			variable = null;
 			method.PushState();
 			method.Next();
 			var op = method.currentOp;
@@ -108,6 +109,12 @@ namespace Katsudon
 							FieldInfo field;
 							if(ILUtils.TryGetStfld(method.currentOp, out field))
 							{
+								if(!field.FieldType.IsAssignableFrom(targetType))
+								{
+									method.PopState();
+									return false;
+								}
+
 								variable = (method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
 								method.DropState();
 								return true;
@@ -121,7 +128,13 @@ namespace Katsudon
 					FieldInfo field;
 					if(ILUtils.TryGetStfld(op, out field))
 					{
-						variable =(method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
+						if(!field.FieldType.IsAssignableFrom(targetType))
+						{
+							method.PopState();
+							return false;
+						}
+
+						variable = (method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
 						method.DropState();
 						method.PopStack().Use();
 						return true;
@@ -130,25 +143,42 @@ namespace Katsudon
 			}
 			if(ILUtils.TryGetStarg(op, out argIndex))
 			{
-				method.DropState();
 				variable = method.GetArgumentVariable(argIndex);
+				if(!variable.type.IsAssignableFrom(targetType))
+				{
+					method.PopState();
+					return false;
+				}
+
+				method.DropState();
 				return true;
 			}
 			int locIndex;
 			if(ILUtils.TryGetStloc(op, out locIndex))
 			{
-				method.DropState();
 				variable = method.GetLocalVariable(locIndex);
+				if(!variable.type.IsAssignableFrom(targetType))
+				{
+					method.PopState();
+					return false;
+				}
+
+				method.DropState();
 				return true;
 			}
 			if(op.opCode == OpCodes.Ret)
 			{
-				method.PopState();
 				variable = method.GetReturnVariable();
+				if(!variable.type.IsAssignableFrom(targetType))
+				{
+					method.PopState();
+					return false;
+				}
+
+				method.PopState();
 				return true;
 			}
 			method.PopState();
-			variable = null;
 			return false;
 		}
 

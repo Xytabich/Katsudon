@@ -91,7 +91,8 @@ namespace Katsudon.Builder.Externs
 			}
 			else
 			{
-				method.machine.BinaryOperatorExtern(operationType, a.OwnType(), b.UseType(typeof(int)), a.type, () => method.GetOrPushOutVariable(a.type));
+				var type = NumberCodeUtils.ToPrimitive(a.type);
+				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(typeof(int)), type, () => method.GetOrPushOutVariable(type));
 			}
 		}
 
