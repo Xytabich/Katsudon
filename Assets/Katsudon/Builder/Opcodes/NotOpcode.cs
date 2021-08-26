@@ -12,7 +12,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var value = method.PopStack();
-			var code = Type.GetTypeCode(value.type);
+			var code = NumberCodeUtils.GetCode(value.type);
 			if(value is IConstVariable constValue)
 			{
 				switch(code)

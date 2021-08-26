@@ -20,8 +20,8 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void ProcessOp(IMethodDescriptor method, IVariable a, IVariable b, Func<IVariable> retVariableCtor, out IVariable constVariable)
 		{
-			var aCode = Type.GetTypeCode(a.type);
-			var bCode = Type.GetTypeCode(b.type);
+			var aCode = NumberCodeUtils.GetCode(a.type);
+			var bCode = NumberCodeUtils.GetCode(b.type);
 
 			var ac = a as IConstVariable;
 			var bc = b as IConstVariable;

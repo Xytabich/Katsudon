@@ -44,8 +44,8 @@ namespace Katsudon.Builder.Externs
 			var bc = b as IConstVariable;
 			if(ac != null && bc != null)
 			{
-				var aCode = Type.GetTypeCode(ac.type);
-				var bCode = Type.GetTypeCode(bc.type);
+				var aCode = NumberCodeUtils.GetCode(ac.type);
+				var bCode = NumberCodeUtils.GetCode(bc.type);
 				bool real = NumberCodeUtils.IsFloat(aCode) || NumberCodeUtils.IsFloat(bCode);
 				bool unsig = unsigned.HasValue ? unsigned.Value : (NumberCodeUtils.IsUnsigned(aCode) || NumberCodeUtils.IsUnsigned(bCode));
 				method.PushStack(method.machine.GetConstVariable(constCtor(
@@ -58,13 +58,13 @@ namespace Katsudon.Builder.Externs
 			{
 				Type type = a.type;
 				if(a.type != b.type && bc == null && (ac != null ||
-					NumberCodeUtils.GetSize(Type.GetTypeCode(b.type)) > NumberCodeUtils.GetSize(Type.GetTypeCode(a.type))))
+					NumberCodeUtils.GetSize(NumberCodeUtils.GetCode(b.type)) > NumberCodeUtils.GetSize(NumberCodeUtils.GetCode(a.type))))
 				{
 					type = b.type;
 				}
 				if(unsigned.HasValue)
 				{
-					var code = Type.GetTypeCode(type);
+					var code = NumberCodeUtils.GetCode(type);
 					if(NumberCodeUtils.IsUnsigned(code) != unsigned.Value)
 					{
 						type = NumberCodeUtils.ToType(unsigned.Value ? NumberCodeUtils.ToUnsigned(code) : NumberCodeUtils.ToSigned(code));
@@ -81,7 +81,7 @@ namespace Katsudon.Builder.Externs
 			var bc = b as IConstVariable;
 			if(ac != null && bc != null)
 			{
-				var aCode = Type.GetTypeCode(ac.type);
+				var aCode = NumberCodeUtils.GetCode(ac.type);
 				bool unsig = unsigned.HasValue ? unsigned.Value : NumberCodeUtils.IsUnsigned(aCode);
 				method.PushStack(method.machine.GetConstVariable(constCtor(
 					GetTypedNumberValue(ac.value, aCode, false, unsig),
@@ -102,8 +102,8 @@ namespace Katsudon.Builder.Externs
 			var bc = b as IConstVariable;
 			if(ac != null && bc != null)
 			{
-				var aCode = Type.GetTypeCode(ac.type);
-				var bCode = Type.GetTypeCode(bc.type);
+				var aCode = NumberCodeUtils.GetCode(ac.type);
+				var bCode = NumberCodeUtils.GetCode(bc.type);
 				bool real = NumberCodeUtils.IsFloat(aCode) || NumberCodeUtils.IsFloat(bCode);
 				bool unsig = unsigned.HasValue ? unsigned.Value : (NumberCodeUtils.IsUnsigned(aCode) || NumberCodeUtils.IsUnsigned(bCode));
 
@@ -117,13 +117,13 @@ namespace Katsudon.Builder.Externs
 			{
 				Type type = a.type;
 				if(a.type != b.type && bc == null && (ac != null ||
-					NumberCodeUtils.GetSize(Type.GetTypeCode(b.type)) > NumberCodeUtils.GetSize(Type.GetTypeCode(a.type))))
+					NumberCodeUtils.GetSize(NumberCodeUtils.GetCode(b.type)) > NumberCodeUtils.GetSize(NumberCodeUtils.GetCode(a.type))))
 				{
 					type = b.type;
 				}
 				if(unsigned.HasValue)
 				{
-					var code = Type.GetTypeCode(type);
+					var code = NumberCodeUtils.GetCode(type);
 					if(NumberCodeUtils.IsUnsigned(code) != unsigned.Value)
 					{
 						type = NumberCodeUtils.ToType(unsigned.Value ? NumberCodeUtils.ToUnsigned(code) : NumberCodeUtils.ToSigned(code));

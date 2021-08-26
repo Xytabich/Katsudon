@@ -44,7 +44,10 @@ public class TUBeh : TBase, TInt
 		Debug.Log(abc | bcd);*/
 
 		// 	var tint = this as TInt;
-
+		if(img.fillMethod == Image.FillMethod.Horizontal)
+		{
+			img.fillMethod = Image.FillMethod.Vertical;
+		}
 		// 	img.fillMethod = Image.FillMethod.Horizontal;
 		// 	goto _label;
 		// _label2:

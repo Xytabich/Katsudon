@@ -29,7 +29,7 @@ namespace Katsudon.Builder.Externs
 			var cvalue = value as IConstVariable;
 			if(cvalue != null)
 			{
-				var aCode = Type.GetTypeCode(cvalue.type);
+				var aCode = NumberCodeUtils.GetCode(cvalue.type);
 				bool real = NumberCodeUtils.IsFloat(aCode);
 
 				method.PushStack(method.machine.GetConstVariable(constCtor(

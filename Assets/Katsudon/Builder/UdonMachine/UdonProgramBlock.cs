@@ -166,7 +166,7 @@ namespace Katsudon.Builder
 					}
 
 					var type = variableInfo.preferredType;
-					if(type != variable.type && NumberCodeUtils.IsPrimitive(Type.GetTypeCode(variable.type)))
+					if(type != variable.type && NumberCodeUtils.IsConvertible(variable.type))
 					{
 						if(convertersList.TryConvert(block, variable, type, out var converted))
 						{

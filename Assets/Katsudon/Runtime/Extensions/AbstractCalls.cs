@@ -4,20 +4,20 @@ using VRC.Udon.Common.Interfaces;
 
 public static class AbstractCallsHelper
 {
-	// public static bool DisableInteractive(this MonoBehaviour behaviour)
-	// {
-	// 	return (behaviour as IUdonEventReceiver).DisableInteractive;
-	// }
+	public static bool DisableInteractive(this MonoBehaviour behaviour)
+	{
+		return (behaviour as IUdonEventReceiver).DisableInteractive;
+	}
 
-	// public static void DisableInteractive(this MonoBehaviour behaviour, bool value)
-	// {
-	// 	(behaviour as IUdonEventReceiver).DisableInteractive = value;
-	// }
+	public static void DisableInteractive(this MonoBehaviour behaviour, bool value)
+	{
+		(behaviour as IUdonEventReceiver).DisableInteractive = value;
+	}
 
-	// public static void RequestSerialization(this MonoBehaviour behaviour)
-	// {
-	// 	(behaviour as IUdonEventReceiver).RequestSerialization();
-	// }
+	public static void RequestSerialization(this MonoBehaviour behaviour)
+	{
+		(behaviour as IUdonEventReceiver).RequestSerialization();
+	}
 
 	public static void SendCustomEvent(this MonoBehaviour behaviour, string eventName)
 	{

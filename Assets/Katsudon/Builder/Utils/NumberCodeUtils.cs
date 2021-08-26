@@ -4,6 +4,21 @@ namespace Katsudon
 {
 	public static class NumberCodeUtils
 	{
+		public static TypeCode GetCode(Type type)
+		{
+			if(type.IsPrimitive) return Type.GetTypeCode(type);
+			return TypeCode.Object;
+		}
+
+		public static bool IsConvertible(Type type)
+		{
+			if(typeof(IConvertible).IsAssignableFrom(type))
+			{
+				return IsPrimitive(Type.GetTypeCode(type));
+			}
+			return false;
+		}
+
 		public static bool IsPrimitive(TypeCode typeCode)
 		{
 			switch(typeCode)

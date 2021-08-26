@@ -17,7 +17,7 @@ namespace Katsudon.Builder.Variables
 				converted = null;
 				return false;
 			}
-			var toCode = Type.GetTypeCode(toType);
+			var toCode = NumberCodeUtils.GetCode(toType);
 			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
 			{
 				converted = null;
@@ -26,7 +26,7 @@ namespace Katsudon.Builder.Variables
 
 			if(NumberCodeUtils.IsInteger(toCode))
 			{
-				var fromCode = Type.GetTypeCode(constVariable.value.GetType());
+				var fromCode = NumberCodeUtils.GetCode(constVariable.value.GetType());
 				object outValue = constVariable.value;
 				if(NumberCodeUtils.IsUnsigned(fromCode))
 				{

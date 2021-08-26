@@ -13,14 +13,14 @@ namespace Katsudon.Builder.Variables
 
 		public bool TryConvert(IUdonProgramBlock block, in IVariable value, Type toType, out IVariable converted)
 		{
-			var toCode = Type.GetTypeCode(toType);
+			var toCode = NumberCodeUtils.GetCode(toType);
 			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
 			{
 				converted = null;
 				return false;
 			}
 
-			var fromCode = Type.GetTypeCode(value.type);
+			var fromCode = NumberCodeUtils.GetCode(value.type);
 			var fromUnsigned = NumberCodeUtils.IsUnsigned(fromCode);
 			var toUnsigned = NumberCodeUtils.IsUnsigned(toCode);
 
