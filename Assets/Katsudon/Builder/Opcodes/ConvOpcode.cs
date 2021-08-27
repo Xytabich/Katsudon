@@ -10,9 +10,9 @@ namespace Katsudon.Builder.AsmOpCodes
 		public int order => 0;
 
 		private Type type;
-		private NumericConvertersList convertersList;
+		private PrimitiveConvertersList convertersList;
 
-		private ConvOpcode(Type type, NumericConvertersList convertersList)
+		private ConvOpcode(Type type, PrimitiveConvertersList convertersList)
 		{
 			this.type = type;
 			this.convertersList = convertersList;
@@ -33,7 +33,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var convertersList = modules.GetModule<NumericConvertersList>();
+			var convertersList = modules.GetModule<PrimitiveConvertersList>();
 			var builder = new ConvOpcode(typeof(sbyte), convertersList);
 			container.RegisterOpBuilder(OpCodes.Conv_I1, builder);
 

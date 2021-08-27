@@ -11,10 +11,10 @@ namespace Katsudon.Builder.Methods
 		private IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap;
 		private MethodBodyBuilder bodyBuilder;
 		private MethodsInstance methodsContainer;
-		private NumericConvertersList convertersList;
+		private PrimitiveConvertersList convertersList;
 
 		public InterfaceMethodBuilder(IReadOnlyDictionary<MethodInfo, MethodInfo> methodsMap, MethodBodyBuilder bodyBuilder,
-			NumericConvertersList convertersList, MethodsInstance methodsContainer)
+			PrimitiveConvertersList convertersList, MethodsInstance methodsContainer)
 		{
 			this.methodsMap = methodsMap;
 			this.bodyBuilder = bodyBuilder;

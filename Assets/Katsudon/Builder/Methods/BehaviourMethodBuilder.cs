@@ -9,9 +9,9 @@ namespace Katsudon.Builder.Methods
 		public int order => 1000;
 
 		private MethodBodyBuilder bodyBuilder;
-		private NumericConvertersList convertersList;
+		private PrimitiveConvertersList convertersList;
 
-		public BehaviourMethodBuilder(MethodBodyBuilder bodyBuilder, NumericConvertersList convertersList)
+		public BehaviourMethodBuilder(MethodBodyBuilder bodyBuilder, PrimitiveConvertersList convertersList)
 		{
 			this.bodyBuilder = bodyBuilder;
 			this.convertersList = convertersList;

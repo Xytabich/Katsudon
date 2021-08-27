@@ -4,7 +4,7 @@ using Katsudon.Builder.Externs;
 namespace Katsudon.Builder.Variables
 {
 	[NumberConverter]
-	public class BoolVariableConverter : IFromNumberConverter
+	public class BoolVariableConverter : IPrimitiveConverter
 	{
 		public int order => 81;
 
@@ -27,7 +27,7 @@ namespace Katsudon.Builder.Variables
 			return true;
 		}
 
-		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
 		{
 			container.AddConverter(new BoolVariableConverter());
 		}

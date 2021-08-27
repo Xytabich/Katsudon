@@ -5,13 +5,13 @@ using UnityEngine.Assertions;
 
 namespace Katsudon.Builder
 {
-	public class NumericConvertersList : IComparer<IFromNumberConverter>
+	public class PrimitiveConvertersList : IComparer<IPrimitiveConverter>
 	{
-		private SortedSet<IFromNumberConverter> converters;
+		private SortedSet<IPrimitiveConverter> converters;
 
-		public NumericConvertersList(IModulesContainer modules)
+		public PrimitiveConvertersList(IModulesContainer modules)
 		{
-			converters = new SortedSet<IFromNumberConverter>(this);
+			converters = new SortedSet<IPrimitiveConverter>(this);
 			modules.AddModule(this);
 
 			var sortedTypes = OrderedTypeUtils.GetOrderedSet<NumberConverterAttribute>();
@@ -24,7 +24,7 @@ namespace Katsudon.Builder
 			}
 		}
 
-		public void AddConverter(IFromNumberConverter converter)
+		public void AddConverter(IPrimitiveConverter converter)
 		{
 			converters.Add(converter);
 		}
@@ -51,21 +51,21 @@ namespace Katsudon.Builder
 			return false;
 		}
 
-		int IComparer<IFromNumberConverter>.Compare(IFromNumberConverter x, IFromNumberConverter y)
+		int IComparer<IPrimitiveConverter>.Compare(IPrimitiveConverter x, IPrimitiveConverter y)
 		{
 			if(x.order == y.order) return x == y ? 0 : -1;
 			return x.order.CompareTo(y.order);
 		}
 	}
 
-	public interface IFromNumberConverter
+	public interface IPrimitiveConverter
 	{
 		int order { get; }
 
 		bool TryConvert(IUdonProgramBlock block, in IVariable value, Type toType, out IVariable converted);
 	}
 
-	public delegate void NumberConverterDelegate(NumericConvertersList container, IModulesContainer modules);
+	public delegate void NumberConverterDelegate(PrimitiveConvertersList container, IModulesContainer modules);
 
 	public sealed class NumberConverterAttribute : OrderedTypeAttributeBase
 	{

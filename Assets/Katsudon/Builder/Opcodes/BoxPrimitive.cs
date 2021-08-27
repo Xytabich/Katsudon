@@ -8,9 +8,9 @@ namespace Katsudon.Builder.AsmOpCodes
 	{
 		public int order => 900;
 
-		private NumericConvertersList convertersList;
+		private PrimitiveConvertersList convertersList;
 
-		public BoxPrimitive(NumericConvertersList convertersList)
+		public BoxPrimitive(PrimitiveConvertersList convertersList)
 		{
 			this.convertersList = convertersList;
 		}
@@ -32,7 +32,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			container.RegisterOpBuilder(OpCodes.Box, new BoxPrimitive(modules.GetModule<NumericConvertersList>()));
+			container.RegisterOpBuilder(OpCodes.Box, new BoxPrimitive(modules.GetModule<PrimitiveConvertersList>()));
 		}
 	}
 }

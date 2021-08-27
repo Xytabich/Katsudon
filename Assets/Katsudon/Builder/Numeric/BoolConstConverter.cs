@@ -3,7 +3,7 @@
 namespace Katsudon.Builder.Variables
 {
 	[NumberConverter]
-	public class BoolConstConverter : IFromNumberConverter
+	public class BoolConstConverter : IPrimitiveConverter
 	{
 		public int order => 80;
 
@@ -18,7 +18,7 @@ namespace Katsudon.Builder.Variables
 			return true;
 		}
 
-		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
 		{
 			container.AddConverter(new BoolConstConverter());
 		}

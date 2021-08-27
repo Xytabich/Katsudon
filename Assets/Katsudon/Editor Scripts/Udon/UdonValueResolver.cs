@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Katsudon.Builder;
 using Katsudon.Editor.Converters;
+using Katsudon.Utility;
+using NUnit.Framework;
 
 namespace Katsudon.Editor
 {
@@ -11,7 +14,15 @@ namespace Katsudon.Editor
 		public UdonValueResolver()
 		{
 			resolvers = new SortedSet<IValueConverter>(this);
-			resolvers.Add(new BehaviourTypes());
+			
+			var sortedTypes = OrderedTypeUtils.GetOrderedSet<ValueConverterAttribute>();
+			var args = new object[] { resolvers };
+			foreach(var pair in sortedTypes)
+			{
+				var method = MethodSearch<ValueConverterDelegate>.FindStaticMethod(pair.Value, "Register");
+				Assert.IsNotNull(method, string.Format("Value converter with type {0} does not have a Register method", pair.Value));
+				method.Invoke(null, args);
+			}
 		}
 
 		public bool TryConvertToUdon(object value, out object outValue)
@@ -20,9 +31,9 @@ namespace Katsudon.Editor
 			if(value == null) return true;
 			foreach(var resolver in resolvers)
 			{
-				if(resolver.TryConvertToUdon(value, out outValue))
+				if(resolver.TryConvertToUdon(value, out outValue, out bool isAllowed))
 				{
-					return true;
+					return isAllowed;
 				}
 			}
 			if(Utils.IsUdonType(value.GetType()))
@@ -43,9 +54,9 @@ namespace Katsudon.Editor
 			}
 			foreach(var resolver in resolvers)
 			{
-				if(resolver.TryConvertFromUdon(value, type, out outValue))
+				if(resolver.TryConvertFromUdon(value, type, out outValue, out bool isAllowed))
 				{
-					return true;
+					return isAllowed;
 				}
 			}
 			if(Utils.IsUdonType(value.GetType()))

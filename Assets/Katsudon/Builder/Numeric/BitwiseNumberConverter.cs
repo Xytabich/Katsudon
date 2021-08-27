@@ -7,7 +7,7 @@ namespace Katsudon.Builder.Variables
 	/// Builds a converter that converts one number to another bit by bit
 	/// </summary>
 	[NumberConverter]
-	public class BitwiseNumberConverter : IFromNumberConverter
+	public class BitwiseNumberConverter : IPrimitiveConverter
 	{
 		public int order => 100;
 
@@ -118,7 +118,7 @@ namespace Katsudon.Builder.Variables
 			return converted;
 		}
 
-		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
 		{
 			container.AddConverter(new BitwiseNumberConverter());
 		}

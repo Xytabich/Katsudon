@@ -6,7 +6,7 @@ namespace Katsudon.Builder.Variables
 	/// Converts one constant number to another bit by bit.
 	/// </summary>
 	[NumberConverter]
-	public class BitwiseNumberConstConverter : IFromNumberConverter
+	public class BitwiseNumberConstConverter : IPrimitiveConverter
 	{
 		public int order => 90;
 
@@ -67,7 +67,7 @@ namespace Katsudon.Builder.Variables
 			return true;
 		}
 
-		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
 		{
 			container.AddConverter(new BitwiseNumberConstConverter());
 		}

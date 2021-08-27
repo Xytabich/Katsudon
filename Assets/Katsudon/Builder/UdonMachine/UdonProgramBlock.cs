@@ -11,7 +11,7 @@ namespace Katsudon.Builder
 		private Dictionary<Type, Stack<TmpVariable>> releasedVariables = new Dictionary<Type, Stack<TmpVariable>>();
 		private HashSet<TmpVariable> variablesInUse = new HashSet<TmpVariable>();
 
-		public UdonProgramBlock(UdonMachine udonMachine, NumericConvertersList convertersList)
+		public UdonProgramBlock(UdonMachine udonMachine, PrimitiveConvertersList convertersList)
 		{
 			this.machine = new UdonBlockBuilder(udonMachine, this, convertersList);
 		}
@@ -98,11 +98,11 @@ namespace Katsudon.Builder
 
 			private UdonMachine udonMachine;
 			private IUdonProgramBlock block;
-			private NumericConvertersList convertersList;
+			private PrimitiveConvertersList convertersList;
 
 			private Stack<IReferenceVariable> referencesStack = new Stack<IReferenceVariable>();
 
-			public UdonBlockBuilder(UdonMachine udonMachine, IUdonProgramBlock block, NumericConvertersList convertersList)
+			public UdonBlockBuilder(UdonMachine udonMachine, IUdonProgramBlock block, PrimitiveConvertersList convertersList)
 			{
 				this.udonMachine = udonMachine;
 				this.block = block;

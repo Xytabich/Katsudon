@@ -23,7 +23,7 @@ namespace Katsudon.Builder
 		private VariableBuildersCollection variableBuilders;
 		private CtorDefaultsExtractor defaultsExtractor;
 		private StringBuilder cachedSb = new StringBuilder();
-		private NumericConvertersList convertersList;
+		private PrimitiveConvertersList convertersList;
 
 		private Dictionary<Type, object> modules = new Dictionary<Type, object>();
 		private List<TypeOpCodeBuider> typeOperationBuilders;
@@ -42,7 +42,7 @@ namespace Katsudon.Builder
 				method.Invoke(null, ctorArgs);
 			}
 
-			convertersList = new NumericConvertersList(this);
+			convertersList = new PrimitiveConvertersList(this);
 
 			methodBodyBuilder = new MethodBodyBuilder();
 			AddModule(methodBodyBuilder);

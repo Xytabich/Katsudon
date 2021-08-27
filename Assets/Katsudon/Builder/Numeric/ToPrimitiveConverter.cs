@@ -4,7 +4,7 @@ using Katsudon.Builder.Externs;
 namespace Katsudon.Builder.Extensions.EnumExtension
 {
 	[NumberConverter]
-	public class ToPrimitiveConverter : IFromNumberConverter
+	public class ToPrimitiveConverter : IPrimitiveConverter
 	{
 		public int order => 80;
 
@@ -22,7 +22,7 @@ namespace Katsudon.Builder.Extensions.EnumExtension
 			return true;
 		}
 
-		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
 		{
 			container.AddConverter(new ToPrimitiveConverter());
 		}

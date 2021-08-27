@@ -19,6 +19,8 @@ public class TUBeh : TBase, TInt
 	public Sprite sprite;
 	public TuTuBeh other;
 
+	public MethodImplOptions enumVar;
+
 	public int counter = 0;
 
 	private TimeSpan dt = DateTime.Now - new DateTime(1999, 9, 16).AddMonths(129);
@@ -36,8 +38,6 @@ public class TUBeh : TBase, TInt
 	private TUBeh self;
 	private byte bt;
 	private int refVariable = 10;
-
-	private MethodImplOptions enumVar;
 
 	public void Start()
 	{

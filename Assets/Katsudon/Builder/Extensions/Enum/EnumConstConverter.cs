@@ -3,7 +3,7 @@
 namespace Katsudon.Builder.Extensions.EnumExtension
 {
 	[NumberConverter]
-	public class EnumConstConverter : IFromNumberConverter
+	public class EnumConstConverter : IPrimitiveConverter
 	{
 		public int order => 50;
 
@@ -24,7 +24,7 @@ namespace Katsudon.Builder.Extensions.EnumExtension
 			return true;
 		}
 
-		public static void Register(NumericConvertersList container, IModulesContainer modules)
+		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
 		{
 			container.AddConverter(new EnumConstConverter());
 		}
