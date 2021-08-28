@@ -2,13 +2,14 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
+using VRC.Udon.Common.Interfaces;
 
 namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
 	public class CallMonoBehaviour : IOperationBuider
 	{
-		public int order => 20;
+		public int order => 19;
 
 		private Dictionary<MethodInfo, System.Func<IMethodDescriptor, IUdonMachine, bool>> methods;
 
@@ -61,24 +62,34 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 		private bool GetEnabled(IMethodDescriptor method, IUdonMachine udonMachine)
 		{
-			var target = method.PopStack();
-			udonMachine.AddExtern(
-				"VRCUdonCommonInterfacesIUdonEventReceiver.__get_enabled__SystemBoolean",
-				() => method.GetOrPushOutVariable(typeof(bool)),
-				target.OwnType()
-			);
-			return true;
+			var target = method.PeekStack(0);
+			if(target is ThisVariable || typeof(IUdonEventReceiver).IsAssignableFrom(target.type) || Utils.IsUdonAsm(target.type))
+			{
+				method.PopStack();
+				udonMachine.AddExtern(
+					"VRCUdonCommonInterfacesIUdonEventReceiver.__get_enabled__SystemBoolean",
+					() => method.GetOrPushOutVariable(typeof(bool)),
+					target.OwnType()
+				);
+				return true;
+			}
+			return false;
 		}
 
 		private bool SetEnabled(IMethodDescriptor method, IUdonMachine udonMachine)
 		{
-			var value = method.PopStack();
-			var target = method.PopStack();
-			udonMachine.AddExtern(
-				"VRCUdonCommonInterfacesIUdonEventReceiver.__set_enabled__SystemBoolean__SystemVoid",
-				target.OwnType(), value.OwnType()
-			);
-			return true;
+			var target = method.PeekStack(1);
+			if(target is ThisVariable || typeof(IUdonEventReceiver).IsAssignableFrom(target.type) || Utils.IsUdonAsm(target.type))
+			{
+				var value = method.PopStack();
+				method.PopStack();
+				udonMachine.AddExtern(
+					"VRCUdonCommonInterfacesIUdonEventReceiver.__set_enabled__SystemBoolean__SystemVoid",
+					target.OwnType(), value.OwnType()
+				);
+				return true;
+			}
+			return false;
 		}
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
