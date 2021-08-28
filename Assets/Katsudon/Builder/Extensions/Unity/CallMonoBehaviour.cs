@@ -3,16 +3,16 @@ using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
-	public class CallUnityBehaviour : IOperationBuider
+	public class CallMonoBehaviour : IOperationBuider
 	{
 		public int order => 20;
 
 		private Dictionary<MethodInfo, System.Func<IMethodDescriptor, IUdonMachine, bool>> methods;
 
-		public CallUnityBehaviour()
+		public CallMonoBehaviour()
 		{
 			methods = new Dictionary<MethodInfo, System.Func<IMethodDescriptor, IUdonMachine, bool>>() {
 				{Utils.GetPropertyMethod<Component>(nameof(Component.transform)), GetTransform},
@@ -83,7 +83,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var instance = new CallUnityBehaviour();
+			var instance = new CallMonoBehaviour();
 			container.RegisterOpBuilder(OpCodes.Call, instance);
 			container.RegisterOpBuilder(OpCodes.Callvirt, instance);
 		}

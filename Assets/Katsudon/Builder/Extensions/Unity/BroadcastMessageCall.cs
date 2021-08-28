@@ -7,21 +7,21 @@ using Katsudon.Utility;
 using UnityEngine;
 using VRC.Udon;
 
-namespace Katsudon.Builder.Extensions.AbstractCalls
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
-	public class SendMessageUpwardsCall : IOperationBuider
+	public class BroadcastMessageCall : IOperationBuider
 	{
 		public int order => 15;
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
-			if(methodInfo.Name == nameof(GameObject.SendMessageUpwards) && (methodInfo.DeclaringType == typeof(Component) ||
+			if(methodInfo.Name == nameof(GameObject.BroadcastMessage) && (methodInfo.DeclaringType == typeof(Component) ||
 				methodInfo.DeclaringType == typeof(GameObject)))
 			{
 				/*
-				var behaviours = GetComponentsInParent(typeof(UdonBehaviour));
+				var behaviours = GetComponentsInChildren(typeof(UdonBehaviour));
 				for(int i = 0; i < behaviours.Length; i++)
 				{
 					if(!behaviours[i].enabled) continue;
@@ -58,7 +58,7 @@ namespace Katsudon.Builder.Extensions.AbstractCalls
 
 				var behaviours = method.GetTmpVariable(typeof(Component[])).Reserve();
 				method.machine.AddExtern(
-					CallGetComponents.GetExternName(methodInfo.DeclaringType == typeof(GameObject), true, nameof(GameObject.GetComponentsInParent)),
+					CallGetComponents.GetExternName(methodInfo.DeclaringType == typeof(GameObject), true, nameof(GameObject.GetComponentsInChildren)),
 					behaviours,
 					target.OwnType(),
 					method.machine.GetConstVariable(typeof(UdonBehaviour)).OwnType()
@@ -85,7 +85,7 @@ namespace Katsudon.Builder.Extensions.AbstractCalls
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var builder = new SendMessageUpwardsCall();
+			var builder = new BroadcastMessageCall();
 			container.RegisterOpBuilder(OpCodes.Call, builder);
 			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 		}

@@ -1,27 +1,26 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
-using Katsudon.Builder.AsmOpCodes;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
 using Katsudon.Utility;
 using UnityEngine;
 using VRC.Udon;
 
-namespace Katsudon.Builder.Extensions.AbstractCalls
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
-	public class BroadcastMessageCall : IOperationBuider
+	public class SendMessageUpwardsCall : IOperationBuider
 	{
 		public int order => 15;
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
-			if(methodInfo.Name == nameof(GameObject.BroadcastMessage) && (methodInfo.DeclaringType == typeof(Component) ||
+			if(methodInfo.Name == nameof(GameObject.SendMessageUpwards) && (methodInfo.DeclaringType == typeof(Component) ||
 				methodInfo.DeclaringType == typeof(GameObject)))
 			{
 				/*
-				var behaviours = GetComponentsInChildren(typeof(UdonBehaviour));
+				var behaviours = GetComponentsInParent(typeof(UdonBehaviour));
 				for(int i = 0; i < behaviours.Length; i++)
 				{
 					if(!behaviours[i].enabled) continue;
@@ -58,7 +57,7 @@ namespace Katsudon.Builder.Extensions.AbstractCalls
 
 				var behaviours = method.GetTmpVariable(typeof(Component[])).Reserve();
 				method.machine.AddExtern(
-					CallGetComponents.GetExternName(methodInfo.DeclaringType == typeof(GameObject), true, nameof(GameObject.GetComponentsInChildren)),
+					CallGetComponents.GetExternName(methodInfo.DeclaringType == typeof(GameObject), true, nameof(GameObject.GetComponentsInParent)),
 					behaviours,
 					target.OwnType(),
 					method.machine.GetConstVariable(typeof(UdonBehaviour)).OwnType()
@@ -85,7 +84,7 @@ namespace Katsudon.Builder.Extensions.AbstractCalls
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var builder = new BroadcastMessageCall();
+			var builder = new SendMessageUpwardsCall();
 			container.RegisterOpBuilder(OpCodes.Call, builder);
 			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 		}

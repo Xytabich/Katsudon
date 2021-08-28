@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Katsudon.Builder;
 using Katsudon.Info;
 
 namespace Katsudon.Members

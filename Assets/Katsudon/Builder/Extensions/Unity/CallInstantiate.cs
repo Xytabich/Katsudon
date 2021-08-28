@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
 	public class CallInstantiate : IOperationBuider

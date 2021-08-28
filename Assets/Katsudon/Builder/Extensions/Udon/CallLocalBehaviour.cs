@@ -2,7 +2,7 @@
 using System.Reflection.Emit;
 using Katsudon.Builder.Methods;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[TypeOperationBuilder]
 	public class CallLocalBehaviour : IOperationBuider

@@ -1,13 +1,12 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
-using Katsudon.Builder.AsmOpCodes;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
 using Katsudon.Utility;
 using UnityEngine;
 using VRC.Udon;
 
-namespace Katsudon.Builder.Extensions.AbstractCalls
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
 	public class SendMessageCall : IOperationBuider

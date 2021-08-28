@@ -4,7 +4,7 @@ using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[OperationBuilder]
 	public class LdInstanceField : IOperationBuider

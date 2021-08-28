@@ -2,10 +2,10 @@
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
-	public class IgnoreCall : IOperationBuider
+	public class IgnoreEditorCall : IOperationBuider
 	{
 		public int order => 10;
 
@@ -30,7 +30,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var instance = new IgnoreCall();
+			var instance = new IgnoreEditorCall();
 			container.RegisterOpBuilder(OpCodes.Call, instance);
 			container.RegisterOpBuilder(OpCodes.Callvirt, instance);
 		}

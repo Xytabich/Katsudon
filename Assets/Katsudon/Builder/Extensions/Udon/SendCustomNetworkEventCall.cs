@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Katsudon.Builder.Extensions.AbstractCalls
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[OperationBuilder]
 	public class SendCustomNetworkEventCall : IOperationBuider

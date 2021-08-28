@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[TypeOperationBuilder]
 	public class StLocalField : IOperationBuider

@@ -2,7 +2,7 @@
 using System.Reflection.Emit;
 using Katsudon.Info;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[TypeOperationBuilder(1)]
 	public class CallLocalVirtual : IOperationBuider

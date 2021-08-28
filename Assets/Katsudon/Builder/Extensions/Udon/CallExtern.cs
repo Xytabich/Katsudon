@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder.Helpers;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[OperationBuilder]
 	public class CallExtern : IOperationBuider

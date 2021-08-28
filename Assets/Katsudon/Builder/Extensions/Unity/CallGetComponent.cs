@@ -2,22 +2,21 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
-using Katsudon.Builder.Variables;
 using Katsudon.Info;
 using Katsudon.Utility;
 using UnityEngine;
 using VRC.Udon;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.UnityExtensions
 {
 	[OperationBuilder]
-	public class CallGetComponents : IOperationBuider
+	public class CallGetComponent : IOperationBuider
 	{
 		public int order => 15;
 
 		private AssembliesInfo assemblies;
 
-		private CallGetComponents(AssembliesInfo assemblies)
+		private CallGetComponent(AssembliesInfo assemblies)
 		{
 			this.assemblies = assemblies;
 		}
@@ -26,9 +25,9 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			var getterName = methodInfo.Name;
-			if((getterName == nameof(Component.GetComponents) ||
-				getterName == nameof(Component.GetComponentsInParent) ||
-				getterName == nameof(Component.GetComponentsInChildren)) &&
+			if((getterName == nameof(Component.GetComponent) ||
+				getterName == nameof(Component.GetComponentInParent) ||
+				getterName == nameof(Component.GetComponentInChildren)) &&
 				(methodInfo.DeclaringType == typeof(Component) || methodInfo.DeclaringType == typeof(GameObject)))
 			{
 				var parameters = methodInfo.GetParameters();
@@ -56,10 +55,9 @@ namespace Katsudon.Builder.AsmOpCodes
 					if(Utils.IsUdonAsm(searchType))
 					{
 						var targetVariable = method.PopStack();
-						BuildGetUdonComponents(method, targetVariable, isGameObject, getterName,
+						BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
 							method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
-							includeInactive,
-							method.GetOrPushOutVariable(searchType.MakeArrayType())
+							includeInactive, method.GetOrPushOutVariable(searchType)
 						);
 						return true;
 					}
@@ -70,7 +68,7 @@ namespace Katsudon.Builder.AsmOpCodes
 							GetGenericExternName(isGameObject, includeInactive == null, getterName),
 							targetVariable, method.machine.GetConstVariable(searchType, typeof(Type)),
 							true, includeInactive,
-							method.GetOrPushOutVariable(searchType.MakeArrayType())
+							method.GetOrPushOutVariable(searchType)
 						);
 						return true;
 					}
@@ -87,12 +85,12 @@ namespace Katsudon.Builder.AsmOpCodes
 				{
 					var targetVariable = method.PopStack();
 
-					if(typeVariable is IConstVariable constVariable)
+					if(typeVariable is IConstVariable constVariable)//TODO: move to GetComponentT part
 					{
 						if(Utils.IsUdonAsm((Type)constVariable.value))
 						{
-							BuildGetUdonComponents(method, targetVariable, isGameObject, getterName,
-								typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component[])));
+							BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
+								typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component)));
 							return true;
 						}
 						else
@@ -101,18 +99,18 @@ namespace Katsudon.Builder.AsmOpCodes
 								GetExternName(isGameObject, includeInactive == null, getterName),
 								targetVariable, typeVariable,
 								false, includeInactive,
-								method.GetOrPushOutVariable(typeof(Component[]))
+								method.GetOrPushOutVariable(typeof(Component))
 							);
 							return true;
 						}
 					}
 					else
 					{
-						var outVariable = method.GetOrPushOutVariable(typeof(Component[]));
+						var outVariable = method.GetOrPushOutVariable(typeof(Component));
 						/*
-						Component[] GetComponents(Type|Guid searchType)
+						Component GetComponent(Type|Guid searchType)
 						{
-							if(searchType.GetType() != typeof(Guid)) return GetComponents(searchType);
+							if(searchType.GetType() != typeof(Guid)) return GetComponent(searchType);
 
 							// ... search by guid
 						}
@@ -121,7 +119,8 @@ namespace Katsudon.Builder.AsmOpCodes
 						typeVariable.Allocate();
 						method.machine.AddExtern("SystemObject.__GetType__SystemType", typeOfType, typeVariable.OwnType());
 						var guidCondition = method.GetTmpVariable(typeof(bool));
-						method.machine.BinaryOperatorExtern(BinaryOperator.Inequality, typeOfType, method.machine.GetConstVariable(typeof(Guid), typeof(Type)), guidCondition);
+						method.machine.BinaryOperatorExtern(BinaryOperator.Inequality, typeOfType,
+							method.machine.GetConstVariable(typeof(Guid), typeof(Type)), guidCondition);
 						var guidSearchLabel = new EmbedAddressLabel();
 						method.machine.AddBranch(guidCondition, guidSearchLabel);
 
@@ -136,7 +135,7 @@ namespace Katsudon.Builder.AsmOpCodes
 						method.machine.AddJump(endLabel);
 
 						method.machine.ApplyLabel(guidSearchLabel);
-						BuildGetUdonComponents(method, targetVariable, isGameObject, getterName, typeVariable, includeInactive, outVariable);
+						BuildGetUdonComponent(method, targetVariable, isGameObject, getterName, typeVariable, includeInactive, outVariable);
 
 						method.machine.ApplyLabel(endLabel);
 						return true;
@@ -146,68 +145,65 @@ namespace Katsudon.Builder.AsmOpCodes
 			return false;
 		}
 
-		public static string GetExternName(bool gameObject, bool defaultCall, string getterName)
+		private static string GetExternName(bool gameObject, bool defaultCall, string getterName)
 		{
-			const string CALL_METHOD_FORMAT = "{0}.__{1}__SystemType__UnityEngineComponentArray";
-			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemType_SystemBoolean__UnityEngineComponentArray";
+			const string CALL_METHOD_FORMAT = "{0}.__{1}__SystemType__UnityEngineComponent";
+			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemType_SystemBoolean__UnityEngineComponent";
 			return string.Format(defaultCall ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
 				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
 		}
 
 		private static string GetGenericExternName(bool gameObject, bool defaultCall, string getterName)
 		{
-			const string CALL_METHOD_FORMAT = "{0}.__{1}__TArray";
-			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemBoolean__TArray";
+			const string CALL_METHOD_FORMAT = "{0}.__{1}__T";
+			const string CALL_METHOD_INCLUDING_FORMAT = "{0}.__{1}__SystemBoolean__T";
 			return string.Format(defaultCall ? CALL_METHOD_FORMAT : CALL_METHOD_INCLUDING_FORMAT,
 				gameObject ? "UnityEngineGameObject" : "UnityEngineComponent", getterName);
 		}
 
-		private static void BuildGetUdonComponents(IMethodDescriptor method, IVariable targetVariable,
-			bool isGameObject, string getterName, IVariable searchType, IVariable includeInactive, IVariable outComponents)
+		private static void BuildGetUdonComponent(IMethodDescriptor method, IVariable targetVariable,
+			bool isGameObject, string getterName, IVariable searchType, IVariable includeInactive, IVariable componentVariable)
 		{
+			//FIX: small search optimization - if the type is interface or abstract, the guid comparison step can be skipped
 			/*
-			Component[] GetUdonComponents(Guid searchTypeId)
+			Component GetUdonComponent(Guid searchTypeId)
 			{
-				int counter = 0;
 				var components = GetComponents(typeof(UdonBehaviour));
 				for(int i = 0; i < components.Length; i++)
 				{
 					var element = components[i];
-					if(element.typeId == searchTypeId || Array.BinarySearch(element.inherits, searchTypeId) >= 0)
-					{
-						components[counter] = element;
-						counter++;
-					}
+					if(element.typeId == searchTypeId) return element;
+					if(Array.BinarySearch(element.inherits, searchTypeId) >= 0) return element;
 				}
-				var outComponents = new Component[counter];
-				Array.Copy(components, outComponents, counter);
-				return outComponents;
+				return null;
 			}
 			*/
+			switch(getterName)
+			{
+				case nameof(Component.GetComponent): getterName = nameof(Component.GetComponents); break;
+				case nameof(Component.GetComponentInParent): getterName = nameof(Component.GetComponentsInParent); break;
+				case nameof(Component.GetComponentInChildren): getterName = nameof(Component.GetComponentsInChildren); break;
+			}
 
-			var counter = method.GetTmpVariable(typeof(int)).Reserve();
 			var components = method.GetTmpVariable(typeof(Component[])).Reserve();
-			var component = method.GetTmpVariable(typeof(Component)).Reserve();
 
 			ExternCall(method,
-				GetExternName(isGameObject, includeInactive == null, getterName),
+				CallGetComponents.GetExternName(isGameObject, includeInactive == null, getterName),
 				targetVariable, method.machine.GetConstVariable(typeof(UdonBehaviour), typeof(Type)),
 				false, includeInactive,
 				components
 			);
 
-			method.machine.AddCopy(method.machine.GetConstVariable((int)0), counter);
-
+			var endSuccessLabel = new EmbedAddressLabel();
 			using(ForLoop.Array(method, components, out var componentsIndex))
 			{
 				method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
-					component, components.OwnType(), componentsIndex.OwnType());
+					componentVariable, components.OwnType(), componentsIndex.OwnType());
 
-				var addToListLabel = new EmbedAddressLabel();
-
-				// if(element.typeId == searchTypeId)
+				// if(element.typeId == searchTypeId) return element;
 				var componentGuid = method.GetTmpVariable(typeof(Guid));
-				method.machine.GetVariableExtern(component, AsmTypeInfo.TYPE_ID_NAME, componentGuid);
+				componentVariable.Allocate();
+				method.machine.GetVariableExtern(componentVariable, AsmTypeInfo.TYPE_ID_NAME, componentGuid);
 
 				searchType.Allocate();
 				var condition = method.GetTmpVariable(typeof(bool));
@@ -215,12 +211,13 @@ namespace Katsudon.Builder.AsmOpCodes
 					BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
 					condition, componentGuid.OwnType(), searchType.OwnType()
 				);
-				method.machine.AddBranch(condition, addToListLabel);
+				method.machine.AddBranch(condition, endSuccessLabel);
 				// endif
 
-				// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0)
+				// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0) return element;
 				var inherits = method.GetTmpVariable(typeof(Guid[]));
-				method.machine.GetVariableExtern(component, AsmTypeInfo.INHERIT_IDS_NAME, inherits);
+				componentVariable.Allocate();
+				method.machine.GetVariableExtern(componentVariable, AsmTypeInfo.INHERIT_IDS_NAME, inherits);
 
 				var inheritsIndex = method.GetTmpVariable(typeof(int));
 				method.machine.AddExtern("SystemArray.__BinarySearch__SystemArray_SystemObject__SystemInt32",
@@ -228,30 +225,15 @@ namespace Katsudon.Builder.AsmOpCodes
 
 				condition = method.GetTmpVariable(typeof(bool));
 				method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
-				method.machine.AddBranch(condition, addToListLabel);
+				method.machine.AddBranch(condition, endSuccessLabel);
 				// endif
-				var continueLoopLabel = new EmbedAddressLabel();
-				method.machine.AddJump(continueLoopLabel);
-
-				method.machine.ApplyLabel(addToListLabel);
-				// components[counter++] = element;
-				method.machine.AddExtern("UnityEngineComponentArray.__Set__SystemInt32_UnityEngineComponent__SystemVoid",
-					components.OwnType(), counter.OwnType(), component.OwnType());
-				method.machine.BinaryOperatorExtern(BinaryOperator.Addition, counter, method.machine.GetConstVariable((int)1), counter);
-				// end
-
-				method.machine.ApplyLabel(continueLoopLabel);
 			}
+			componentVariable.Allocate();
+			method.machine.AddCopy(method.machine.GetConstVariable(null), componentVariable);
 
-			var udonType = ArrayTypes.GetUdonArrayType(outComponents.type);
-			method.machine.AddExtern(Utils.GetExternName(udonType, "__ctor__SystemInt32__{0}", udonType), outComponents, counter.OwnType());
-			outComponents.Allocate();
-			method.machine.AddExtern("SystemArray.__Copy__SystemArray_SystemArray_SystemInt32__SystemVoid",
-				components.OwnType(), outComponents.OwnType(), counter.OwnType());
+			method.machine.ApplyLabel(endSuccessLabel);
 
-			counter.Release();
 			components.Release();
-			component.Release();
 		}
 
 		private static void ExternCall(IMethodDescriptor method, string name, IVariable targetVariable,
@@ -273,7 +255,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var builder = new CallGetComponents(modules.GetModule<AssembliesInfo>());
+			var builder = new CallGetComponent(modules.GetModule<AssembliesInfo>());
 			container.RegisterOpBuilder(OpCodes.Call, builder);
 			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 		}

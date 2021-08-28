@@ -2,7 +2,7 @@
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 
-namespace Katsudon.Builder.Extensions.AbstractCalls
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[OperationBuilder]
 	public class SendCustomEventCall : IOperationBuider
