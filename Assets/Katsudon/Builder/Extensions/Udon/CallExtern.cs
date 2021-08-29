@@ -10,19 +10,16 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 	{
 		public int order => 20;
 
-		private IReadOnlyDictionary<MethodIdentifier, string> externs = null;
 		private List<VariableMeta> arguments = new List<VariableMeta>();
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			if(externs == null) externs = UdonCacheHelper.cache.GetMethodNames();
-
 			var methodInfo = method.currentOp.argument as MethodInfo;
-			if(externs.TryGetValue(UdonCacheHelper.cache.GetMethodIdentifier(methodInfo), out var fullName))
+			var parameters = methodInfo.GetParameters();
+			if(UdonCacheHelper.cache.TryFindUdonMethod(methodInfo.IsStatic ? null : method.PeekStack(parameters.Length).type, methodInfo, out var methodId, out var fullName))
 			{
 				int popCount = 0;
 				if(!methodInfo.IsStatic) popCount++;
-				var parameters = methodInfo.GetParameters();
 				popCount += parameters.Length;
 				if(popCount > 0)
 				{

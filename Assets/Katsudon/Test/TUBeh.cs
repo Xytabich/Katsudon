@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
+using VRC.SDK3.Components;
 using VRC.Udon;
 
 public class TUBeh : TBase, TInt
@@ -19,6 +20,7 @@ public class TUBeh : TBase, TInt
 	public Sprite sprite;
 	public TuTuBeh other;
 
+	public Image testComponent;
 	public MethodImplOptions enumVar;
 
 	public int counter = 0;
@@ -44,6 +46,8 @@ public class TUBeh : TBase, TInt
 		/*var abc = Image.Type.Filled;
 		var bcd = Image.Type.Sliced;
 		Debug.Log(abc | bcd);*/
+
+		testComponent.enabled = false;
 
 		// 	var tint = this as TInt;
 		if(img.fillMethod == Image.FillMethod.Horizontal)

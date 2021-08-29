@@ -19,7 +19,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				{
 					var info = ((ExternMethodPattern)significant.value);
 					var pattern = new object[3];
-					pattern[DelegateUtility.METHOD_NAME_OFFSET] = UdonCacheHelper.cache.GetMethodNames()[info.method];
+					pattern[DelegateUtility.METHOD_NAME_OFFSET] = info.fullName;
 					pattern[DelegateUtility.DELEGATE_TYPE_OFFSET] = info.isStatic ? (uint)DelegateUtility.TYPE_STATIC_EXTERN : (uint)DelegateUtility.TYPE_EXTERN;
 
 					table.AddVariable(TypedSignificantVariable.From(variable, typeof(object[]), pattern));
@@ -46,13 +46,15 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 	public struct ExternMethodPattern
 	{
+		public readonly string fullName;
 		public readonly bool isStatic;
-		public readonly MethodIdentifier method;
+		private MethodIdentifier method;
 
-		public ExternMethodPattern(MethodInfo method)
+		public ExternMethodPattern(string fullName, bool isStatic, MethodIdentifier method)
 		{
-			this.method = new MethodIdentifier(UdonCacheHelper.cache, method);
-			this.isStatic = method.IsStatic;
+			this.fullName = fullName;
+			this.isStatic = isStatic;
+			this.method = method;
 		}
 
 		public override bool Equals(object obj)

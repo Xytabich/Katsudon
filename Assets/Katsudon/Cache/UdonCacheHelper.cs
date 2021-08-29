@@ -419,10 +419,12 @@ namespace Katsudon.Builder.Helpers
 		private int[] arguments;
 		private int hashCode;
 
-		public MethodIdentifier(IUdonPartsCache cache, MethodBase info)
+		public MethodIdentifier(IUdonPartsCache cache, MethodBase info) : this(cache, info.DeclaringType, info) { }
+
+		public MethodIdentifier(IUdonPartsCache cache, Type calleeType, MethodBase info)
 		{
 			name = info.Name;
-			declaringType = cache.GetTypeIdentifier(info.DeclaringType);
+			declaringType = cache.GetTypeIdentifier(calleeType);
 
 			var parameters = info.GetParameters();
 			arguments = new int[parameters.Length];
@@ -508,6 +510,13 @@ namespace Katsudon.Builder.Helpers
 				sb.Append(arguments[i]);
 			}
 			sb.Append(" })");
+		}
+
+		public override string ToString()
+		{
+			var sb = new StringBuilder();
+			AppendCtor(sb);
+			return sb.ToString();
 		}
 
 		public static bool operator ==(MethodIdentifier a, MethodIdentifier b)

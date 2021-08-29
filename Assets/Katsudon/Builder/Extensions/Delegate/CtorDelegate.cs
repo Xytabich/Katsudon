@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder.AsmOpCodes;
+using Katsudon.Builder.Helpers;
 using Katsudon.Info;
 
 namespace Katsudon.Builder.Extensions.DelegateExtension
@@ -51,11 +52,11 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				method.machine.AddExtern("SystemArray.__Clone__SystemObject", () => method.GetOrPushOutVariable(typeof(Delegate)), target.OwnType());
 				return true;
 			}
-			else
+			else if(UdonCacheHelper.cache.TryFindUdonMethod(method.PeekStack(1).type, methodPtr.method, out var methodId, out var fullName))
 			{
 				method.PopStack();
 				var target = method.PopStack();
-				BuildDelegate(method, method.machine.GetConstVariable(new ExternMethodPattern(methodPtr.method)), target);
+				BuildDelegate(method, method.machine.GetConstVariable(new ExternMethodPattern(fullName, methodPtr.method.IsStatic, methodId)), target);
 				return true;
 			}
 			return false;

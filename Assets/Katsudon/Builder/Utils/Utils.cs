@@ -65,6 +65,23 @@ namespace Katsudon
 			return UdonCacheHelper.cache.ContainsUdonType(type);
 		}
 
+		public static bool TryFindUdonMethod(this IUdonPartsCache cache, Type calleeType, MethodInfo method, out MethodIdentifier id, out string fullName)
+		{
+			var names = cache.GetMethodNames();
+			id = new MethodIdentifier(cache, method);
+			if(names.TryGetValue(id, out fullName)) return true;
+			if(calleeType == null || !method.DeclaringType.IsAssignableFrom(calleeType)) return false;
+
+			var baseType = method.DeclaringType;
+			while(calleeType != baseType)
+			{
+				id = new MethodIdentifier(cache, calleeType, method);
+				if(names.TryGetValue(id, out fullName)) return true;
+				calleeType = calleeType.BaseType;
+			}
+			return false;
+		}
+
 		public static T Used<T>(this T variable) where T : IVariable
 		{
 			variable.Use();

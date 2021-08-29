@@ -143,9 +143,16 @@ namespace Katsudon.Builder.Helpers
 							{
 								var id = new MethodIdentifier(this, methodInfo);
 								MethodNodeInfo nodeInfo;
-								if(!methods.TryGetValue(id, out nodeInfo) || type.IsAssignableFrom(nodeInfo.declaringType))
+								if(methods.TryGetValue(id, out nodeInfo))
 								{
-									methods[id] = new MethodNodeInfo(type, module.Key + "." + action.Key);
+									if(nodeInfo.PreAddMethod(type))
+									{
+										nodeInfo.AddMethod(type, new MethodIdentifier(this, type, methodInfo), module.Key + "." + action.Key);
+									}
+								}
+								else
+								{
+									methods[id] = new MethodNodeInfo(type, new MethodIdentifier(this, type, methodInfo), module.Key + "." + action.Key);
 								}
 								continue;
 							}
@@ -188,7 +195,7 @@ namespace Katsudon.Builder.Helpers
 			this.fieldNames = fieldNames;
 
 			var methodNames = new Dictionary<MethodIdentifier, string>(methods.Count);
-			foreach(var pair in methods) methodNames.Add(pair.Key, pair.Value.fullName);
+			foreach(var pair in methods) pair.Value.FillList(methodNames);
 			this.methodNames = methodNames;
 		}
 
@@ -394,15 +401,79 @@ namespace Katsudon.Builder.Helpers
 			return string.Format("_{0}{1}", char.ToLowerInvariant(evt[0]), evt.Substring(1));
 		}
 
-		private struct MethodNodeInfo
+		private class MethodNodeInfo
 		{
-			public Type declaringType;
-			public string fullName;
+			private MethodNode rootNode = null;
+			private MethodNode lastNode = null;
 
-			public MethodNodeInfo(Type declaringType, string fullName)
+			public MethodNodeInfo(Type targetType, MethodIdentifier identifier, string fullName)
 			{
-				this.declaringType = declaringType;
-				this.fullName = fullName;
+				this.AddMethod(targetType, identifier, fullName);
+			}
+
+			public bool PreAddMethod(Type targetType)
+			{
+				var node = rootNode;
+				while(node != null)
+				{
+					if(node.targetType == targetType) return false;
+					if(node.targetType.IsAssignableFrom(targetType)) return false;
+					node = node.next;
+				}
+				node = rootNode;
+				MethodNode prevNode = null;
+				while(node != null)
+				{
+					if(targetType.IsAssignableFrom(node.targetType))
+					{
+						if(prevNode == null) rootNode = node.next;
+						else prevNode.next = node.next;
+						if(node.next == null) lastNode = prevNode;
+					}
+					else prevNode = node;
+					node = node.next;
+				}
+				return true;
+			}
+
+			public void AddMethod(Type targetType, MethodIdentifier identifier, string fullName)
+			{
+				if(rootNode == null)
+				{
+					lastNode = rootNode = new MethodNode(targetType, identifier, fullName);
+				}
+				else
+				{
+					var node = new MethodNode(targetType, identifier, fullName);
+					lastNode.next = node;
+					lastNode = node;
+				}
+			}
+
+			public void FillList(IDictionary<MethodIdentifier, string> list)
+			{
+				var node = rootNode;
+				while(node != null)
+				{
+					list.Add(node.identifier, node.fullName);
+					node = node.next;
+				}
+			}
+
+			private class MethodNode
+			{
+				public Type targetType;
+				public MethodIdentifier identifier;
+				public string fullName;
+				public MethodNode next = null;
+
+				public MethodNode(Type targetType, MethodIdentifier identifier, string fullName)
+				{
+					this.targetType = targetType;
+					this.identifier = identifier;
+					this.fullName = fullName;
+					this.next = null;
+				}
 			}
 		}
 

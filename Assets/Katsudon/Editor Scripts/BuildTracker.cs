@@ -81,6 +81,8 @@ namespace Katsudon.Editor
 
 		private static bool BuildAssemblies()
 		{
+			var startTime = DateTime.Now;
+
 			var allScripts = MonoImporter.GetAllRuntimeMonoScripts();
 			var options = new List<BuildOption>();
 			Dictionary<string, List<MonoScript>> libraries = null;
@@ -265,6 +267,8 @@ namespace Katsudon.Editor
 				AssetDatabase.StopAssetEditing();
 				AssetDatabase.SaveAssets();
 				AssetDatabase.Refresh();
+
+				Debug.Log("[Katsudon] Build finished in " + (DateTime.Now - startTime));
 				return true;
 			}
 			return false;
