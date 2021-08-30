@@ -159,7 +159,7 @@ namespace Katsudon.Builder
 			uint address = 0;
 			int methodIndex = 0;
 			uint nextMethodAddress = sortedMethods[methodIndex].address;
-			var exportedMethdos = new HashSet<string>();
+			var exportedMethods = new HashSet<string>();
 			foreach(var op in operations)
 			{
 				if(address == nextMethodAddress)
@@ -168,7 +168,7 @@ namespace Katsudon.Builder
 					var method = sortedMethods[methodIndex];
 					if(method.export)
 					{
-						if(!exportedMethdos.Add(method.name))
+						if(!exportedMethods.Add(method.name))
 						{
 							throw new Exception(string.Format("An exported method named '{0}' already exists", method.name));
 						}

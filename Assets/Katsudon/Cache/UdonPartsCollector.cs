@@ -58,6 +58,11 @@ namespace Katsudon.Builder.Helpers
 			ParseUdonGraph();
 		}
 
+		protected override void CreateMethodBaseTypesList()
+		{
+			ParseUdonGraph();
+		}
+
 		protected override void CreateCtorsList()
 		{
 			ParseUdonGraph();
@@ -195,8 +200,18 @@ namespace Katsudon.Builder.Helpers
 			this.fieldNames = fieldNames;
 
 			var methodNames = new Dictionary<MethodIdentifier, string>(methods.Count);
-			foreach(var pair in methods) pair.Value.FillList(methodNames);
+			foreach(var pair in methods) pair.Value.FillNames(methodNames);
 			this.methodNames = methodNames;
+
+			var tmpTypesList = new List<Type>();
+			var methodBaseTypes = new Dictionary<MethodIdentifier, Type[]>(methods.Count);
+			foreach(var pair in methods)
+			{
+				tmpTypesList.Clear();
+				pair.Value.FillTypes(tmpTypesList);
+				methodBaseTypes.Add(pair.Key, tmpTypesList.ToArray());
+			}
+			this.methodBaseTypes = methodBaseTypes;
 		}
 
 		private static bool IsGeneric(string str)
@@ -450,12 +465,22 @@ namespace Katsudon.Builder.Helpers
 				}
 			}
 
-			public void FillList(IDictionary<MethodIdentifier, string> list)
+			public void FillNames(IDictionary<MethodIdentifier, string> list)
 			{
 				var node = rootNode;
 				while(node != null)
 				{
 					list.Add(node.identifier, node.fullName);
+					node = node.next;
+				}
+			}
+
+			public void FillTypes(IList<Type> list)
+			{
+				var node = rootNode;
+				while(node != null)
+				{
+					list.Add(node.targetType);
 					node = node.next;
 				}
 			}

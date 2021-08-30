@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEditor;
 using UnityEngine;
 
@@ -62,19 +61,7 @@ namespace Katsudon.Builder.Helpers
 					{
 						indent++;
 						EditorUtility.DisplayProgressBar("Katsudon caching", "Building ctor list", 0.3f);
-						AppendLineFormat(sb, indent, "ctorNames = new Dictionary<MethodIdentifier, string>({0}) {{", ctorNames.Count);
-						indent++;
-						foreach(var pair in ctorNames)
-						{
-							sb.Append('\t', indent);
-							sb.Append("{ ");
-							pair.Key.AppendCtor(sb);
-							sb.Append(", \"");
-							sb.Append(pair.Value);
-							sb.Append("\" },\n");
-						}
-						indent--;
-						AppendLine(sb, indent, "};");
+						AppendListBuilder(sb, indent, "ctorNames", "Dictionary<MethodIdentifier, string>", ctorNames, MethodNamesBuilder);
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
@@ -84,21 +71,7 @@ namespace Katsudon.Builder.Helpers
 						indent++;
 						var fieldNames = collector.GetFieldNames();
 						EditorUtility.DisplayProgressBar("Katsudon caching", "Building fields list", 0.4f);
-						AppendLineFormat(sb, indent, "fieldNames = new Dictionary<FieldIdentifier, FieldNameInfo>({0}) {{", fieldNames.Count);
-						{
-							indent++;
-							foreach(var pair in fieldNames)
-							{
-								sb.Append('\t', indent);
-								sb.Append("{ ");
-								pair.Key.AppendCtor(sb);
-								sb.Append(", ");
-								pair.Value.AppendCtor(sb);
-								sb.Append(" },\n");
-							}
-							indent--;
-						}
-						AppendLine(sb, indent, "};");
+						AppendListBuilder(sb, indent, "fieldNames", "Dictionary<FieldIdentifier, FieldNameInfo>", fieldNames, FieldNamesBuilder);
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
@@ -108,21 +81,17 @@ namespace Katsudon.Builder.Helpers
 						indent++;
 						EditorUtility.DisplayProgressBar("Katsudon caching", "Building methods list", 0.5f);
 						var methodNames = collector.GetMethodNames();
-						AppendLineFormat(sb, indent, "methodNames = new Dictionary<MethodIdentifier, string>({0}) {{", methodNames.Count);
-						{
-							indent++;
-							foreach(var pair in methodNames)
-							{
-								sb.Append('\t', indent);
-								sb.Append("{ ");
-								pair.Key.AppendCtor(sb);
-								sb.Append(", \"");
-								sb.Append(pair.Value);
-								sb.Append("\" },\n");
-							}
-							indent--;
-						}
-						AppendLine(sb, indent, "};");
+						AppendListBuilder(sb, indent, "methodNames", "Dictionary<MethodIdentifier, string>", methodNames, MethodNamesBuilder);
+						indent--;
+					}
+					AppendLine(sb, indent, "}");
+
+					AppendLine(sb, indent, "protected override void CreateMethodBaseTypesList() {");
+					{
+						indent++;
+						EditorUtility.DisplayProgressBar("Katsudon caching", "Building methods list", 0.6f);
+						var methodBaseTypes = collector.GetMethodBaseTypes();
+						AppendListBuilder(sb, indent, "methodBaseTypes", "Dictionary<MethodIdentifier, Type[]>", methodBaseTypes, MethodBaseTypesBuilder);
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
@@ -130,23 +99,9 @@ namespace Katsudon.Builder.Helpers
 					AppendLine(sb, indent, "protected override void CreateMagicMethodsList() {");
 					{
 						indent++;
-						EditorUtility.DisplayProgressBar("Katsudon caching", "Building magic methods list", 0.6f);
-						var magicMethdos = collector.GetMagicMethods();
-						AppendLineFormat(sb, indent, "magicMethods = new Dictionary<string, MagicMethodInfo>({0}) {{", magicMethdos.Count);
-						{
-							indent++;
-							foreach(var pair in magicMethdos)
-							{
-								sb.Append('\t', indent);
-								sb.Append("{ \"");
-								sb.Append(pair.Key);
-								sb.Append("\", ");
-								pair.Value.AppendCtor(sb);
-								sb.Append(" },\n");
-							}
-							indent--;
-						}
-						AppendLine(sb, indent, "};");
+						EditorUtility.DisplayProgressBar("Katsudon caching", "Building magic methods list", 0.7f);
+						var magicMethods = collector.GetMagicMethods();
+						AppendListBuilder(sb, indent, "magicMethods", "Dictionary<string, MagicMethodInfo>", magicMethods, MagicMethodsBuilder);
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
@@ -154,22 +109,8 @@ namespace Katsudon.Builder.Helpers
 					AppendLine(sb, indent, "protected override void CreateTypesList() {");
 					{
 						indent++;
-						EditorUtility.DisplayProgressBar("Katsudon caching", "Building types list", 0.7f);
-						AppendLineFormat(sb, indent, "typeNames = new Dictionary<Type, string>({0}) {{", typeNames.Count);
-						{
-							indent++;
-							foreach(var pair in typeNames)
-							{
-								sb.Append('\t', indent);
-								sb.Append("{ ");
-								AppendTypeof(sb, pair.Key);
-								sb.Append(", \"");
-								sb.Append(pair.Value);
-								sb.Append("\" },\n");
-							}
-							indent--;
-						}
-						AppendLine(sb, indent, "};");
+						EditorUtility.DisplayProgressBar("Katsudon caching", "Building types list", 0.8f);
+						AppendListBuilder(sb, indent, "typeNames", "Dictionary<Type, string>", typeNames, TypeNamesBuilder);
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
@@ -177,24 +118,10 @@ namespace Katsudon.Builder.Helpers
 					AppendLine(sb, indent, "protected override void CreateTypeIdentifiersList() {");
 					{
 						indent++;
-						EditorUtility.DisplayProgressBar("Katsudon caching", "Building type identifiers list", 0.8f);
+						EditorUtility.DisplayProgressBar("Katsudon caching", "Building type identifiers list", 0.9f);
 						var typeIdentifiers = collector.GetTypeIdentifiers();
 						AppendLineFormat(sb, indent, "tmpTypeCounter = {0};", typeIdentifiers.Count);
-						AppendLineFormat(sb, indent, "typeIdentifiers = new Dictionary<Type, int>({0}) {{", typeIdentifiers.Count);
-						{
-							indent++;
-							foreach(var pair in typeIdentifiers)
-							{
-								sb.Append('\t', indent);
-								sb.Append("{ ");
-								AppendTypeof(sb, pair.Key);
-								sb.Append(", ");
-								sb.Append(pair.Value);
-								sb.Append(" },\n");
-							}
-							indent--;
-						}
-						AppendLine(sb, indent, "};");
+						AppendListBuilder(sb, indent, "typeIdentifiers", "Dictionary<Type, int>", typeIdentifiers, TypeIdentifiersBuilder);
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
@@ -205,7 +132,7 @@ namespace Katsudon.Builder.Helpers
 			}
 			sb.Append('}');
 
-			EditorUtility.DisplayProgressBar("Katsudon caching", "Saving cache", 0.9f);
+			EditorUtility.DisplayProgressBar("Katsudon caching", "Saving cache", 1.0f);
 			File.WriteAllText(Path.Combine(Path.GetDirectoryName(new StackTrace(true).GetFrame(0).GetFileName()), "UdonPartsCache.cs"), sb.ToString(), Encoding.UTF8);
 			EditorUtility.ClearProgressBar();
 			return collector;
@@ -282,6 +209,129 @@ namespace Katsudon.Builder.Helpers
 			}
 		}
 
+		private static void AppendListBuilder<T>(StringBuilder sb, int indent, string outName,
+			string typeName, IReadOnlyCollection<T> list, Action<StringBuilder, T> builder)
+		{
+			sb.Append('\t', indent);
+			sb.Append("var local = new ");
+			sb.Append(typeName);
+			sb.Append("(");
+			sb.Append(list.Count);
+			sb.AppendLine(");");
+			if(list.Count <= 1000)
+			{
+				foreach(var value in list)
+				{
+					sb.Append('\t', indent);
+					sb.Append("local.Add(");
+					builder.Invoke(sb, value);
+					sb.AppendLine(");");
+				}
+			}
+			else
+			{
+				// Splitting into multiple methods as one big method causes stack overflow
+				bool methodStarted = false;
+				int counter = 0, methodIndex = 0;
+				foreach(var value in list)
+				{
+					if(!methodStarted)
+					{
+						methodStarted = true;
+						sb.Append('\t', indent);
+						sb.Append("void AddToList");
+						sb.Append(methodIndex);
+						sb.AppendLine("() {");
+						indent++;
+					}
+
+					sb.Append('\t', indent);
+					sb.Append("local.Add(");
+					builder.Invoke(sb, value);
+					sb.AppendLine(");");
+
+					counter++;
+					if(counter >= 500)
+					{
+						counter = 0;
+						indent--;
+						sb.Append('\t', indent);
+						sb.AppendLine("}");
+						sb.Append('\t', indent);
+						sb.Append("AddToList");
+						sb.Append(methodIndex);
+						sb.AppendLine("();");
+						methodIndex++;
+						methodStarted = false;
+					}
+				}
+				if(methodStarted)
+				{
+					indent--;
+					sb.Append('\t', indent);
+					sb.AppendLine("}");
+					sb.Append('\t', indent);
+					sb.Append("AddToList");
+					sb.Append(methodIndex);
+					sb.AppendLine("();");
+				}
+			}
+			sb.Append('\t', indent);
+			sb.Append(outName);
+			sb.AppendLine(" = local;");
+		}
+
+		private static void FieldNamesBuilder(StringBuilder sb, KeyValuePair<FieldIdentifier, FieldNameInfo> pair)
+		{
+			pair.Key.AppendCtor(sb);
+			sb.Append(", ");
+			pair.Value.AppendCtor(sb);
+		}
+
+		private static void MethodNamesBuilder(StringBuilder sb, KeyValuePair<MethodIdentifier, string> pair)
+		{
+			pair.Key.AppendCtor(sb);
+			sb.Append(", \"");
+			sb.Append(pair.Value);
+			sb.Append("\"");
+		}
+
+		private static void MethodBaseTypesBuilder(StringBuilder sb, KeyValuePair<MethodIdentifier, Type[]> pair)
+		{
+			pair.Key.AppendCtor(sb);
+			sb.Append(", new Type[] { ");
+			var types = pair.Value;
+			for(int i = 0; i < types.Length; i++)
+			{
+				if(i > 0) sb.Append(", ");
+				AppendTypeof(sb, types[i]);
+			}
+			sb.Append(" }");
+		}
+
+		private static void MagicMethodsBuilder(StringBuilder sb, KeyValuePair<string, MagicMethodInfo> pair)
+		{
+			sb.Append("\"");
+			sb.Append(pair.Key);
+			sb.Append("\", ");
+			pair.Value.AppendCtor(sb);
+		}
+
+		private static void TypeNamesBuilder(StringBuilder sb, KeyValuePair<Type, string> pair)
+		{
+			AppendTypeof(sb, pair.Key);
+			sb.Append(", \"");
+			sb.Append(pair.Value);
+			sb.Append("\"");
+		}
+
+		private static void TypeIdentifiersBuilder(StringBuilder sb, KeyValuePair<Type, int> pair)
+		{
+			AppendTypeof(sb, pair.Key);
+			sb.Append(", ");
+			sb.Append(pair.Value);
+		}
+
 		private static string GetUdonVersion()
 		{
 			string currentVersion = "";
@@ -307,6 +357,8 @@ namespace Katsudon.Builder.Helpers
 		protected IReadOnlyDictionary<MethodIdentifier, string> ctorNames = null;
 		protected IReadOnlyDictionary<FieldIdentifier, FieldNameInfo> fieldNames = null;
 		protected IReadOnlyDictionary<string, MagicMethodInfo> magicMethods = null;
+
+		protected IReadOnlyDictionary<MethodIdentifier, Type[]> methodBaseTypes = null;
 
 		protected int tmpTypeCounter;
 		protected Dictionary<Type, int> typeIdentifiers = null;
@@ -356,6 +408,12 @@ namespace Katsudon.Builder.Helpers
 			return methodNames;
 		}
 
+		public IReadOnlyDictionary<MethodIdentifier, Type[]> GetMethodBaseTypes()
+		{
+			if(methodBaseTypes == null) CreateMethodBaseTypesList();
+			return methodBaseTypes;
+		}
+
 		public IReadOnlyDictionary<MethodIdentifier, string> GetCtorNames()
 		{
 			if(ctorNames == null) CreateCtorsList();
@@ -377,6 +435,8 @@ namespace Katsudon.Builder.Helpers
 		protected abstract void CreateTypesList();
 
 		protected abstract void CreateMethodsList();
+
+		protected abstract void CreateMethodBaseTypesList();
 
 		protected abstract void CreateCtorsList();
 
@@ -404,6 +464,8 @@ namespace Katsudon.Builder.Helpers
 		bool ContainsUdonType(Type type);
 
 		IReadOnlyDictionary<MethodIdentifier, string> GetMethodNames();
+
+		IReadOnlyDictionary<MethodIdentifier, Type[]> GetMethodBaseTypes();
 
 		IReadOnlyDictionary<MethodIdentifier, string> GetCtorNames();
 
