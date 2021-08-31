@@ -20,7 +20,7 @@ public class TUBeh : TBase, TInt
 	public Sprite sprite;
 	public TuTuBeh other;
 
-	public Image testComponent;
+	public object testComponent;
 	public MethodImplOptions enumVar;
 
 	public int counter = 0;
@@ -47,7 +47,7 @@ public class TUBeh : TBase, TInt
 		var bcd = Image.Type.Sliced;
 		Debug.Log(abc | bcd);*/
 
-		testComponent.enabled = false;
+		(testComponent as Image).enabled = false;
 
 		// 	var tint = this as TInt;
 		if(img.fillMethod == Image.FillMethod.Horizontal)

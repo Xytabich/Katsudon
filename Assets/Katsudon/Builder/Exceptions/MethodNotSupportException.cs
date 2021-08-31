@@ -20,7 +20,7 @@ namespace Katsudon.Builder.Exceptions
 				var sb = new StringBuilder(128);
 				sb.Append("Method ");
 				sb.Append(methodInfo);
-				sb.AppendLine(" not supported for declared target. Cast target to a supported type from the list before using:");
+				sb.AppendLine(" not supported for declared target. Use a supported type from the list:");
 				for(int i = 0; i < types.Length; i++)
 				{
 					sb.AppendLine(types[i].ToString());

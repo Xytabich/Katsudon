@@ -16,9 +16,6 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var builder = new IgnoreOpcodes();
 			container.RegisterOpBuilder(OpCodes.Nop, builder);
-			container.RegisterOpBuilder(OpCodes.Unbox, builder);
-			container.RegisterOpBuilder(OpCodes.Unbox_Any, builder);
-			container.RegisterOpBuilder(OpCodes.Castclass, builder);
 			container.RegisterOpBuilder(OpCodes.Tailcall, builder);
 			container.RegisterOpBuilder(OpCodes.Constrained, builder);
 			container.RegisterOpBuilder(OpCodes.Readonly, builder);
