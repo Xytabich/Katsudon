@@ -47,13 +47,16 @@ public class TUBeh : TBase, TInt
 		var bcd = Image.Type.Sliced;
 		Debug.Log(abc | bcd);*/
 
-		(testComponent as Image).enabled = false;
+		object tmp = this;
+		Debug.Log(tmp as TuTuBeh);
 
-		// 	var tint = this as TInt;
-		if(img.fillMethod == Image.FillMethod.Horizontal)
-		{
-			img.fillMethod = Image.FillMethod.Vertical;
-		}
+		// (testComponent as Image).enabled = false;
+
+		// var tint = this as TInt;
+		// if(img.fillMethod == Image.FillMethod.Horizontal)
+		// {
+		// 	img.fillMethod = Image.FillMethod.Vertical;
+		// }
 		// 	img.fillMethod = Image.FillMethod.Horizontal;
 		// 	goto _label;
 		// _label2:

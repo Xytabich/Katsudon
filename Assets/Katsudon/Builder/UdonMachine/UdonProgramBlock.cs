@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Katsudon.Info;
 using VRC.Udon.VM.Common;
 
 namespace Katsudon.Builder
@@ -76,7 +77,7 @@ namespace Katsudon.Builder
 		private void ReleaseVariable(TmpVariable variable)
 		{
 			//TODO: debug define
-			if(!variablesInUse.Remove(variable)) throw new Exception("This variable is not used");
+			if(!variablesInUse.Remove(variable)) throw new Exception("This variable is not used:\n\t" + variable.ToString().Replace("\n", "\n\t"));
 
 			Stack<TmpVariable> list;
 			if(!releasedVariables.TryGetValue(variable.type, out list))
@@ -94,6 +95,8 @@ namespace Katsudon.Builder
 
 		private class UdonBlockBuilder : IUdonMachine, IRawUdonMachine
 		{
+			public AsmTypeInfo typeInfo => udonMachine.typeInfo;
+
 			public UdonMachine mainMachine => udonMachine;
 
 			private UdonMachine udonMachine;
@@ -358,6 +361,8 @@ namespace Katsudon.Builder
 
 	public interface IUdonMachine : IUdonProgramBuilder
 	{
+		AsmTypeInfo typeInfo { get; }
+
 		IVariable GetReturnAddressGlobal();
 
 		IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour);

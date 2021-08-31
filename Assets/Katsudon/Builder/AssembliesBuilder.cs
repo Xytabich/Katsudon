@@ -65,7 +65,7 @@ namespace Katsudon.Builder
 				var register = MethodSearch<OperationBuilderDelegate>.FindStaticMethod(typeBuilders[i].Value, "Register");
 				Assert.IsNotNull(register, string.Format("Operation builder with type {0} does not have a Register method", typeBuilders[i].Value));
 				var unRegister = MethodSearch<OperationBuilderDelegate>.FindStaticMethod(typeBuilders[i].Value, "UnRegister");
-				Assert.IsNotNull(register, string.Format("Operation builder with type {0} does not have a UnRegister method", typeBuilders[i].Value));
+				Assert.IsNotNull(unRegister, string.Format("Operation builder with type {0} does not have a UnRegister method", typeBuilders[i].Value));
 				sortedTypeBuilders.Add(new TypeOpCodeBuider(register, unRegister, typeBuilders[i].Key.registerOrder, typeBuilders[i].Value));
 			}
 			typeOperationBuilders = new List<TypeOpCodeBuider>(sortedTypeBuilders.Count);
@@ -169,7 +169,7 @@ namespace Katsudon.Builder
 				typeOperationBuilders[i].Register(methodBodyBuilder, this);
 			}
 
-			var programBlock = new ProgramBlock(new UdonMachine(constCollection, externsCollection, fieldsCollection), propertiesBlock, executionOrder);
+			var programBlock = new ProgramBlock(new UdonMachine(classInfo, constCollection, externsCollection, fieldsCollection), propertiesBlock, executionOrder);
 			programBlock.AddMethodBuilder(behaviourMethodBuilder);
 			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, methodBodyBuilder, convertersList, methodsCollection));
 			builder.AddBlock(programBlock);

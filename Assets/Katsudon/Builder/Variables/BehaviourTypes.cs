@@ -14,7 +14,14 @@ namespace Katsudon.Builder.Variables
 			var type = variable.type;
 			if((type.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(type)) && Utils.IsUdonAsm(type))
 			{
-				table.AddVariable(TypedVariable.From(variable, typeof(UdonBehaviour)));
+				if(variable is ThisVariable)
+				{
+					table.AddVariable(new ThisVariableProxy(variable));
+				}
+				else
+				{
+					table.AddVariable(TypedVariable.From(variable, typeof(UdonBehaviour)));
+				}
 				return true;
 			}
 			return false;
@@ -32,6 +39,32 @@ namespace Katsudon.Builder.Variables
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)
 		{
 			container.AddBuilder(new BehaviourTypes());
+		}
+
+		private class ThisVariableProxy : IVariable, ISelfPointingVariable
+		{
+			public string name => variable.name;
+			public Type type => typeof(UdonBehaviour);
+			public uint address { get; private set; }
+
+			public bool isSelf => true;
+
+			private IVariable variable;
+
+			public ThisVariableProxy(IVariable variable)
+			{
+				this.variable = variable;
+			}
+
+			public void Allocate(int count = 1) { }
+
+			public void Use() { }
+
+			public void SetAddress(uint address)
+			{
+				this.address = address;
+				variable.SetAddress(address);
+			}
 		}
 	}
 }

@@ -209,7 +209,10 @@ namespace Katsudon.Builder.Helpers
 			{
 				tmpTypesList.Clear();
 				pair.Value.FillTypes(tmpTypesList);
-				methodBaseTypes.Add(pair.Key, tmpTypesList.ToArray());
+				if(tmpTypesList.Count > 1 || pair.Value.firstIdentifier != pair.Key)
+				{
+					methodBaseTypes.Add(pair.Key, tmpTypesList.ToArray());
+				}
 			}
 			this.methodBaseTypes = methodBaseTypes;
 		}
@@ -420,6 +423,8 @@ namespace Katsudon.Builder.Helpers
 		{
 			private MethodNode rootNode = null;
 			private MethodNode lastNode = null;
+
+			public MethodIdentifier firstIdentifier => rootNode.identifier;
 
 			public MethodNodeInfo(Type targetType, MethodIdentifier identifier, string fullName)
 			{

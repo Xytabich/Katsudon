@@ -11,7 +11,7 @@ namespace Katsudon.Info
 		public const string INHERIT_IDS_NAME = "__inheritsTypeIDs";
 		public const string INTERNAL_NAME_FORMAT = "__{0}_{1}";
 
-		private readonly Type type;
+		public readonly Type type;
 		public readonly Guid guid;
 
 		public event System.Action<MethodInfo> onMethodRequested;

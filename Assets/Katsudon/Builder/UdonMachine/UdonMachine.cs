@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Katsudon.Info;
 using UnityEngine;
 using VRC.Udon.VM.Common;
 
@@ -10,6 +11,8 @@ namespace Katsudon.Builder
 	{
 		public const uint LAST_ALIGNED_ADDRESS = 0xFFFFFFFC;
 		public static readonly IAddressLabel endProgramAddress = new EndAddressLabel();
+
+		public AsmTypeInfo typeInfo { get; private set; }
 
 		private ExternsCollection externsCollection;
 		private ConstCollection constCollection;
@@ -23,8 +26,9 @@ namespace Katsudon.Builder
 		private IVariable transformVariable = null;
 		private IVariable gameObjectVariable = null;
 
-		public UdonMachine(ConstCollection constCollection, ExternsCollection externsCollection, FieldsCollection fieldsCollection)
+		public UdonMachine(AsmTypeInfo typeInfo, ConstCollection constCollection, ExternsCollection externsCollection, FieldsCollection fieldsCollection)
 		{
+			this.typeInfo = typeInfo;
 			this.constCollection = constCollection;
 			this.externsCollection = externsCollection;
 			this.fieldsCollection = fieldsCollection;
@@ -79,7 +83,7 @@ namespace Katsudon.Builder
 				case UdonThisType.Behaviour:
 					if(thisVariable == null)
 					{
-						thisVariable = new ThisVariable();
+						thisVariable = new ThisVariable(typeInfo.type);
 					}
 					return thisVariable;
 				case UdonThisType.Transform:

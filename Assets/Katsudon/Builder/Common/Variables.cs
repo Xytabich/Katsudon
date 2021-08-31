@@ -222,6 +222,6 @@ namespace Katsudon.Builder
 	{
 		public bool isSelf => true;
 
-		public ThisVariable() : base("this", typeof(UdonBehaviour)) { }
+		public ThisVariable(Type type) : base("this", type) { }
 	}
 }
