@@ -11,7 +11,7 @@ using VRC.Udon.ProgramSources;
 
 namespace Katsudon.Editor
 {
-	public class BuildTracker
+	public static class BuildTracker
 	{
 		private const string FORCEBUILD_FILE = "forcebuild";
 		private const string ASSEMBLIES_FILE = "assemblyCache";
@@ -82,6 +82,7 @@ namespace Katsudon.Editor
 		private static bool BuildAssemblies()
 		{
 			var startTime = DateTime.Now;
+			var operationTime = DateTime.Now;
 
 			var allScripts = MonoImporter.GetAllRuntimeMonoScripts();
 			var options = new List<BuildOption>();
@@ -104,6 +105,7 @@ namespace Katsudon.Editor
 							path = Path.ChangeExtension(AssetDatabase.GetAssetPath(behaviour), ".UProgram.asset");
 						}
 						options.Add(new BuildOption(behaviour, path));
+						Resources.UnloadAsset(importer);
 					}
 					else
 					{
@@ -114,6 +116,9 @@ namespace Katsudon.Editor
 					}
 				}
 			}
+
+			var collectingTime = (DateTime.Now - operationTime);
+			operationTime = DateTime.Now;
 
 			List<LibraryInfo> librariesBuild = null;
 			if(libraries != null)
@@ -140,8 +145,8 @@ namespace Katsudon.Editor
 							}
 							else
 							{
-								if(AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(programAsset)).GetExternalObjectMap()
-									.TryGetValue(ProgramUtils.GetScriptIdentifier(), out var scriptAsset))
+								var programImporter = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(programAsset));
+								if(programImporter.GetExternalObjectMap().TryGetValue(ProgramUtils.GetScriptIdentifier(), out var scriptAsset))
 								{
 									if(scriptAsset == null)
 									{
@@ -164,10 +169,12 @@ namespace Katsudon.Editor
 									map.Remove(key);
 									importer.RemoveRemap(key);
 								}
+								Resources.UnloadAsset(programImporter);
 							}
 						}
 					}
 					AssetDatabase.WriteImportSettingsIfDirty(path);
+					Resources.UnloadAsset(importer);
 
 					var list = lib.Value;
 					var buildOptions = new BuildOption[list.Count];
@@ -196,6 +203,11 @@ namespace Katsudon.Editor
 				libraries = null;
 			}
 
+			GC.Collect();
+			Resources.UnloadUnusedAssets();
+			var refreshingTime = (DateTime.Now - operationTime);
+			operationTime = DateTime.Now;
+
 			if(options.Count > 0 || libraries != null)
 			{
 				bool buildError = false;
@@ -214,7 +226,8 @@ namespace Katsudon.Editor
 							var buildOptions = librariesBuild[i].options;
 							for(int j = 0; j < buildOptions.Length; j++)
 							{
-								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut, MonoImporter.GetExecutionOrder(buildOptions[j].script));
+								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
+									MonoImporter.GetExecutionOrder(buildOptions[j].script));
 							}
 						}
 					}
@@ -229,6 +242,11 @@ namespace Katsudon.Editor
 				AssetDatabase.Refresh();
 				if(buildError) return false;
 
+				GC.Collect();
+				Resources.UnloadUnusedAssets();
+				var buildingTime = (DateTime.Now - operationTime);
+				operationTime = DateTime.Now;
+
 				AssetDatabase.StartAssetEditing();
 				for(var i = 0; i < options.Count; i++)
 				{
@@ -236,12 +254,15 @@ namespace Katsudon.Editor
 					var importer = AssetImporter.GetAtPath(programPath);
 					importer.AddRemap(ProgramUtils.GetScriptIdentifier(), options[i].script);
 					AssetDatabase.WriteImportSettingsIfDirty(programPath);
+					Resources.UnloadAsset(importer);
+
 					if(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(options[i].script, out string guid, out long fileId))
 					{
 						var scriptPath = AssetDatabase.GUIDToAssetPath(guid);
 						importer = AssetImporter.GetAtPath(scriptPath);
 						importer.AddRemap(ProgramUtils.GetMainProgramIdentifier(), AssetDatabase.LoadMainAssetAtPath(programPath));
 						AssetDatabase.WriteImportSettingsIfDirty(scriptPath);
+						Resources.UnloadAsset(importer);
 					}
 				}
 				if(librariesBuild != null)
@@ -257,18 +278,25 @@ namespace Katsudon.Editor
 							var importer = AssetImporter.GetAtPath(programPath);
 							importer.AddRemap(ProgramUtils.GetScriptIdentifier(), options[j].script);
 							AssetDatabase.WriteImportSettingsIfDirty(programPath);
+							Resources.UnloadAsset(importer);
 
 							libraryImporter.AddRemap(ProgramUtils.GetSubProgramIdentifier(options[j].script.GetClass()),
 								AssetDatabase.LoadMainAssetAtPath(programPath));
 						}
 						AssetDatabase.WriteImportSettingsIfDirty(libraryPath);
+						Resources.UnloadAsset(libraryImporter);
 					}
 				}
 				AssetDatabase.StopAssetEditing();
 				AssetDatabase.SaveAssets();
 				AssetDatabase.Refresh();
 
-				Debug.Log("[Katsudon] Build finished in " + (DateTime.Now - startTime));
+				GC.Collect();
+				Resources.UnloadUnusedAssets();
+				var linkingTime = (DateTime.Now - operationTime);
+
+				Debug.LogFormat("[Katsudon] Build finished in {0}:\nCollecting: {1}\nRefreshing: {2}\nBuilding & Saving: {3}\nLinking: {4}",
+					DateTime.Now - startTime, collectingTime, refreshingTime, buildingTime, linkingTime);
 				return true;
 			}
 			return false;
