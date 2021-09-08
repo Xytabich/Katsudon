@@ -34,9 +34,9 @@ namespace Katsudon.Editor
 
 		private static void OnAssemblyCompiled(string assemblyPath, CompilerMessage[] messages)
 		{
+			InitRebuild();
 			if(!rebuildRequested)
 			{
-				InitRebuild();
 				rebuildListCached.Add(Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), assemblyPath)));
 				SaveRebuild();
 			}
@@ -384,22 +384,29 @@ namespace Katsudon.Editor
 		private static void SaveRebuild()
 		{
 			if(rebuildRequestSaved) return;
-			using(var writer = FileUtils.GetFileWriter(FORCEBUILD_FILE))
+			try
 			{
-				writer.Write(FORCEBUILD_FILE_VERSION);
-				writer.Write(rebuildRequested);
-				if(rebuildRequested)
+				using(var writer = FileUtils.GetFileWriter(FORCEBUILD_FILE))
 				{
-					rebuildRequestSaved = true;
-				}
-				else
-				{
-					writer.Write(rebuildListCached.Count);
-					foreach(var path in rebuildListCached)
+					writer.Write(FORCEBUILD_FILE_VERSION);
+					writer.Write(rebuildRequested);
+					if(rebuildRequested)
 					{
-						writer.Write(path);
+						rebuildRequestSaved = true;
+					}
+					else
+					{
+						writer.Write(rebuildListCached.Count);
+						foreach(var path in rebuildListCached)
+						{
+							writer.Write(path);
+						}
 					}
 				}
+			}
+			catch(Exception e)
+			{
+				Debug.LogException(e);
 			}
 		}
 
@@ -463,14 +470,21 @@ namespace Katsudon.Editor
 
 		private static void SaveBuildedCache(HashSet<string> set)
 		{
-			using(var writer = FileUtils.GetFileWriter(BUILDED_FILE))
+			try
 			{
-				writer.Write(BUILDED_FILE_VERSION);
-				writer.Write(set.Count);
-				foreach(var name in set)
+				using(var writer = FileUtils.GetFileWriter(BUILDED_FILE))
 				{
-					writer.Write(name);
+					writer.Write(BUILDED_FILE_VERSION);
+					writer.Write(set.Count);
+					foreach(var name in set)
+					{
+						writer.Write(name);
+					}
 				}
+			}
+			catch(Exception e)
+			{
+				Debug.LogException(e);
 			}
 		}
 

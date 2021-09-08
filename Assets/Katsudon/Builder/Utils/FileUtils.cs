@@ -17,7 +17,7 @@ namespace Katsudon.Utility
 
 		public static BinaryWriter GetFileWriter(string filename)
 		{
-			var stream = File.Open(GetFilePath(filename, true), FileMode.OpenOrCreate, FileAccess.Write);
+			var stream = File.Open(GetFilePath(filename, true), FileMode.OpenOrCreate, FileAccess.ReadWrite);
 			stream.SetLength(0);
 			return new BinaryWriter(stream);
 		}

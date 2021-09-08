@@ -95,20 +95,31 @@ namespace Katsudon.Info
 						list.Add(new KeyValuePair<string, Guid>(pair.Key.FullName, pair.Value.guid));
 					}
 					writer.Write(CACHE_VERSION);
+
+					var stream = writer.BaseStream;
 					writer.Write(grouped.Count);
 					foreach(var pair in grouped)
 					{
 						writer.Write(pair.Key);
+						writer.Write((uint)0);
+						var start = stream.Position;
 						writer.Write(pair.Value.Count);
 						foreach(var typeInfo in pair.Value)
 						{
 							writer.Write(typeInfo.Key);
 							writer.Write(typeInfo.Value.ToByteArray());
 						}
+						var end = stream.Position;
+						stream.Seek(start - sizeof(uint), SeekOrigin.Begin);
+						writer.Write((uint)(end - start));
+						stream.Seek(end, SeekOrigin.Begin);
 					}
 				}
 			}
-			catch { }
+			catch(Exception e)
+			{
+				Debug.LogException(e);
+			}
 		}
 
 		public AsmTypeInfo GetTypeInfo(Type type)
