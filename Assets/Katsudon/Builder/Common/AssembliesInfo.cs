@@ -1,24 +1,114 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Katsudon.Members;
+using Katsudon.Utility;
 using UnityEngine;
 
 namespace Katsudon.Info
 {
 	public class AssembliesInfo
 	{
+		private const string ASSEMBLIES_FILE = "assemblyCache";
+		private const byte CACHE_VERSION = 0;
+
 		private static AssembliesInfo _instance;
 		public static AssembliesInfo instance => _instance ?? (_instance = new AssembliesInfo());
 
 		public MembersProcessor processor { get; private set; }
 
+		private Dictionary<Type, Guid> cachedGuids = new Dictionary<Type, Guid>();
 		private Dictionary<Type, AsmTypeInfo> types = new Dictionary<Type, AsmTypeInfo>();
 
 		private AssembliesInfo()
 		{
+			try
+			{
+				using(var reader = FileUtils.TryGetFileReader(ASSEMBLIES_FILE))
+				{
+					if(reader != null)
+					{
+						if(reader.ReadByte() != CACHE_VERSION) throw new IOException("Invalid version");
+						var udonAssemblies = new Dictionary<string, Assembly>();
+						foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+						{
+							if(Utils.IsUdonAsm(assembly)) udonAssemblies.Add(assembly.GetName().Name, assembly);
+						}
+						var guidBytes = new byte[16];
+						var count = reader.ReadInt32();
+						for(int i = 0; i < count; i++)
+						{
+							try
+							{
+								var name = reader.ReadString();
+								var size = reader.ReadUInt32();
+								if(udonAssemblies.TryGetValue(name, out var assembly))
+								{
+									var typesCount = reader.ReadInt32();
+									for(int j = 0; j < typesCount; j++)
+									{
+										var typeName = reader.ReadString();
+										reader.BaseStream.Read(guidBytes, 0, 16);
+										var guid = new Guid(guidBytes);
+										var type = assembly.GetType(typeName, false, true);
+										if(type != null) cachedGuids.Add(type, guid);
+									}
+								}
+								else
+								{
+									reader.BaseStream.Seek(size, SeekOrigin.Current);
+								}
+							}
+							catch(IOException)
+							{
+								throw;
+							}
+							catch(Exception) { }
+						}
+					}
+				}
+			}
+			catch(IOException)
+			{
+				FileUtils.DeleteFile(ASSEMBLIES_FILE);
+			}
 			processor = new MembersProcessor(this);
+		}
+
+		public void SaveCache()
+		{
+			try
+			{
+				using(var writer = FileUtils.GetFileWriter(ASSEMBLIES_FILE))
+				{
+					var grouped = new Dictionary<string, List<KeyValuePair<string, Guid>>>();
+					foreach(var pair in types)
+					{
+						var name = pair.Key.Assembly.GetName().Name;
+						if(!grouped.TryGetValue(name, out var list))
+						{
+							list = new List<KeyValuePair<string, Guid>>();
+							grouped[name] = list;
+						}
+						list.Add(new KeyValuePair<string, Guid>(pair.Key.FullName, pair.Value.guid));
+					}
+					writer.Write(CACHE_VERSION);
+					writer.Write(grouped.Count);
+					foreach(var pair in grouped)
+					{
+						writer.Write(pair.Key);
+						writer.Write(pair.Value.Count);
+						foreach(var typeInfo in pair.Value)
+						{
+							writer.Write(typeInfo.Key);
+							writer.Write(typeInfo.Value.ToByteArray());
+						}
+					}
+				}
+			}
+			catch { }
 		}
 
 		public AsmTypeInfo GetTypeInfo(Type type)
@@ -30,13 +120,17 @@ namespace Katsudon.Info
 				throw new Exception(string.Format("Type {0} is not supported because it is not contained in an assembly marked with the UdonAsm attribute.", type));
 			}
 
+			if(!cachedGuids.TryGetValue(type, out var guid))
+			{
+				guid = Guid.NewGuid();
+			}
 			if(type.IsInterface)
 			{
-				info = BuildInterfaceInfo(type);
+				info = BuildInterfaceInfo(type, guid);
 			}
 			else if(type.IsClass && typeof(MonoBehaviour).IsAssignableFrom(type))
 			{
-				info = BuildBehaviourInfo(type);
+				info = BuildBehaviourInfo(type, guid);
 			}
 			else
 			{
@@ -65,7 +159,7 @@ namespace Katsudon.Info
 			return GetTypeInfo(targetType).GetMethod(method);
 		}
 
-		private AsmTypeInfo BuildInterfaceInfo(Type type)
+		private AsmTypeInfo BuildInterfaceInfo(Type type, Guid guid)
 		{
 			var inherits = new HashSet<AsmTypeInfo>();
 			foreach(var interfaceType in type.GetInterfaces())
@@ -73,7 +167,6 @@ namespace Katsudon.Info
 				inherits.UnionWith(GetTypeInfo(interfaceType).GetInheritance());
 			}
 
-			var guid = Guid.NewGuid();
 			var types = inherits.ToArray();
 			var info = new AsmTypeInfo(type, guid, types, types);
 			var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
@@ -85,7 +178,7 @@ namespace Katsudon.Info
 			return info;
 		}
 
-		private AsmTypeInfo BuildBehaviourInfo(Type type)
+		private AsmTypeInfo BuildBehaviourInfo(Type type, Guid guid)
 		{
 			var hierarhy = new List<AsmTypeInfo>();
 			var inherits = new HashSet<AsmTypeInfo>();
@@ -103,7 +196,6 @@ namespace Katsudon.Info
 				hierarhy.Add(baseInfo);
 			}
 
-			var guid = Guid.NewGuid();
 			var info = new AsmTypeInfo(type, guid, inherits.ToArray(), hierarhy.ToArray());
 			processor.ProcessMembers(type, info);
 			return info;

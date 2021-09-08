@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Katsudon.Builder.Methods;
 using Katsudon.Info;
 using VRC.Udon.VM.Common;
 
@@ -145,6 +146,11 @@ namespace Katsudon.Builder
 			public uint GetAddressCounter()
 			{
 				return udonMachine.GetAddressCounter();
+			}
+
+			public void AddMethodMeta(UdonMethodMeta methodMeta)
+			{
+				//TODO:
 			}
 
 			#region opcodes
@@ -376,6 +382,8 @@ namespace Katsudon.Builder
 		void ApplyLabel(IEmbedAddressLabel label);
 
 		uint GetAddressCounter();
+
+		void AddMethodMeta(UdonMethodMeta methodMeta);
 	}
 
 	public interface IUdonProgramBuilder

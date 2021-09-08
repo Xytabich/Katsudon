@@ -1,7 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
+using Katsudon.Builder.Methods;
 
 namespace Katsudon.Builder
 {
@@ -58,7 +63,9 @@ namespace Katsudon.Builder
 				operations.Add(op);
 			}
 
-			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, locals, machineBlock);
+			var addressPointers = new List<UdonAddressPointer>();//FIX: cache
+			addressPointers.Add(new UdonAddressPointer(machineBlock.machine.GetAddressCounter(), 0));
+			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, locals, machineBlock, addressPointers);
 			try
 			{
 				SortedSet<IOperationBuider> list;
@@ -92,6 +99,11 @@ namespace Katsudon.Builder
 				}
 				methodDescriptor.CheckState();
 				methodDescriptor.ApplyProperties();
+
+				if(BuildMeta(method, addressPointers, machineBlock.machine.GetAddressCounter(), out var meta))
+				{
+					machineBlock.machine.AddMethodMeta(meta);
+				}
 			}
 			catch
 			{
@@ -104,6 +116,16 @@ namespace Katsudon.Builder
 		{
 			if(x.order == y.order) return x == y ? 0 : -1;
 			return x.order.CompareTo(y.order);
+		}
+
+		private static bool BuildMeta(MethodInfo method, List<UdonAddressPointer> addressPointers, uint endAddress, out UdonMethodMeta meta)
+		{
+			meta = default;
+			var assembly = method.DeclaringType.Assembly;
+			if(assembly.IsDynamic || string.IsNullOrEmpty(assembly.Location)) return false;
+			if(!File.Exists(assembly.Location)) return false;
+			meta = new UdonMethodMeta(assembly.Location, method.MetadataToken, addressPointers[0].udonAddress, endAddress, addressPointers);
+			return true;
 		}
 
 		private static string GetArgInfo(object arg)
@@ -120,5 +142,54 @@ namespace Katsudon.Builder
 			int value = (ushort)opCode.Value;
 			return (value & 0xFF) + (value >> 8);
 		}
+	}
+
+	public interface IMethodDescriptor : IMethodProgram, IMethodStack, IMethodVariables, IUdonProgramBlock
+	{
+		bool isStatic { get; }
+
+		IAddressLabel GetMachineAddressLabel(int methodAddress);
+
+		IAddressLabel GetReturnAddress();
+	}
+
+	public interface IExternBuilder
+	{
+		string BuildExtern(IMethodDescriptor method, IUdonMachine machine, Action<VariableMeta> pushCallback);
+	}
+
+	public interface IMethodVariables
+	{
+		IVariable GetReturnVariable();
+
+		IVariable GetArgumentVariable(int index);
+
+		IVariable GetLocalVariable(int index);
+	}
+
+	public interface IMethodStack
+	{
+		bool stackIsEmpty { get; }
+
+		void PushStack(IVariable value);
+
+		IVariable PopStack();
+
+		IVariable PeekStack(int offset);
+
+		IEnumerator<IVariable> PopMultiple(int count);
+	}
+
+	public interface IMethodProgram
+	{
+		Operation currentOp { get; }
+
+		bool Next(bool skipNop = true);
+
+		void PushState();
+
+		void PopState();
+
+		void DropState();
 	}
 }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using Katsudon.Builder;
 using Katsudon.Editor.Udon;
+using Katsudon.Info;
+using Katsudon.Utility;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.Compilation;
@@ -13,9 +15,15 @@ namespace Katsudon.Editor
 {
 	public static class BuildTracker
 	{
-		private const string FORCEBUILD_FILE = "forcebuild";
-		private const string ASSEMBLIES_FILE = "assemblyCache";
+		private static string BUILDED_FILE = "buildedList";
+		private static byte BUILDED_FILE_VERSION = 0;
 
+		private static string FORCEBUILD_FILE = "forceBuild";
+		private static byte FORCEBUILD_FILE_VERSION = 0;
+
+		private static bool rebuildCacheLoaded = false;
+		private static bool rebuildRequestSaved = false;
+		private static bool rebuildRequested = false;
 		private static HashSet<string> rebuildListCached = null;
 
 		[InitializeOnLoadMethod]
@@ -26,56 +34,89 @@ namespace Katsudon.Editor
 
 		private static void OnAssemblyCompiled(string assemblyPath, CompilerMessage[] messages)
 		{
-			AddToRebuild(Path.Combine(Directory.GetCurrentDirectory(), assemblyPath).Replace('\\', '/'));
+			if(!rebuildRequested)
+			{
+				InitRebuild();
+				rebuildListCached.Add(Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), assemblyPath)));
+				SaveRebuild();
+			}
 		}
 
 		[DidReloadScripts]
 		private static void OnScriptsReloaded()
 		{
-			InitRebuildList();
-			if(rebuildListCached.Count > 0)
+			bool rebuild = false;
+			var cache = GetBuildedCache();
+			foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
-				bool rebuild = false;
-				var cache = GetAssemblyCache();
-				foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+				if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
 				{
-					if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
+					if(!cache.Contains(assembly.FullName))
 					{
-						var name = assembly.GetName();
-						if(!cache.Contains(new AssemblyIdentifier(name.Name, name.Version.ToString())))
-						{
-							rebuild = true;
-							break;
-						}
-						if(rebuildListCached.Contains(assembly.Location.Replace('\\', '/')))
-						{
-							rebuild = true;
-							break;
-						}
+						rebuild = true;
+						break;
 					}
 				}
-				rebuildListCached.Clear();
-				DeleteFile(FORCEBUILD_FILE);
-				if(rebuild) RebuildAssemblies();
 			}
+			InitRebuild();
+			if(!rebuild)
+			{
+				if(rebuildRequested)
+				{
+					rebuild = true;
+				}
+				else if(rebuildListCached.Count > 0)
+				{
+					foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+					{
+						if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
+						{
+							if(rebuildListCached.Contains(Path.GetFullPath(assembly.Location)))
+							{
+								rebuild = true;
+								break;
+							}
+						}
+					}
+					if(rebuild)
+					{
+						rebuildRequested = true;
+						SaveRebuild();
+					}
+					else
+					{
+						ClearRebuild();
+					}
+				}
+			}
+			if(rebuild) RebuildAssemblies();
 		}
 
 		[MenuItem("Katsudon/Force Rebuild")]
+		private static void ForceRebuild()
+		{
+			InitRebuild();
+			rebuildRequested = true;
+			SaveRebuild();
+			RebuildAssemblies();
+		}
+
 		private static void RebuildAssemblies()
 		{
-			DeleteFile(ASSEMBLIES_FILE);
 			if(BuildAssemblies())
 			{
-				var newCache = new HashSet<AssemblyIdentifier>();
+				var newCache = new HashSet<string>();
 				foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
 				{
 					if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
 					{
-						var name = assembly.GetName();
-						newCache.Add(new AssemblyIdentifier(name.Name, name.Version.ToString()));
+						newCache.Add(assembly.FullName);
 					}
 				}
-				SaveAssemblyCache(newCache);
+				SaveBuildedCache(newCache);
+
+				AssembliesInfo.instance.SaveCache();
+				ClearRebuild();
 			}
 		}
 
@@ -332,126 +373,104 @@ namespace Katsudon.Editor
 			return true;
 		}
 
-		private static void AddToRebuild(string path)
+		private static void ClearRebuild()
 		{
-			InitRebuildList();
-			if(rebuildListCached.Add(path))
+			rebuildRequested = false;
+			rebuildRequestSaved = false;
+			rebuildListCached.Clear();
+			FileUtils.DeleteFile(FORCEBUILD_FILE);
+		}
+
+		private static void SaveRebuild()
+		{
+			if(rebuildRequestSaved) return;
+			using(var writer = FileUtils.GetFileWriter(FORCEBUILD_FILE))
 			{
-				using(var stream = TryGetFileStream(FORCEBUILD_FILE, FileMode.Create))
+				writer.Write(FORCEBUILD_FILE_VERSION);
+				writer.Write(rebuildRequested);
+				if(rebuildRequested)
 				{
-					var writer = new BinaryWriter(stream);
+					rebuildRequestSaved = true;
+				}
+				else
+				{
 					writer.Write(rebuildListCached.Count);
-					foreach(var item in rebuildListCached)
+					foreach(var path in rebuildListCached)
 					{
-						writer.Write(item);
+						writer.Write(path);
 					}
 				}
 			}
 		}
 
-		private static void InitRebuildList()
+		private static void InitRebuild()
 		{
-			if(rebuildListCached == null)
+			if(rebuildCacheLoaded) return;
+			rebuildCacheLoaded = true;
+
+			rebuildRequested = false;
+			rebuildListCached = new HashSet<string>();
+			try
 			{
-				rebuildListCached = new HashSet<string>();
-				var stream = TryGetFileStream(FORCEBUILD_FILE, FileMode.Open);
-				if(stream != null)
+				using(var reader = FileUtils.TryGetFileReader(FORCEBUILD_FILE))
 				{
-					using(stream)
+					if(reader != null)
 					{
-						var reader = new BinaryReader(stream);
-						int count = reader.ReadInt32();
-						for(int i = 0; i < count; i++)
+						if(reader.ReadByte() != FORCEBUILD_FILE_VERSION) throw new IOException("Invalid version");
+						rebuildRequested = reader.ReadBoolean();
+						if(!rebuildRequested)
 						{
-							rebuildListCached.Add(reader.ReadString());
+							int count = reader.ReadInt32();
+							for(int i = 0; i < count; i++)
+							{
+								rebuildListCached.Add(reader.ReadString());
+							}
 						}
 					}
 				}
 			}
+			catch(IOException)
+			{
+				rebuildRequested = true;
+				FileUtils.DeleteFile(FORCEBUILD_FILE);
+			}
 		}
 
-		private static HashSet<AssemblyIdentifier> GetAssemblyCache()
+		private static HashSet<string> GetBuildedCache()
 		{
-			var set = new HashSet<AssemblyIdentifier>();
-			var stream = TryGetFileStream(ASSEMBLIES_FILE, FileMode.Open);
-			if(stream != null)
+			var set = new HashSet<string>();
+			try
 			{
-				using(stream)
+				using(var reader = FileUtils.TryGetFileReader(BUILDED_FILE))
 				{
-					var reader = new BinaryReader(stream);
-					int count = reader.ReadInt32();
-					for(int i = 0; i < count; i++)
+					if(reader != null)
 					{
-						var name = reader.ReadString();
-						var version = reader.ReadString();
-						set.Add(new AssemblyIdentifier(name, version));
+						if(reader.ReadByte() != BUILDED_FILE_VERSION) throw new IOException("Invalid version");
+						int count = reader.ReadInt32();
+						for(int i = 0; i < count; i++)
+						{
+							set.Add(reader.ReadString());
+						}
 					}
 				}
+			}
+			catch(IOException)
+			{
+				FileUtils.DeleteFile(BUILDED_FILE);
 			}
 			return set;
 		}
 
-		private static void SaveAssemblyCache(HashSet<AssemblyIdentifier> set)
+		private static void SaveBuildedCache(HashSet<string> set)
 		{
-			using(var stream = TryGetFileStream(ASSEMBLIES_FILE, FileMode.Create))
+			using(var writer = FileUtils.GetFileWriter(BUILDED_FILE))
 			{
-				var writer = new BinaryWriter(stream);
+				writer.Write(BUILDED_FILE_VERSION);
 				writer.Write(set.Count);
-				foreach(var item in set)
+				foreach(var name in set)
 				{
-					writer.Write(item.name);
-					writer.Write(item.version);
+					writer.Write(name);
 				}
-			}
-		}
-
-		private static FileStream TryGetFileStream(string filename, FileMode mode)
-		{
-			string dir = LibraryDirectory();
-			string path = Path.Combine(dir, filename);
-			if(!File.Exists(path))
-			{
-				if(mode == FileMode.Open) return null;
-				if(!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-			}
-			return File.Open(path, mode);
-		}
-
-		private static void DeleteFile(string filename)
-		{
-			string path = Path.Combine(LibraryDirectory(), filename);
-			if(File.Exists(path)) File.Delete(path);
-		}
-
-		private static string LibraryDirectory()
-		{
-			return Path.Combine(Directory.GetCurrentDirectory(), "Library/Katsudon");
-		}
-
-		private struct AssemblyIdentifier
-		{
-			public readonly string name;
-			public readonly string version;
-
-			public AssemblyIdentifier(string name, string version)
-			{
-				this.name = name;
-				this.version = version;
-			}
-
-			public override bool Equals(object obj)
-			{
-				return obj is AssemblyIdentifier identifier &&
-					   name == identifier.name &&
-					   version == identifier.version;
-			}
-
-			public override int GetHashCode()
-			{
-				int hashCode = 1545369197;
-				hashCode = hashCode * -1521134295 + name.GetHashCode();
-				hashCode = hashCode * -1521134295 + version.GetHashCode();
-				return hashCode;
 			}
 		}
 

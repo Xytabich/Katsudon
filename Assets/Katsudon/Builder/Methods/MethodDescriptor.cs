@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Katsudon.Builder
+namespace Katsudon.Builder.Methods
 {
 	public class MethodDescriptor : IMethodDescriptor
 	{
@@ -25,14 +25,17 @@ namespace Katsudon.Builder
 		#endregion
 
 		private int index;
-		private Stack<int> states = new Stack<int>();
+		private Stack<int> states = new Stack<int>();//TODO: cache
 		private List<IVariable> stack = new List<IVariable>();
 
 		private Dictionary<int, uint> methodToMachineAddress = null;
 		private List<MachineAddressLabel> initAddresses = new List<MachineAddressLabel>();
 
+		private uint lastUdonAddress;
+		private IList<UdonAddressPointer> addressPointers;
+
 		public MethodDescriptor(bool isStatic, IList<IVariable> arguments, IVariable returnVariable, IAddressLabel returnAddress,
-			IList<Operation> operations, IList<IVariable> locals, IUdonProgramBlock block)
+			IList<Operation> operations, IList<IVariable> locals, IUdonProgramBlock block, IList<UdonAddressPointer> addressPointers)
 		{
 			this.isStatic = isStatic;
 			this.operations = operations;
@@ -42,8 +45,11 @@ namespace Katsudon.Builder
 			this.locals = locals;
 			this.index = -1;
 
+			this.lastUdonAddress = block.machine.GetAddressCounter();
+			this.addressPointers = addressPointers;
+
 			this.machineBlock = block;
-			methodToMachineAddress = new Dictionary<int, uint>(operations.Count);
+			methodToMachineAddress = new Dictionary<int, uint>(operations.Count);//TODO: cache
 		}
 
 		//TODO: debug define
@@ -70,6 +76,11 @@ namespace Katsudon.Builder
 			{
 				index++;
 				if(index >= operations.Count) return false;
+				if(machineBlock.machine.GetAddressCounter() != lastUdonAddress)
+				{
+					lastUdonAddress = machineBlock.machine.GetAddressCounter();
+					addressPointers.Add(new UdonAddressPointer(lastUdonAddress, currentOp.offset));
+				}
 				methodToMachineAddress[currentOp.offset] = machineBlock.machine.GetAddressCounter();
 			}
 			while(currentOp.opCode.Value == 0x00);
@@ -177,52 +188,33 @@ namespace Katsudon.Builder
 		}
 	}
 
-	public interface IMethodDescriptor : IMethodProgram, IMethodStack, IMethodVariables, IUdonProgramBlock
+	public struct UdonAddressPointer
 	{
-		bool isStatic { get; }
+		public uint udonAddress;
+		public int methodOffset;
 
-		IAddressLabel GetMachineAddressLabel(int methodAddress);
-
-		IAddressLabel GetReturnAddress();
+		public UdonAddressPointer(uint udonAddress, int methodOffset)
+		{
+			this.udonAddress = udonAddress;
+			this.methodOffset = methodOffset;
+		}
 	}
 
-	public interface IExternBuilder
+	public struct UdonMethodMeta
 	{
-		string BuildExtern(IMethodDescriptor method, IUdonMachine machine, Action<VariableMeta> pushCallback);
-	}
+		public string assemblyLocation;
+		public int methodToken;
+		public uint startAddress;
+		public uint endAddress;
+		public IReadOnlyList<UdonAddressPointer> pointers;
 
-	public interface IMethodVariables
-	{
-		IVariable GetReturnVariable();
-
-		IVariable GetArgumentVariable(int index);
-
-		IVariable GetLocalVariable(int index);
-	}
-
-	public interface IMethodStack
-	{
-		bool stackIsEmpty { get; }
-
-		void PushStack(IVariable value);
-
-		IVariable PopStack();
-
-		IVariable PeekStack(int offset);
-
-		IEnumerator<IVariable> PopMultiple(int count);
-	}
-
-	public interface IMethodProgram
-	{
-		Operation currentOp { get; }
-
-		bool Next(bool skipNop = true);
-
-		void PushState();
-
-		void PopState();
-
-		void DropState();
+		public UdonMethodMeta(string assemblyLocation, int methodToken, uint startAddress, uint endAddress, IReadOnlyList<UdonAddressPointer> pointers)
+		{
+			this.assemblyLocation = assemblyLocation;
+			this.methodToken = methodToken;
+			this.startAddress = startAddress;
+			this.endAddress = endAddress;
+			this.pointers = pointers;
+		}
 	}
 }
