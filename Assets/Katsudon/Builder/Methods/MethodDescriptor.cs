@@ -191,30 +191,48 @@ namespace Katsudon.Builder.Methods
 	public struct UdonAddressPointer
 	{
 		public uint udonAddress;
-		public int methodOffset;
+		public int ilOffset;
 
-		public UdonAddressPointer(uint udonAddress, int methodOffset)
+		public UdonAddressPointer(uint udonAddress, int ilOffset)
 		{
 			this.udonAddress = udonAddress;
-			this.methodOffset = methodOffset;
+			this.ilOffset = ilOffset;
 		}
 	}
 
-	public struct UdonMethodMeta
+	public struct UdonMethodMeta : IComparable<UdonMethodMeta>
 	{
-		public string assemblyLocation;
+		public string assemblyName;
+		public string moduleName;
 		public int methodToken;
 		public uint startAddress;
 		public uint endAddress;
 		public IReadOnlyList<UdonAddressPointer> pointers;
 
-		public UdonMethodMeta(string assemblyLocation, int methodToken, uint startAddress, uint endAddress, IReadOnlyList<UdonAddressPointer> pointers)
+		public UdonMethodMeta(string assemblyName, string moduleName, int methodToken, uint startAddress, uint endAddress, IReadOnlyList<UdonAddressPointer> pointers)
 		{
-			this.assemblyLocation = assemblyLocation;
+			this.assemblyName = assemblyName;
+			this.moduleName = moduleName;
 			this.methodToken = methodToken;
 			this.startAddress = startAddress;
 			this.endAddress = endAddress;
 			this.pointers = pointers;
+		}
+
+		public int CompareTo(UdonMethodMeta other)
+		{
+			if(startAddress == other.startAddress)
+			{
+				int c = methodToken.CompareTo(other.methodToken);
+				if(c != 0) return c;
+				c = moduleName.CompareTo(other.moduleName);
+				if(c != 0) return c;
+				return assemblyName.CompareTo(other.assemblyName);
+			}
+			else
+			{
+				return startAddress.CompareTo(other.startAddress);
+			}
 		}
 	}
 }

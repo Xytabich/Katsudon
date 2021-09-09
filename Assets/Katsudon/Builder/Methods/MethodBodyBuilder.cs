@@ -122,9 +122,8 @@ namespace Katsudon.Builder
 		{
 			meta = default;
 			var assembly = method.DeclaringType.Assembly;
-			if(assembly.IsDynamic || string.IsNullOrEmpty(assembly.Location)) return false;
-			if(!File.Exists(assembly.Location)) return false;
-			meta = new UdonMethodMeta(assembly.Location, method.MetadataToken, addressPointers[0].udonAddress, endAddress, addressPointers);
+			if(assembly.IsDynamic) return false;
+			meta = new UdonMethodMeta(assembly.FullName, method.Module.Name, method.MetadataToken, addressPointers[0].udonAddress, endAddress, addressPointers);
 			return true;
 		}
 

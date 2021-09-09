@@ -150,7 +150,7 @@ namespace Katsudon.Builder
 
 			public void AddMethodMeta(UdonMethodMeta methodMeta)
 			{
-				//TODO:
+				udonMachine.AddMethodMeta(methodMeta);
 			}
 
 			#region opcodes

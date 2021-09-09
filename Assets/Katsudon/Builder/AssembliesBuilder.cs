@@ -7,6 +7,7 @@ using Katsudon.Builder.Helpers;
 using Katsudon.Builder.Methods;
 using Katsudon.Builder.Variables;
 using Katsudon.Info;
+using Katsudon.Meta;
 using Katsudon.Utility;
 using UnityEditor;
 using UnityEngine;
@@ -15,8 +16,10 @@ using VRC.Udon.ProgramSources;
 
 namespace Katsudon.Builder
 {
-	public class AssembliesBuilder : IModulesContainer
+	public class AssembliesBuilder : IModulesContainer, IDisposable
 	{
+		public const string ASSEMBLIES_META_FILE = "assembliesMeta";
+
 		private AssembliesInfo assembliesInfo;
 		private MethodBodyBuilder methodBodyBuilder;
 		private BehaviourMethodBuilder behaviourMethodBuilder;
@@ -24,6 +27,9 @@ namespace Katsudon.Builder
 		private CtorDefaultsExtractor defaultsExtractor;
 		private StringBuilder cachedSb = new StringBuilder();
 		private PrimitiveConvertersList convertersList;
+
+		private List<UdonMethodMeta> metaCache = new List<UdonMethodMeta>();
+		private UdonAssembliesMetaWriter metaWriter;
 
 		private Dictionary<Type, object> modules = new Dictionary<Type, object>();
 		private List<TypeOpCodeBuider> typeOperationBuilders;
@@ -74,6 +80,14 @@ namespace Katsudon.Builder
 			defaultsExtractor = new CtorDefaultsExtractor();
 
 			variableBuilders = new VariableBuildersCollection(this);
+
+			metaWriter = new UdonAssembliesMetaWriter(FileUtils.GetWriteStream(ASSEMBLIES_META_FILE));
+		}
+
+		public void Dispose()
+		{
+			metaWriter.Flush();
+			metaWriter.Dispose();
 		}
 
 		public T GetModule<T>() where T : class
@@ -169,7 +183,9 @@ namespace Katsudon.Builder
 				typeOperationBuilders[i].Register(methodBodyBuilder, this);
 			}
 
-			var programBlock = new ProgramBlock(new UdonMachine(classInfo, constCollection, externsCollection, fieldsCollection), propertiesBlock, executionOrder);
+			metaCache.Clear();
+			var machine = new UdonMachine(metaCache, classInfo, constCollection, externsCollection, fieldsCollection);
+			var programBlock = new ProgramBlock(machine, propertiesBlock, executionOrder);
 			programBlock.AddMethodBuilder(behaviourMethodBuilder);
 			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, methodBodyBuilder, convertersList, methodsCollection));
 			builder.AddBlock(programBlock);
@@ -218,6 +234,7 @@ namespace Katsudon.Builder
 				AssetDatabase.CreateAsset(programAsset, programPath);
 			}
 			programAsset.StoreProgram(program);
+			metaWriter.WriteType(classInfo.guid, metaCache);
 		}
 
 		private static void MapInterfaceMethods(Type[] interfaces, Type type, Dictionary<MethodInfo, MethodInfo> interfaceMethods)

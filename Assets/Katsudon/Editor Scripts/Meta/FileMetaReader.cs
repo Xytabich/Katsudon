@@ -2,17 +2,17 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Security.Permissions;
+using System.Reflection.Metadata.Ecma335;
 
-namespace Katsudon.Builder
+namespace Katsudon.Editor.Meta
 {
-	public class PdbMetadataReader : IDisposable
+	public class FileMetaReader : IDisposable
 	{
 		private readonly ConcurrentDictionary<string, MetadataReaderProvider> metadataCache = new ConcurrentDictionary<string, MetadataReaderProvider>();
 
-		void IDisposable.Dispose()
+		public void Dispose()
 		{
 			foreach(MetadataReaderProvider value in metadataCache.Values)
 			{

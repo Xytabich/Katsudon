@@ -6,20 +6,32 @@ namespace Katsudon.Utility
 	{
 		public static BinaryReader TryGetFileReader(string filename)
 		{
+			var stream = GetReadStream(filename);
+			if(stream == null) return null;
+			return new BinaryReader(stream);
+		}
+
+		public static FileStream GetReadStream(string filename)
+		{
 			var path = GetFilePath(filename, true);
 			if(!File.Exists(path)) return null;
 
-			var file = File.Open(path, FileMode.Open, FileAccess.Read);
-			if(file == null) return null;
+			var stream = File.Open(path, FileMode.Open, FileAccess.Read);
+			if(stream == null) return null;
 
-			return new BinaryReader(file);
+			return stream;
 		}
 
 		public static BinaryWriter GetFileWriter(string filename)
 		{
+			return new BinaryWriter(GetWriteStream(filename));
+		}
+
+		public static FileStream GetWriteStream(string filename)
+		{
 			var stream = File.Open(GetFilePath(filename, true), FileMode.OpenOrCreate, FileAccess.ReadWrite);
 			stream.SetLength(0);
-			return new BinaryWriter(stream);
+			return stream;
 		}
 
 		public static void DeleteFile(string filename)

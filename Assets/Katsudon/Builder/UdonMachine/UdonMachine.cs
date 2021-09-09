@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Katsudon.Builder.Methods;
 using Katsudon.Info;
 using UnityEngine;
 using VRC.Udon.VM.Common;
@@ -26,8 +27,12 @@ namespace Katsudon.Builder
 		private IVariable transformVariable = null;
 		private IVariable gameObjectVariable = null;
 
-		public UdonMachine(AsmTypeInfo typeInfo, ConstCollection constCollection, ExternsCollection externsCollection, FieldsCollection fieldsCollection)
+		private IList<UdonMethodMeta> metaList;
+
+		public UdonMachine(IList<UdonMethodMeta> metaList, AsmTypeInfo typeInfo, ConstCollection constCollection,
+			ExternsCollection externsCollection, FieldsCollection fieldsCollection)
 		{
+			this.metaList = metaList;
 			this.typeInfo = typeInfo;
 			this.constCollection = constCollection;
 			this.externsCollection = externsCollection;
@@ -130,6 +135,11 @@ namespace Katsudon.Builder
 		{
 			operations.Add(new Operation(opCode, arg));
 			addressCounter += UdonMachine.GetOpSize(opCode);
+		}
+
+		public void AddMethodMeta(UdonMethodMeta meta)
+		{
+			this.metaList.Add(meta);
 		}
 
 		public void Build()

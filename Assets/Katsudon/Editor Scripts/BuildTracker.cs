@@ -255,20 +255,22 @@ namespace Katsudon.Editor
 				AssetDatabase.StartAssetEditing();
 				try
 				{
-					var builder = new AssembliesBuilder();
-					for(int i = options.Count - 1; i >= 0; i--)
+					using(var builder = new AssembliesBuilder())
 					{
-						builder.BuildClass(options[i].script.GetClass(), options[i].programOut, MonoImporter.GetExecutionOrder(options[i].script));
-					}
-					if(librariesBuild != null)
-					{
-						for(int i = librariesBuild.Count - 1; i >= 0; i--)
+						for(int i = options.Count - 1; i >= 0; i--)
 						{
-							var buildOptions = librariesBuild[i].options;
-							for(int j = 0; j < buildOptions.Length; j++)
+							builder.BuildClass(options[i].script.GetClass(), options[i].programOut, MonoImporter.GetExecutionOrder(options[i].script));
+						}
+						if(librariesBuild != null)
+						{
+							for(int i = librariesBuild.Count - 1; i >= 0; i--)
 							{
-								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
-									MonoImporter.GetExecutionOrder(buildOptions[j].script));
+								var buildOptions = librariesBuild[i].options;
+								for(int j = 0; j < buildOptions.Length; j++)
+								{
+									builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
+										MonoImporter.GetExecutionOrder(buildOptions[j].script));
+								}
 							}
 						}
 					}
