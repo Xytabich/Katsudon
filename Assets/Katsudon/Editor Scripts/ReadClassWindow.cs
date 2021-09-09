@@ -50,45 +50,51 @@ namespace Katsudon.Editor
 		// 	}
 		// }
 
-		// [MenuItem("Tools/TestMeta")]
-		// private static void TestMeta()
-		// {
-		// 	using(var reader = new UdonTraceReader())
-		// 	{
-		// 		var traceList = new List<UdonTraceReader.TraceFrame>();
-		// 		reader.FillTraceInfo(new Guid("43cde0e5-275f-45fa-9318-e07f62b55e80"), 0x0220, traceList);
-		// 		var sb = new StringBuilder();
-		// 		sb.AppendLine("Message");
-		// 		for(int i = 0; i < traceList.Count; i++)
-		// 		{
-		// 			sb.Append('\t');
-		// 			var trace = traceList[i];
-		// 			if(trace.method != null)
-		// 			{
-		// 				sb.Append(trace.method.DeclaringType);
-		// 				sb.Append(':');
-		// 				sb.Append(trace.method.Name);
-		// 				sb.Append(' ');
-		// 				sb.Append('(');
-		// 				var parameters = trace.method.GetParameters();
-		// 				for(int j = 0; j < parameters.Length; j++)
-		// 				{
-		// 					if(j > 0) sb.Append(',');
-		// 					sb.Append(parameters[j].ParameterType);
-		// 				}
-		// 				sb.Append(')');
-		// 				sb.Append(' ');
-		// 			}
-		// 			sb.Append("(at ");
-		// 			sb.Append(trace.fileName);
-		// 			sb.Append(':');
-		// 			sb.Append(trace.line);
-		// 			sb.Append(')');
-		// 			sb.AppendLine();
-		// 		}
-		// 		Debug.Log(sb.ToString());
-		// 	}
-		// }
+		[MenuItem("Tools/TestMeta")]
+		private static void TestMeta()
+		{
+			using(var reader = new UdonTraceReader())
+			{
+				var traceList = new List<UdonTraceReader.TraceFrame>();
+				reader.FillTraceInfo(new Guid("43cde0e5-275f-45fa-9318-e07f62b55e80"), 0x0220, traceList);
+				var sb = new StringBuilder();
+				sb.AppendLine("Message");
+				if(traceList.Count < 1)
+				{
+					sb.Append("(at <unknown>:0)");
+				}
+				else
+				{
+					for(int i = 0; i < traceList.Count; i++)
+					{
+						var trace = traceList[i];
+						if(trace.method != null)
+						{
+							sb.Append(trace.method.DeclaringType);
+							sb.Append(':');
+							sb.Append(trace.method.Name);
+							sb.Append(' ');
+							sb.Append('(');
+							var parameters = trace.method.GetParameters();
+							for(int j = 0; j < parameters.Length; j++)
+							{
+								if(j > 0) sb.Append(',');
+								sb.Append(parameters[j].ParameterType);
+							}
+							sb.Append(')');
+							sb.Append(' ');
+						}
+						sb.Append("(at ");
+						sb.Append(trace.fileName);
+						sb.Append(':');
+						sb.Append(trace.line);
+						sb.Append(')');
+						sb.AppendLine();
+					}
+				}
+				Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", sb.ToString());
+			}
+		}
 
 		[MenuItem("Tools/ReadClass")]
 		private static void ShowWindow()
