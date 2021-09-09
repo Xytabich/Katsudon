@@ -124,6 +124,7 @@ public class TUBeh : TBase, TInt
 
 		int v = (int)img.fillMethod;
 		Debug.Log(v.ToString());
+		TstEvt("abc");
 
 		enumVar = MethodImplOptions.ForwardRef;
 		enumVar |= MethodImplOptions.AggressiveInlining;

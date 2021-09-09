@@ -153,10 +153,18 @@ namespace Katsudon.Meta
 					writer.Write(innerMeta.startAddress);
 					writer.Write(innerMeta.endAddress);
 					writer.Write((byte)METHOD_BLOCK);
+					var sizePos = stream.Position;
+					writer.Write((uint)0);
 					writer.Write(GetStringIndex(innerMeta.assemblyName));
 					writer.Write(GetStringIndex(innerMeta.moduleName));
 					writer.Write(innerMeta.methodToken);
 					WriteBlocks(ref metaIndex, sortedMeta);
+
+					tmpPos = stream.Position;
+					stream.Position = sizePos;
+					writer.Write((uint)((tmpPos - sizePos) - sizeof(uint)));
+					stream.Position = tmpPos;
+
 					nextMethod = (metaIndex + 1 < sortedMeta.Count) ? sortedMeta[metaIndex + 1].startAddress : uint.MaxValue;
 					offset = innerMeta.endAddress;
 				}

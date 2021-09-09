@@ -234,6 +234,7 @@ namespace Katsudon.Builder
 				AssetDatabase.CreateAsset(programAsset, programPath);
 			}
 			programAsset.StoreProgram(program);
+			metaCache.Sort();
 			metaWriter.WriteType(classInfo.guid, metaCache);
 		}
 
