@@ -13,10 +13,17 @@ namespace Katsudon.Editor.Meta
 		private UdonAssembliesMetaReader assembliesReader;
 		private Dictionary<string, Assembly> assemblies = null;
 
+		private bool disposed = false;
+
 		public UdonTraceReader()
 		{
 			metaReader = new FileMetaReader();
 			assembliesReader = new UdonAssembliesMetaReader(FileUtils.GetReadStream(AssembliesBuilder.ASSEMBLIES_META_FILE));
+		}
+
+		~UdonTraceReader()
+		{
+			if(!disposed) Dispose();
 		}
 
 		public void FillTraceInfo(Guid typeGuid, uint programOffset, IList<TraceFrame> outList)
@@ -48,6 +55,7 @@ namespace Katsudon.Editor.Meta
 		{
 			metaReader.Dispose();
 			assembliesReader.Dispose();
+			disposed = true;
 		}
 
 		public struct TraceFrame

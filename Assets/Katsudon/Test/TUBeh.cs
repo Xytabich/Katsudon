@@ -49,6 +49,9 @@ public class TUBeh : TBase, TInt
 
 		object tmp = this;
 		Debug.Log(tmp as TuTuBeh);
+		int a = 0;
+
+		Debug.Log(100500/a);
 
 		// (testComponent as Image).enabled = false;
 
