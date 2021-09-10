@@ -363,6 +363,8 @@ namespace Katsudon.Builder.Helpers
 		protected int tmpTypeCounter;
 		protected Dictionary<Type, int> typeIdentifiers = null;
 
+		private Dictionary<Type, int> cachedGenericTypes = new Dictionary<Type, int>();
+
 		public MethodIdentifier GetMethodIdentifier(MethodInfo info)
 		{
 			return new MethodIdentifier(this, info);
@@ -388,6 +390,12 @@ namespace Katsudon.Builder.Helpers
 			id = tmpTypeCounter++;
 			typeIdentifiers[type] = id;
 			return id;
+		}
+
+		public GenericTypeIndexer GetGenericTypeIndexer()
+		{
+			cachedGenericTypes.Clear();
+			return new GenericTypeIndexer(cachedGenericTypes);
 		}
 
 		public IReadOnlyDictionary<Type, string> GetTypeNames()
@@ -459,6 +467,8 @@ namespace Katsudon.Builder.Helpers
 
 		int GetTypeIdentifier(Type type);
 
+		GenericTypeIndexer GetGenericTypeIndexer();
+
 		IReadOnlyDictionary<Type, string> GetTypeNames();
 
 		bool ContainsUdonType(Type type);
@@ -472,6 +482,29 @@ namespace Katsudon.Builder.Helpers
 		IReadOnlyDictionary<FieldIdentifier, FieldNameInfo> GetFieldNames();
 
 		IReadOnlyDictionary<string, MagicMethodInfo> GetMagicMethods();
+	}
+
+	public struct GenericTypeIndexer
+	{
+		private Dictionary<Type, int> type2Index;
+		private int typeCounter;
+
+		public GenericTypeIndexer(Dictionary<Type, int> cached)
+		{
+			this.type2Index = cached;
+			this.typeCounter = 0;
+		}
+
+		public int GetTypeIdentifier(Type type)
+		{
+			if(!type2Index.TryGetValue(type, out var index))
+			{
+				typeCounter--;
+				index = typeCounter;
+				type2Index[type] = index;
+			}
+			return index;
+		}
 	}
 
 	public struct MethodIdentifier : IEquatable<MethodIdentifier>
@@ -490,20 +523,27 @@ namespace Katsudon.Builder.Helpers
 
 			var parameters = info.GetParameters();
 			arguments = new int[parameters.Length];
-			for(var i = 0; i < parameters.Length; i++)
+			if(info.IsGenericMethodDefinition)
 			{
-				var type = parameters[i].ParameterType;
-				if(type.IsByRef) type = type.GetElementType();
-				arguments[i] = cache.GetTypeIdentifier(type);
+				var genericIndexer = cache.GetGenericTypeIndexer();
+				for(var i = 0; i < parameters.Length; i++)
+				{
+					var type = parameters[i].ParameterType;
+					if(type.IsByRef) type = type.GetElementType();
+					arguments[i] = type.ContainsGenericParameters ? genericIndexer.GetTypeIdentifier(type) : cache.GetTypeIdentifier(type);
+				}
+			}
+			else
+			{
+				for(var i = 0; i < parameters.Length; i++)
+				{
+					var type = parameters[i].ParameterType;
+					if(type.IsByRef) type = type.GetElementType();
+					arguments[i] = cache.GetTypeIdentifier(type);
+				}
 			}
 
-			hashCode = -890188069;
-			hashCode = hashCode * -1521134295 + name.GetHashCode();
-			hashCode = hashCode * -1521134295 + declaringType.GetHashCode();
-			for(var i = 0; i < arguments.Length; i++)
-			{
-				hashCode = hashCode * -1521134295 + arguments[i].GetHashCode();
-			}
+			this.hashCode = CalcHash(name, declaringType, arguments);
 		}
 
 		public MethodIdentifier(int declaringType, string name, int[] arguments)
@@ -512,13 +552,7 @@ namespace Katsudon.Builder.Helpers
 			this.arguments = arguments;
 			this.name = name;
 
-			hashCode = -890188069;
-			hashCode = hashCode * -1521134295 + name.GetHashCode();
-			hashCode = hashCode * -1521134295 + declaringType.GetHashCode();
-			for(var i = 0; i < arguments.Length; i++)
-			{
-				hashCode = hashCode * -1521134295 + arguments[i].GetHashCode();
-			}
+			this.hashCode = CalcHash(name, declaringType, arguments);
 		}
 
 		public override bool Equals(object obj)
@@ -579,6 +613,18 @@ namespace Katsudon.Builder.Helpers
 			var sb = new StringBuilder();
 			AppendCtor(sb);
 			return sb.ToString();
+		}
+
+		private static int CalcHash(string name, int declaringType, int[] arguments)
+		{
+			int hashCode = -890188069;
+			hashCode = hashCode * -1521134295 + name.GetHashCode();
+			hashCode = hashCode * -1521134295 + declaringType;
+			for(var i = 0; i < arguments.Length; i++)
+			{
+				hashCode = hashCode * -1521134295 + arguments[i];
+			}
+			return hashCode;
 		}
 
 		public static bool operator ==(MethodIdentifier a, MethodIdentifier b)

@@ -6,7 +6,7 @@ using System.Reflection.PortableExecutable;
 using System.Security.Permissions;
 using System.Reflection.Metadata.Ecma335;
 
-namespace Katsudon.Editor.Meta
+namespace Katsudon.Meta
 {
 	public class FileMetaReader : IDisposable
 	{

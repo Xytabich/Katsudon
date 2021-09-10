@@ -146,6 +146,15 @@ namespace Katsudon.Builder.Helpers
 							}
 							if(memberInfo is MethodInfo methodInfo)
 							{
+								if(methodInfo.IsGenericMethodDefinition)
+								{
+									int paramsCount = methodInfo.GetParameters().Length + (methodInfo.ReturnType == typeof(void) ? 0 : 1) + (methodInfo.IsStatic ? 0 : 1);
+									if(action.Value != paramsCount || methodInfo.Name.Contains("GetComponent"))
+									{
+										continue;
+									}
+								}
+
 								var id = new MethodIdentifier(this, methodInfo);
 								MethodNodeInfo nodeInfo;
 								if(methods.TryGetValue(id, out nodeInfo))
@@ -220,6 +229,33 @@ namespace Katsudon.Builder.Helpers
 		private static bool IsGeneric(string str)
 		{
 			return str.Contains("_T_") || str.EndsWith("_T") || str.Contains("TArray") || str.Contains("ListT") || str.Contains("IEnumerableT");
+		}
+
+		private static bool IsSupportedGenericParameter(Type t)
+		{
+			if(t.IsGenericParameter) return true;
+			if(t.IsArray) return t.GetArrayRank() <= 1 && t.GetElementType().IsGenericParameter;
+			if(t.IsGenericType)
+			{
+				var td = t.GetGenericTypeDefinition();
+				if(td == typeof(IEnumerable<>) || td == typeof(List<>))
+				{
+					return t.GetGenericArguments()[0].IsGenericParameter;
+				}
+			}
+			return false;
+		}
+
+		private static string GetGenericParameterName(Type t)
+		{
+			if(t.IsGenericParameter) return t.Name;
+			if(t.IsArray) return t.GetElementType().Name + "Array";
+			if(t.IsGenericType)
+			{
+				var name = t.Name;
+				return name.Remove(name.LastIndexOf('`')) + t.GetGenericArguments()[0].Name;
+			}
+			throw new InvalidOperationException();
 		}
 
 		private static void CollectTypeMembers(Type type, StringBuilder sb, Dictionary<string, MemberInfo> members, IReadOnlyDictionary<Type, string> supportedTypes)
@@ -315,19 +351,73 @@ namespace Katsudon.Builder.Helpers
 				for(var i = 0; i < methods.Length; i++)
 				{
 					var method = methods[i];
-					if(!method.IsGenericMethodDefinition)
+					string retTypeName;
+					bool supportedReturn;
+					if(method.ReturnType == typeof(void))
 					{
-						string retTypeName;
-						bool supportedReturn;
-						if(method.ReturnType == typeof(void))
+						supportedReturn = true;
+						retTypeName = "SystemVoid";
+					}
+					else
+					{
+						supportedReturn = supportedTypes.TryGetValue(method.ReturnType, out retTypeName);
+					}
+					if(method.IsGenericMethodDefinition)
+					{
+						if(!supportedReturn)
 						{
-							supportedReturn = true;
-							retTypeName = "SystemVoid";
+							supportedReturn = IsSupportedGenericParameter(method.ReturnType);
 						}
-						else
+						if(supportedReturn)
 						{
-							supportedReturn = supportedTypes.TryGetValue(method.ReturnType, out retTypeName);
+							sb.Clear();
+							// sb.Append(typeName);
+							// sb.Append('.');
+
+							sb.Append("__");
+							AppendMemberName(sb, method.Name);
+
+							var parameters = method.GetParameters();
+							if(parameters.Length > 0)
+							{
+								sb.Append('_');
+								bool ignore = false;
+								for(var j = 0; j < parameters.Length; j++)
+								{
+									if(supportedTypes.TryGetValue(parameters[j].ParameterType, out var argTypeName))
+									{
+										sb.Append('_');
+										sb.Append(argTypeName);
+									}
+									else if(IsSupportedGenericParameter(parameters[j].ParameterType))
+									{
+										sb.Append('_');
+										sb.Append(GetGenericParameterName(parameters[j].ParameterType));
+									}
+									else
+									{
+										ignore = true;
+										break;
+									}
+								}
+								if(ignore) continue;
+							}
+
+							sb.Append("__");
+							sb.Append(retTypeName);
+							memberName = sb.ToString();
+							if(members.TryGetValue(memberName, out otherMember))
+							{
+								if(otherMember.DeclaringType.IsAssignableFrom(method.DeclaringType))
+								{
+									members[memberName] = method;
+								}
+							}
+							else members.Add(memberName, method);
 						}
+					}
+					else
+					{
 						if(supportedReturn)
 						{
 							sb.Clear();

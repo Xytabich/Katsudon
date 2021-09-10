@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Katsudon.Builder.Methods;
+using Katsudon.Meta;
 
 namespace Katsudon.Builder
 {
@@ -88,10 +89,9 @@ namespace Katsudon.Builder
 							throw new System.Exception(string.Format("Builder not found for opcode {0}{1}", methodDescriptor.currentOp.opCode.Name, GetArgInfo(methodDescriptor.currentOp.argument)));
 						}
 					}
-					catch
+					catch(Exception e)
 					{
-						UnityEngine.Debug.LogErrorFormat("Exception during building opcode on position 0x{0:X}", methodDescriptor.currentOp.offset);
-						throw;
+						throw new System.Exception(string.Format("Exception during building opcode on position 0x{0:X}", methodDescriptor.currentOp.offset), e);
 					}
 				}
 				methodDescriptor.CheckState();
@@ -104,7 +104,24 @@ namespace Katsudon.Builder
 			}
 			catch
 			{
-				UnityEngine.Debug.LogErrorFormat("Exception during building method {1} from {0}", method.DeclaringType, method);
+				string message = string.Format("Exception during building method {1} from {0}\n\n\n", method.DeclaringType, method);
+
+				var assembly = method.DeclaringType.Assembly;
+				if(!assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
+				{
+					using(var reader = new FileMetaReader())
+					{
+						if(reader.GetSourceLineInfo(assembly.Location, method.MetadataToken, methodDescriptor.currentOp.offset, out var source, out var line, out _))
+						{
+							if(!string.IsNullOrEmpty(source) && !source.StartsWith("<"))
+							{
+								message = string.Format("Exception during building method\n{0} (at {1}:{2})\n\n\n", method, source, line);
+							}
+						}
+					}
+				}
+
+				UnityEngine.Debug.LogError(message);
 				throw;
 			}
 		}

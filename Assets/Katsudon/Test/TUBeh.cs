@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDK3.Components;
+using VRC.SDKBase;
 using VRC.Udon;
 
 public class TUBeh : TBase, TInt
@@ -51,8 +52,9 @@ public class TUBeh : TBase, TInt
 		Debug.Log(tmp as TuTuBeh);
 		int a = 0;
 
-		Debug.Log(100500/a);
-
+		object[] values = null;
+		Utilities.ShuffleArray(values);
+		//Array.BinarySearch(b, a);
 		// (testComponent as Image).enabled = false;
 
 		// var tint = this as TInt;
