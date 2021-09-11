@@ -38,7 +38,6 @@ public class TUBeh : TBase, TInt
 	private Type t = typeof(int);
 
 	private event Func<string, int> evt;
-	private TUBeh self;
 	private byte bt;
 	private int refVariable = 10;
 
@@ -50,10 +49,12 @@ public class TUBeh : TBase, TInt
 
 		object tmp = this;
 		Debug.Log(tmp as TuTuBeh);
-		int a = 0;
 
-		object[] values = null;
-		Utilities.ShuffleArray(values);
+		print(this.DisableInteractive());
+		this.DisableInteractive(true);
+		print(this.DisableInteractive());
+		this.DisableInteractive(false);
+		print(this.DisableInteractive());
 		//Array.BinarySearch(b, a);
 		// (testComponent as Image).enabled = false;
 

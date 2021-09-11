@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
+using VRC.Udon.Common.Interfaces;
 
 namespace Katsudon.Builder.Extensions.UdonExtensions
 {
@@ -14,9 +15,10 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 			if(methodInfo.Name == nameof(AbstractCallsHelper.SendCustomNetworkEvent) && methodInfo.DeclaringType == typeof(AbstractCallsHelper))
 			{
 				var eventName = method.PopStack();
+				var eventTarget = method.PopStack();
 				var target = method.PopStack();
 				method.machine.AddExtern("VRCUdonCommonInterfacesIUdonEventReceiver.__SendCustomNetworkEvent__VRCUdonCommonInterfacesNetworkEventTarget_SystemString__SystemVoid",
-					target.OwnType(), eventName.OwnType());
+					target.OwnType(), eventTarget.UseType(typeof(NetworkEventTarget)), eventName.OwnType());
 				return true;
 			}
 			return false;

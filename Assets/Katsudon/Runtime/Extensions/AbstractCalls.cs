@@ -4,11 +4,17 @@ using VRC.Udon.Common.Interfaces;
 
 public static class AbstractCallsHelper
 {
+	/// <summary>
+	/// Getter for <see cref="IUdonEventReceiver.DisableInteractive"/>
+	/// </summary>
 	public static bool DisableInteractive(this MonoBehaviour behaviour)
 	{
 		return (behaviour as IUdonEventReceiver).DisableInteractive;
 	}
 
+	/// <summary>
+	/// Setter for <see cref="IUdonEventReceiver.DisableInteractive"/>
+	/// </summary>
 	public static void DisableInteractive(this MonoBehaviour behaviour, bool value)
 	{
 		(behaviour as IUdonEventReceiver).DisableInteractive = value;

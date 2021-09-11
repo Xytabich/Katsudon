@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Katsudon.Builder.Externs;
 using UnityEngine;
 using VRC.Udon.Common.Interfaces;
 
@@ -20,6 +22,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 				{Utils.GetPropertyMethod<Component>(nameof(Component.gameObject)), GetGameObject},
 				{Utils.GetPropertyMethod<MonoBehaviour>(nameof(MonoBehaviour.enabled)), GetEnabled},
 				{Utils.GetPropertyMethod<MonoBehaviour>(nameof(MonoBehaviour.enabled), false), SetEnabled},
+				{Utils.GetMethod<MonoBehaviour>(nameof(MonoBehaviour.print), typeof(object)), PrintMessage},
 				// TODO: In future
 				// {Utils.GetMethod<Component>(nameof(Component.SendMessage), typeof(string)), null},
 				// {Utils.GetMethod<Component>(nameof(Component.SendMessageUpwards), typeof(string)), null},
@@ -90,6 +93,13 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 				return true;
 			}
 			return false;
+		}
+
+		private bool PrintMessage(IMethodDescriptor method, IUdonMachine udonMachine)
+		{
+			var value = method.PopStack();
+			udonMachine.DebugLog(value);
+			return true;
 		}
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
