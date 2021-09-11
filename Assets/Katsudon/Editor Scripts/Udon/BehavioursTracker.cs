@@ -94,6 +94,7 @@ namespace Katsudon.Editor.Udon
 
 		private static void PickFromScene(Scene scene)
 		{
+			if(!scene.IsValid()) return;
 			if(loadedScenes == null || !loadedScenes.Contains(scene))
 			{
 				if(loadedScenes == null) loadedScenes = new HashSet<Scene>();
@@ -440,6 +441,8 @@ namespace Katsudon.Editor.Udon
 			private void OnRemoveContainer(int id)
 			{
 				var container = containers[id];
+				if(container == null) return;
+
 				containers[id] = null;
 				freeContainerIds.Add(id);
 

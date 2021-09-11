@@ -13,6 +13,24 @@ namespace Katsudon.Editor
 		private static Func<string> GetActiveFolderPath = (Func<string>)Delegate.CreateDelegate(typeof(Func<string>),
 			typeof(ProjectWindowUtil).GetMethod("GetActiveFolderPath", BindingFlags.NonPublic | BindingFlags.Static));
 
+#if !VRC_KATSUDON
+		[InitializeOnLoadMethod]
+		private static void Init()
+		{
+			var list = new System.Collections.Generic.List<string>();
+			AddDefineToTarget(BuildTargetGroup.Standalone, list);
+			AddDefineToTarget(BuildTargetGroup.Android, list);
+		}
+
+		private static void AddDefineToTarget(BuildTargetGroup targetGroup, System.Collections.Generic.List<string> list)
+		{
+			list.Clear();
+			list.AddRange(PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup).Split(';'));
+			list.Add("VRC_KATSUDON");
+			PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, string.Join(";", list));
+		}
+#endif
+
 		[MenuItem("Assets/Create/UDON Assembly Folder", true, 20)]
 		private static bool CanCreateAssemblyFolder()
 		{
