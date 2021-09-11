@@ -13,6 +13,7 @@ namespace Katsudon.Editor
 	public class UdonExceptionsParser : EditorWindow
 	{
 		private static Regex udonMessagePattern = new Regex(@"The VM encountered an error![\n\s]+Exception Message:[\n\s]+An exception occurred during EXTERN to '.*?'\.[\n\s]+Parameter Addresses:[0-9a-fA-Fx,\s]+[\s\n]+([^\s\n].*)[\n\s-]+Program Counter was at:\s*(\d+)[\n\s-]+[\n\s\S]+Heap Dump:[\n\s]+0x00000000:\s*([0-9a-fA-F\-]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		private static Regex katsudonMessagePattern = new Regex(@"^(.+?)[\s\n]+\{KatsudonExceptionInfo:([0-9a-fA-F\-]+):(\d+)\}", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
 		private TextField fileField;
 		private VisualElement messagesContainer;
@@ -63,16 +64,11 @@ namespace Katsudon.Editor
 				}
 				if(!string.IsNullOrEmpty(text))
 				{
-					var match = udonMessagePattern.Match(text);
 					var list = new List<TraceMessage>();
-					while(match.Success)
+					int offset = 0;
+					while(MatchMessage(text, ref offset, out var guid, out var address, out var msg))
 					{
-						if(uint.TryParse(match.Groups[2].Value, out var address) && Guid.TryParse(match.Groups[3].Value, out var guid))
-						{
-							var msg = match.Groups[1].Value.Trim();
-							list.Add(new TraceMessage(msg, guid, address));
-						}
-						match = match.NextMatch();
+						list.Add(new TraceMessage(msg, guid, address));
 					}
 					if(list.Count > 0)
 					{
@@ -179,16 +175,37 @@ namespace Katsudon.Editor
 		{
 			if(type == LogType.Error)
 			{
-				var match = udonMessagePattern.Match(condition);
-				if(match.Success && uint.TryParse(match.Groups[2].Value, out var address) && Guid.TryParse(match.Groups[3].Value, out var guid))
+				int offset = 0;
+				if(MatchMessage(condition, ref offset, out var guid, out var address, out var msg))
 				{
-					var msg = match.Groups[1].Value.Trim();
 					using(var reader = new UdonTraceReader())
 					{
 						Debug.LogFormat(LogType.Exception, LogOption.NoStacktrace, null, "[<color=green>KEP</color>] {0}", GenerateTrace(reader, guid, address, msg));
 					}
 				}
 			}
+		}
+
+		private static bool MatchMessage(string condition, ref int offset, out Guid guid, out uint programOffset, out string msg)
+		{
+			var match = udonMessagePattern.Match(condition, offset);
+			if(match.Success && uint.TryParse(match.Groups[2].Value, out programOffset) && Guid.TryParse(match.Groups[3].Value, out guid))
+			{
+				msg = match.Groups[1].Value.Trim();
+				offset = match.Index + match.Length;
+				return true;
+			}
+			match = katsudonMessagePattern.Match(condition, offset);
+			if(match.Success && uint.TryParse(match.Groups[3].Value, out programOffset) && Guid.TryParse(match.Groups[2].Value, out guid))
+			{
+				msg = match.Groups[1].Value.Trim();
+				offset = match.Index + match.Length;
+				return true;
+			}
+			guid = default;
+			programOffset = default;
+			msg = default;
+			return false;
 		}
 
 		private static string GenerateTrace(UdonTraceReader reader, Guid guid, uint programOffset, string message)
