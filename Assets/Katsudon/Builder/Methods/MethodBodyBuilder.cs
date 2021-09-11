@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Katsudon.Builder.Methods;
 using Katsudon.Meta;
 
@@ -91,7 +92,7 @@ namespace Katsudon.Builder
 					}
 					catch(Exception e)
 					{
-						throw new System.Exception(string.Format("Exception during building opcode on position 0x{0:X}", methodDescriptor.currentOp.offset), e);
+						throw new IlOffsetInfoException(methodDescriptor.currentOp.offset, e);
 					}
 				}
 				methodDescriptor.CheckState();
@@ -102,10 +103,11 @@ namespace Katsudon.Builder
 					machineBlock.machine.AddMethodMeta(meta);
 				}
 			}
-			catch
+			catch(Exception e)
 			{
-				string message = string.Format("Exception during building method {1} from {0}\n\n\n", method.DeclaringType, method);
+				if(!(e is IlOffsetInfoException ilOffset)) throw;
 
+				KatsudonBuildException exception = null;
 				var assembly = method.DeclaringType.Assembly;
 				if(!assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
 				{
@@ -115,14 +117,14 @@ namespace Katsudon.Builder
 						{
 							if(!string.IsNullOrEmpty(source) && !source.StartsWith("<"))
 							{
-								message = string.Format("Exception during building method\n{0} (at {1}:{2})\n\n\n", method, source, line);
+								exception = new KatsudonBuildException(method, source, line, ilOffset.ilOffset, e.InnerException);
 							}
 						}
 					}
 				}
-
-				UnityEngine.Debug.LogError(message);
-				throw;
+				if(exception == null) new KatsudonBuildException(method, ilOffset.ilOffset, e.InnerException);
+				//TODO: log e.InnerException exception separately in debug define
+				throw exception;
 			}
 		}
 
@@ -154,6 +156,45 @@ namespace Katsudon.Builder
 		{
 			int value = (ushort)opCode.Value;
 			return (value & 0xFF) + (value >> 8);
+		}
+
+		private class KatsudonBuildException : Exception
+		{
+			public KatsudonBuildException(MethodInfo method, int ilOffset, Exception innerException) :
+				base(BuildMessage(method, ilOffset, innerException))
+			{ }
+
+			public KatsudonBuildException(MethodInfo method, string source, int line, int ilOffset, Exception innerException) :
+				base(BuildMessage(method, source, line, ilOffset, innerException))
+			{ }
+
+			private static string BuildMessage(MethodInfo method, int ilOffset, Exception innerException)
+			{
+				var sb = new StringBuilder();
+				sb.AppendLine(innerException.Message);
+				sb.AppendFormat("(at {0}:{1}) IL_{2:x8}", method.DeclaringType, method, ilOffset);
+				sb.AppendLine();
+				return sb.ToString();
+			}
+
+			private static string BuildMessage(MethodInfo method, string source, int line, int ilOffset, Exception innerException)
+			{
+				var sb = new StringBuilder();
+				sb.AppendLine(innerException.Message);
+				sb.AppendFormat("{0} (at {1}:{2}) IL_{3:x8}", method, source, line, ilOffset);
+				sb.AppendLine();
+				return sb.ToString();
+			}
+		}
+
+		private class IlOffsetInfoException : Exception
+		{
+			public readonly int ilOffset;
+
+			public IlOffsetInfoException(int ilOffset, Exception innerException) : base(null, innerException)
+			{
+				this.ilOffset = ilOffset;
+			}
 		}
 	}
 
