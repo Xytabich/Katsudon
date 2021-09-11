@@ -46,6 +46,7 @@ namespace Katsudon.Members
 				methods[type] = list;
 			}
 			if(list == null) return false;
+			MethodsCollector.CheckRefParameters(methodInfo);
 			return list.Contains(methodInfo);
 		}
 

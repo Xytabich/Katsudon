@@ -75,6 +75,8 @@ namespace Katsudon.Members
 			{"Update", new Info("Event {0} is not supported in udon")}
 		};
 
+		private HashSet<string> magicMethodNames = new HashSet<string>();
+
 		private bool initComplete = false;
 
 		public void SetMethod(string name, string udonName, Type retType, KeyValuePair<string, Type>[] parameters)
@@ -125,6 +127,10 @@ namespace Katsudon.Members
 					default: return true;
 				}
 			}
+			else if(magicMethodNames.Contains(method.Name))
+			{
+				UnityEngine.Debug.LogWarningFormat("Method {0} declared in {1} uses a reserved name which may cause incorrect behavior", method, method.DeclaringType);
+			}
 			return false;
 		}
 
@@ -133,6 +139,7 @@ namespace Katsudon.Members
 			foreach(var pair in UdonCacheHelper.cache.GetMagicMethods())
 			{
 				methods[pair.Key] = new Info(pair.Value.udonName, pair.Value.returnType, pair.Value.parameters);
+				magicMethodNames.Add(pair.Value.udonName);
 			}
 			initComplete = true;
 		}

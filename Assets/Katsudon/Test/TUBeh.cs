@@ -26,7 +26,7 @@ public class TUBeh : TBase, TInt
 
 	public int counter = 0;
 
-	private TimeSpan dt = DateTime.Now - new DateTime(1999, 9, 16).AddMonths(129);
+	// private TimeSpan dt = DateTime.Now - new DateTime(1999, 9, 16).AddMonths(129);
 	private Image.FillMethod fm = Image.FillMethod.Radial180;
 	private Vector3 v = new Vector3(-1, -2, 16);
 	private int[] b = new int[] { 1050 };
@@ -141,7 +141,7 @@ public class TUBeh : TBase, TInt
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private int TstEvt(string b)
+	private int TstEvt(in string b)
 	{
 		return b == "1" ? 1 : 0;
 	}

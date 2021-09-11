@@ -14,7 +14,7 @@ namespace Katsudon.Members
 			var field = member as FieldInfo;
 			if(field.IsStatic && (field.IsInitOnly || !field.IsLiteral))//keep const
 			{
-				throw new Exception("Static fields is not supported currently: " + field);
+				throw new Exception(string.Format("Static fields are not currently supported: {0}:{1}", field.DeclaringType, field));
 			}
 			return false;
 		}

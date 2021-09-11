@@ -11,7 +11,7 @@ namespace Katsudon.Members
 		bool IMemberHandler.Process(MemberInfo member, AssembliesInfo assemblies, AsmTypeInfo typeInfo)
 		{
 			var method = member as MethodInfo;
-			if(method.IsGenericMethod) throw new System.Exception("Generic methods is not supported now");
+			if(method.IsGenericMethod) throw new System.Exception("Generic methods are not currently supported");
 			return false;
 		}
 
