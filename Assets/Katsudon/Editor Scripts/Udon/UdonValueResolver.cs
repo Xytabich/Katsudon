@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Katsudon.Builder;
 using Katsudon.Editor.Converters;
 using Katsudon.Utility;
-using NUnit.Framework;
+using UnityEngine.Assertions;
 
 namespace Katsudon.Editor
 {
