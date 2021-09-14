@@ -19,6 +19,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
+			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
 			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 			if(!method.isStatic)
 			{

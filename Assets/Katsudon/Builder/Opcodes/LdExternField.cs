@@ -28,7 +28,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					if(method.currentOp.opCode == OpCodes.Ldflda && !string.IsNullOrEmpty(nameInfo.setterName))
 					{
 						method.PushStack(new ReferenceExternVariable(nameInfo.getterName, nameInfo.setterName,
-							method.GetTmpVariable(target).Reserve(), method.GetTmpVariable(field.FieldType)));
+							method.GetTmpVariable(target.OwnType()).Reserve(), method.GetTmpVariable(field.FieldType)));
 					}
 					else
 					{

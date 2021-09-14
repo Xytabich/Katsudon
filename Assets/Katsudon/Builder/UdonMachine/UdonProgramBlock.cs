@@ -60,19 +60,36 @@ namespace Katsudon.Builder
 			return variable;
 		}
 
-		public ITmpVariable GetTmpVariable(IVariable variable)
+		public ITmpVariable GetTmpVariable(VariableMeta variable)
 		{
-			if(variable is ITmpVariable tmp && !tmp.isHandle)
+			if(variable.variable is ITmpVariable tmp && !tmp.isHandle)
 			{
 				return tmp;
 			}
 			else
 			{
-				var newTmp = GetTmpVariable(variable.type);
+				var newTmp = GetTmpVariable(variable.preferredType);
 				newTmp.Allocate();
-				machine.AddCopy(variable, newTmp);
+				machine.AddCopy(variable.variable, newTmp, variable.preferredType);
 				return newTmp;
 			}
+		}
+
+		public IVariable GetReadonlyVariable(VariableMeta variable)
+		{
+			if(variable.variable is ITmpVariable tmp && !tmp.isHandle)
+			{
+				return tmp;
+			}
+			if(variable.variable is IConstVariable)
+			{
+				return variable.variable;
+			}
+
+			var newTmp = GetTmpVariable(variable.preferredType);
+			newTmp.Allocate();
+			machine.AddCopy(variable.variable, newTmp, variable.preferredType);
+			return newTmp;
 		}
 
 		private void ReleaseVariable(TmpVariable variable)
@@ -427,7 +444,12 @@ namespace Katsudon.Builder
 		/// <summary>
 		/// Creates a temporary copy of a variable if the variable itself is not temporary
 		/// </summary>
-		ITmpVariable GetTmpVariable(IVariable variable);
+		ITmpVariable GetTmpVariable(VariableMeta variable);
+
+		/// <summary>
+		/// Creates a temporary copy of the variable if it is volatile. Otherwise, it returns the same variable.
+		/// </summary>
+		IVariable GetReadonlyVariable(VariableMeta variable);
 	}
 
 	public interface ITmpVariable : IVariable

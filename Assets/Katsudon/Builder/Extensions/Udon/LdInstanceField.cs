@@ -28,7 +28,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 				if(method.currentOp.opCode == OpCodes.Ldflda)
 				{
-					method.PushStack(new ReferenceInstanceVariable(info.name, method.GetTmpVariable(target).Reserve(), method.GetTmpVariable(field.FieldType)));
+					method.PushStack(new ReferenceInstanceVariable(info.name, method.GetTmpVariable(target.OwnType()).Reserve(), method.GetTmpVariable(field.FieldType)));
 				}
 				else
 				{

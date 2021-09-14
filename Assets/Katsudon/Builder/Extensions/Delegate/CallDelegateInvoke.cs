@@ -34,7 +34,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 						if(type.IsByRef) type = type.GetElementType();
 						else
 						{
-							parameter = method.GetTmpVariable(parameter).Reserve();
+							parameter = method.GetTmpVariable(parameter.UseType(type)).Reserve();
 							reservedCache.Add((ITmpVariable)parameter);
 						}
 						argumentsCache.Add(parameter.UseType(type));
@@ -43,7 +43,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 				}
 
 				//Struct: object[][]{{target, methodName, delegateType[, ...args][, returnName]}}
-				var actions = method.GetTmpVariable(method.PopStack()).Reserve();
+				var actions = method.GetTmpVariable(method.PopStack().OwnType()).Reserve();
 
 				var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetOrPushOutVariable(methodInfo.ReturnType);
 

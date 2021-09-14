@@ -29,7 +29,6 @@ public class TUBeh : TBase, TInt
 	// private TimeSpan dt = DateTime.Now - new DateTime(1999, 9, 16).AddMonths(129);
 	private Image.FillMethod fm = Image.FillMethod.Radial180;
 	private Vector3 v = new Vector3(-1, -2, 16);
-	private int[] b = new int[] { 1050 };
 	private uint @extern = (uint)(!DateTime.Now.IsDaylightSavingTime() ? 0x16 : 0x18);
 
 	private bool abc = true;
@@ -39,7 +38,9 @@ public class TUBeh : TBase, TInt
 
 	private event Func<string, int> evt;
 	private byte bt;
-	private int refVariable = 10;
+
+	private int[] listArray = new int[] { 1050 };
+	private int listCount = 10;
 
 	public void Start()
 	{
@@ -49,6 +50,13 @@ public class TUBeh : TBase, TInt
 
 		object tmp = this;
 		Debug.Log(tmp as TuTuBeh);
+
+		this.v = default;
+		ListUtils.Ctor(ref listArray, ref listCount, 10);
+		ListUtils.Add(ref listArray, ref listCount, 101);
+		print(listArray[0]);
+		ListUtils.RemoveAt(ref listArray, ref listCount, 0);
+		print(listCount);
 
 		print(this.DisableInteractive());
 		this.DisableInteractive(true);

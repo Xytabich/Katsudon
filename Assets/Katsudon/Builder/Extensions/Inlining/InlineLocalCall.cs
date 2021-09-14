@@ -23,7 +23,8 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
-			if(methodInfo.IsStatic || !Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
+			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
+			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 			if((methodInfo.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) == 0) return false;
 
 			var target = method.PeekStack(methodInfo.GetParameters().Length);
@@ -44,8 +45,12 @@ namespace Katsudon.Builder.AsmOpCodes
 					var parameter = iterator.Current;
 					if(!parameters[index].ParameterType.IsByRef)
 					{
-						parameter = method.GetTmpVariable(parameter).Reserve();
-						reservedCache.Add((ITmpVariable)parameter);
+						parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
+						if(parameter is ITmpVariable tmpVariable)
+						{
+							tmpVariable.Reserve();
+							reservedCache.Add(tmpVariable);
+						}
 					}
 					argumentsCache.Add(parameter);
 					index++;

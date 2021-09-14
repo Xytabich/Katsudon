@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Katsudon.Editor.Meta;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,6 +16,9 @@ namespace Katsudon.Editor
 		private static Regex udonMessagePattern = new Regex(@"The VM encountered an error![\n\s]+Exception Message:[\n\s]+An exception occurred during EXTERN to '.*?'\.[\n\s]+Parameter Addresses:[0-9a-fA-Fx,\s]+[\s\n]+([^\s\n].*)[\n\s-]+Program Counter was at:\s*(\d+)[\n\s-]+[\n\s\S]+Heap Dump:[\n\s]+0x00000000:\s*([0-9a-fA-F\-]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 		private static Regex katsudonMessagePattern = new Regex(@"^(.+?)[\s\n]+\{KatsudonExceptionInfo:([0-9a-fA-F\-]+):(\d+)\}", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+		private TextField guidField;
+		private IntegerField positionField;
+
 		private TextField fileField;
 		private VisualElement messagesContainer;
 
@@ -23,9 +27,26 @@ namespace Katsudon.Editor
 			var root = this.rootVisualElement;
 			root.style.paddingTop = 2f;
 
+			var directAddressRoot = new VisualElement();
+			directAddressRoot.style.flexDirection = FlexDirection.Row;
+			guidField = new TextField("Guid");
+			guidField.style.flexGrow = 0.7f;
+			guidField.style.flexShrink = 1f;
+			directAddressRoot.Add(guidField);
+			directAddressRoot.Add(new Label("Address"));
+			positionField = new IntegerField();
+			positionField.style.flexGrow = 0.2f;
+			positionField.style.flexShrink = 0.5f;
+			directAddressRoot.Add(positionField);
+			var showDirectBtn = new Button(ShowFileDirect);
+			showDirectBtn.style.flexGrow = 0.1f;
+			showDirectBtn.style.flexShrink = 1f;
+			showDirectBtn.text = "Show";
+			directAddressRoot.Add(showDirectBtn);
+			root.Add(directAddressRoot);
+
 			var fileSelectRoot = new VisualElement();
 			fileSelectRoot.style.flexDirection = FlexDirection.Row;
-			fileSelectRoot.style.alignItems = Align.Stretch;
 			fileField = new TextField("File");
 			fileField.style.flexGrow = 1f;
 			fileField.style.flexShrink = 1f;
@@ -81,46 +102,7 @@ namespace Katsudon.Editor
 								traceList.Clear();
 								reader.FillTraceInfo(list[i].typeGuid, list[i].programOffset, traceList);
 
-								var messageRoot = new Box();
-								messageRoot.style.marginTop = 2f;
-								messageRoot.style.marginLeft = 3f;
-								messageRoot.style.marginRight = 3f;
-								messageRoot.style.paddingTop = 4f;
-								messageRoot.style.paddingLeft = 4f;
-								messageRoot.style.paddingRight = 4f;
-								messageRoot.style.paddingBottom = 4f;
-								messageRoot.style.flexDirection = FlexDirection.Column;
-								ContextMenu(messageRoot, list[i]);
-
-								var msg = new TextElement() { text = list[i].message };
-								msg.style.marginBottom = 4f;
-								messageRoot.Add(msg);
-
-								if(traceList.Count < 1)
-								{
-									var frame = new TextElement() { text = "(at <unknown>:0)" };
-									frame.style.paddingLeft = 24f;
-									frame.style.color = (Color)new Color32(147, 179, 248, 255);
-									messageRoot.Add(frame);
-								}
-								else
-								{
-									for(int j = 0; j < traceList.Count; j++)
-									{
-										sb.Clear();
-										AppendFrame(sb, traceList[j], true);
-										var frame = new Button() { text = sb.ToString() };
-										frame.ClearClassList();
-										frame.style.marginLeft = 24f;
-										frame.style.color = (Color)new Color32(147, 179, 248, 255);
-										if(traceList[j].method != null)
-										{
-											GotoOnClick(frame, traceList[j]);
-										}
-										messageRoot.Add(frame);
-									}
-								}
-								messagesContainer.Add(messageRoot);
+								AddTraceMessage(list[i], traceList, sb);
 							}
 						}
 					}
@@ -130,6 +112,68 @@ namespace Katsudon.Editor
 			{
 				Debug.Log("File does not exist: " + fileField.value);
 			}
+		}
+
+		private void ShowFileDirect()
+		{
+			messagesContainer.Clear();
+			if(Guid.TryParse(guidField.value, out var guid) && positionField.value >= 0)
+			{
+				using(var reader = new UdonTraceReader())
+				{
+					var trace = new TraceMessage("Trace info", guid, (uint)positionField.value);
+
+					var traceList = new List<UdonTraceReader.TraceFrame>();
+					reader.FillTraceInfo(trace.typeGuid, trace.programOffset, traceList);
+
+					var sb = new StringBuilder();
+					AddTraceMessage(trace, traceList, sb);
+				}
+			}
+		}
+
+		private void AddTraceMessage(TraceMessage trace, List<UdonTraceReader.TraceFrame> traceList, StringBuilder sb)
+		{
+			var messageRoot = new Box();
+			messageRoot.style.marginTop = 2f;
+			messageRoot.style.marginLeft = 3f;
+			messageRoot.style.marginRight = 3f;
+			messageRoot.style.paddingTop = 4f;
+			messageRoot.style.paddingLeft = 4f;
+			messageRoot.style.paddingRight = 4f;
+			messageRoot.style.paddingBottom = 4f;
+			messageRoot.style.flexDirection = FlexDirection.Column;
+			ContextMenu(messageRoot, trace);
+
+			var msg = new TextElement() { text = trace.message };
+			msg.style.marginBottom = 4f;
+			messageRoot.Add(msg);
+
+			if(traceList.Count < 1)
+			{
+				var frame = new TextElement() { text = "(at <unknown>:0)" };
+				frame.style.paddingLeft = 24f;
+				frame.style.color = (Color)new Color32(147, 179, 248, 255);
+				messageRoot.Add(frame);
+			}
+			else
+			{
+				for(int j = 0; j < traceList.Count; j++)
+				{
+					sb.Clear();
+					AppendFrame(sb, traceList[j], true);
+					var frame = new Button() { text = sb.ToString() };
+					frame.ClearClassList();
+					frame.style.marginLeft = 24f;
+					frame.style.color = (Color)new Color32(147, 179, 248, 255);
+					if(traceList[j].method != null)
+					{
+						GotoOnClick(frame, traceList[j]);
+					}
+					messageRoot.Add(frame);
+				}
+			}
+			messagesContainer.Add(messageRoot);
 		}
 
 		private void GotoOnClick(Button element, UdonTraceReader.TraceFrame frame)
@@ -256,6 +300,7 @@ namespace Katsudon.Editor
 				sb.Append(frame.column);
 			}
 			sb.Append(')');
+			sb.AppendFormat(" IL_{0:X8}", frame.ilOffset);
 			sb.AppendLine();
 		}
 

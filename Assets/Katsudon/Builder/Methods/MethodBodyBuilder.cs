@@ -123,7 +123,8 @@ namespace Katsudon.Builder
 					}
 				}
 				if(exception == null) new KatsudonBuildException(method, ilOffset.ilOffset, e.InnerException);
-				//TODO: log e.InnerException exception separately in debug define
+				//TODO: debug define
+				UnityEngine.Debug.LogException(e.InnerException);
 				throw exception;
 			}
 		}

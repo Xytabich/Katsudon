@@ -37,8 +37,12 @@ namespace Katsudon.Builder.Extensions.Inlining
 					var parameter = iterator.Current;
 					if(!parameters[index].ParameterType.IsByRef)
 					{
-						parameter = method.GetTmpVariable(parameter).Reserve();
-						reservedCache.Add((ITmpVariable)parameter);
+						parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
+						if(parameter is ITmpVariable tmpVariable)
+						{
+							tmpVariable.Reserve();
+							reservedCache.Add(tmpVariable);
+						}
 					}
 					argumentsCache.Add(parameter);
 					index++;

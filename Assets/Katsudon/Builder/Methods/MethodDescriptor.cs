@@ -141,11 +141,22 @@ namespace Katsudon.Builder.Methods
 			return tmp;
 		}
 
-		ITmpVariable IUdonProgramBlock.GetTmpVariable(IVariable variable)
+		ITmpVariable IUdonProgramBlock.GetTmpVariable(VariableMeta variable)
 		{
 			var tmp = machineBlock.GetTmpVariable(variable);
 			//TODO: debug define
 			(tmp as ITmpVariableDebug).allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+			return tmp;
+		}
+
+		IVariable IUdonProgramBlock.GetReadonlyVariable(VariableMeta variable)
+		{
+			var tmp = machineBlock.GetReadonlyVariable(variable);
+			//TODO: debug define
+			if(tmp is ITmpVariableDebug debug)
+			{
+				debug.allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+			}
 			return tmp;
 		}
 
