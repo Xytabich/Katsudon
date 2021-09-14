@@ -45,12 +45,8 @@ namespace Katsudon.Builder.AsmOpCodes
 					var parameter = iterator.Current;
 					if(!parameters[index].ParameterType.IsByRef)
 					{
-						parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
-						if(parameter is ITmpVariable tmpVariable)
-						{
-							tmpVariable.Reserve();
-							reservedCache.Add(tmpVariable);
-						}
+						parameter = method.GetTmpVariable(parameter.UseType(parameters[index].ParameterType)).Reserve();
+						reservedCache.Add((ITmpVariable)parameter);
 					}
 					argumentsCache.Add(parameter);
 					index++;
@@ -96,7 +92,6 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var builder = new InlineLocalCall(modules.GetModule<MethodBodyBuilder>());
 			container.RegisterOpBuilder(OpCodes.Call, builder);
-			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 		}
 	}
 }
