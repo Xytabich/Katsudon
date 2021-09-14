@@ -155,7 +155,7 @@ public class TUBeh : TBase, TInt
 		return b == "1" ? 1 : 0;
 	}
 
-	private void TestMessage()
+	protected void TestMessage()
 	{
 		Debug.Log("Message!");
 	}

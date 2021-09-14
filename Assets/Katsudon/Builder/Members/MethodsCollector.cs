@@ -26,7 +26,10 @@ namespace Katsudon.Members
 
 		public static void CheckRefParameters(MethodInfo method)
 		{
-			if((method.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) != 0) return;
+			if((method.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) != 0)
+			{
+				if(method.IsPrivate) return;
+			}
 			bool hasByRef = method.ReturnType.IsByRef;
 			if(!hasByRef)
 			{

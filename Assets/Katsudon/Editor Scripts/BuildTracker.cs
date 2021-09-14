@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
 using Katsudon.Builder;
 using Katsudon.Editor.Udon;
 using Katsudon.Info;
@@ -9,6 +11,7 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.Compilation;
 using UnityEngine;
+using VRC.SDKBase.Editor.BuildPipeline;
 using VRC.Udon.ProgramSources;
 
 namespace Katsudon.Editor
@@ -21,6 +24,9 @@ namespace Katsudon.Editor
 		private static string FORCEBUILD_FILE = "forceBuild";
 		private static byte FORCEBUILD_FILE_VERSION = 0;
 
+		private static string ERROR_FILE = "buildError";
+		private static byte ERROR_FILE_VERSION = 0;
+
 		private static bool rebuildCacheLoaded = false;
 		private static bool rebuildRequestSaved = false;
 		private static bool rebuildRequested = false;
@@ -29,6 +35,7 @@ namespace Katsudon.Editor
 		[InitializeOnLoadMethod]
 		private static void Init()
 		{
+			EditorApplication.playModeStateChanged += OnPlayModeChanged;
 			CompilationPipeline.assemblyCompilationFinished += OnAssemblyCompiled;
 		}
 
@@ -39,6 +46,19 @@ namespace Katsudon.Editor
 			{
 				rebuildListCached.Add(Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), assemblyPath)));
 				SaveRebuild();
+			}
+		}
+
+		private static void OnPlayModeChanged(PlayModeStateChange state)
+		{
+			if(state == PlayModeStateChange.ExitingEditMode)
+			{
+				if(TryGetBuildError(out var exception))
+				{
+					Debug.LogException(exception);
+					typeof(SceneView).GetMethod("ShowCompileErrorNotification", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[0]);
+					EditorApplication.ExitPlaymode();
+				}
 			}
 		}
 
@@ -278,6 +298,7 @@ namespace Katsudon.Editor
 				catch(Exception e)
 				{
 					Debug.LogException(e);
+					SaveError(e);
 					buildError = true;
 				}
 				AssetDatabase.StopAssetEditing();
@@ -340,6 +361,8 @@ namespace Katsudon.Editor
 
 				Debug.LogFormat("[Katsudon] Build finished in {0}:\nCollecting: {1}\nRefreshing: {2}\nBuilding & Saving: {3}\nLinking: {4}",
 					DateTime.Now - startTime, collectingTime, refreshingTime, buildingTime, linkingTime);
+
+				FileUtils.DeleteFile(ERROR_FILE);
 				return true;
 			}
 			return false;
@@ -490,6 +513,45 @@ namespace Katsudon.Editor
 			}
 		}
 
+		private static void SaveError(Exception exception)
+		{
+			try
+			{
+				using(var writer = FileUtils.GetFileWriter(ERROR_FILE))
+				{
+					writer.Write(ERROR_FILE_VERSION);
+					new BinaryFormatter().Serialize(writer.BaseStream, exception);
+				}
+			}
+			catch(Exception e)
+			{
+				Debug.LogException(e);
+			}
+		}
+
+		private static bool TryGetBuildError(out Exception exception)
+		{
+			try
+			{
+				using(var reader = FileUtils.TryGetFileReader(ERROR_FILE))
+				{
+					if(reader != null)
+					{
+						if(reader.ReadByte() != ERROR_FILE_VERSION) throw new IOException("Invalid version");
+						exception = (Exception)new BinaryFormatter().Deserialize(reader.BaseStream);
+						return true;
+					}
+				}
+			}
+			catch
+			{
+				exception = new Exception("Unknown exception thrown during build, try to force rebuild");
+				return true;
+			}
+			exception = null;
+			return false;
+		}
+
 		private struct BuildOption
 		{
 			public MonoScript script;
@@ -511,6 +573,25 @@ namespace Katsudon.Editor
 			{
 				this.path = path;
 				this.options = options;
+			}
+		}
+
+		private class VRCBuildRequestHandler : IVRCSDKBuildRequestedCallback
+		{
+			public int callbackOrder => 0;
+
+			public bool OnBuildRequested(VRCSDKRequestedBuildType requestedBuildType)
+			{
+				if(requestedBuildType == VRCSDKRequestedBuildType.Scene)
+				{
+					if(TryGetBuildError(out var exception))
+					{
+						Debug.LogException(exception);
+						EditorUtility.DisplayDialog("Build Aborted", "All compiler errors have to be fixed before you can build a scene!", "Ok");
+						return false;
+					}
+				}
+				return true;
 			}
 		}
 	}

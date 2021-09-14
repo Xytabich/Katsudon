@@ -27,13 +27,19 @@ namespace Katsudon.Builder.AsmOpCodes
 			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
 			if((methodInfo.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) == 0) return false;
 
-			var target = method.PeekStack(methodInfo.GetParameters().Length);
+			var parameters = methodInfo.GetParameters();
+			var target = method.PeekStack(parameters.Length);
 			if(!(target is ThisVariable))
 			{
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					if(parameters[i].ParameterType.IsByRef)
+					{
+						throw new System.Exception("Method with reference parameters can only be called locally");
+					}
+				}
 				return false;
 			}
-
-			var parameters = methodInfo.GetParameters();
 
 			int argsCount = parameters.Length;
 			if(argsCount != 0)
