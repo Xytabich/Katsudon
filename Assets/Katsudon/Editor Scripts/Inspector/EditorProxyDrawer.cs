@@ -6,32 +6,14 @@ namespace Katsudon.Editor
 {
 	public abstract class EditorProxyDrawer : UnityEditor.Editor
 	{
-		private bool isFirstEnable;
-		private bool isEnabled = false;
-
 		private IEditorProxy proxy = null;
-
-		protected virtual void Awake()
-		{
-			isFirstEnable = true;
-			OnInit();
-		}
 
 		protected virtual void OnEnable()
 		{
-			if(isFirstEnable) isFirstEnable = false;
-			else OnInit();
-			if(proxy != null) proxy.OnEnable();
-			isEnabled = true;
+			OnInit();
 		}
 
 		protected virtual void OnDisable()
-		{
-			if(proxy != null) proxy.OnDisable();
-			isEnabled = false;
-		}
-
-		protected virtual void OnDestroy()
 		{
 			if(proxy != null)
 			{
@@ -70,9 +52,7 @@ namespace Katsudon.Editor
 
 		protected IEditorProxy CreateProxy(UnityEditor.Editor editor)
 		{
-			var proxy = new EditorProxy(editor);
-			if(isEnabled) proxy.OnEnable();
-			return proxy;
+			return proxy = new EditorProxy(editor);
 		}
 
 		protected void SetProxy(IEditorProxy proxy)
@@ -186,7 +166,7 @@ namespace Katsudon.Editor
 			public UnityEditor.Editor editor = null;
 
 			// There is no need for awake and destroy messages because they are called automatically when an object is created or destroyed
-			private Action onEnableMessage = null, onDisableMessage = null, onSceneGUIMessage = null;
+			private Action onSceneGUIMessage = null;
 			private Func<bool> hasFrameBoundsMessage = null;
 			private Func<Bounds> onGetFrameBoundsMessage = null;
 			private Action onHeaderGUICallback = null;
@@ -198,11 +178,6 @@ namespace Katsudon.Editor
 				var type = editor.GetType();
 
 				const BindingFlags MESSAGE_FLAGS = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-				var onEnable = type.GetMethod(nameof(OnEnable), MESSAGE_FLAGS);
-				onEnableMessage = onEnable == null ? null : CreateDelegate<Action>(editor, onEnable);
-
-				var onDisable = type.GetMethod(nameof(OnDisable), MESSAGE_FLAGS);
-				onDisableMessage = onDisable == null ? null : CreateDelegate<Action>(editor, onDisable);
 
 				var onSceneGUI = type.GetMethod(nameof(OnSceneGUI), MESSAGE_FLAGS, null, Type.EmptyTypes, null);
 				onSceneGUIMessage = onSceneGUI == null ? null : CreateDelegate<Action>(editor, onSceneGUI);
@@ -218,22 +193,6 @@ namespace Katsudon.Editor
 
 				var shouldHideOpenButton = type.GetMethod(nameof(ShouldHideOpenButton), BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 				shouldHideOpenButtonCallback = CreateDelegate<Func<bool>>(editor, shouldHideOpenButton);
-			}
-
-			public void OnEnable()
-			{
-				if(onEnableMessage != null)
-				{
-					onEnableMessage();
-				}
-			}
-
-			public void OnDisable()
-			{
-				if(onDisableMessage != null)
-				{
-					onDisableMessage();
-				}
 			}
 
 			public void DrawPreview(Rect previewArea)
@@ -334,18 +293,13 @@ namespace Katsudon.Editor
 
 			public void Dispose()
 			{
-				if(editor != null)
-				{
-					DestroyImmediate(editor);
-					editor = null;
-					onEnableMessage = null;
-					onDisableMessage = null;
-					onSceneGUIMessage = null;
-					hasFrameBoundsMessage = null;
-					onGetFrameBoundsMessage = null;
-					onHeaderGUICallback = null;
-					shouldHideOpenButtonCallback = null;
-				}
+				DestroyImmediate(editor);
+				editor = null;
+				onSceneGUIMessage = null;
+				hasFrameBoundsMessage = null;
+				onGetFrameBoundsMessage = null;
+				onHeaderGUICallback = null;
+				shouldHideOpenButtonCallback = null;
 			}
 
 			private static T CreateDelegate<T>(UnityEditor.Editor editor, MethodInfo method)
@@ -356,10 +310,6 @@ namespace Katsudon.Editor
 
 		protected interface IEditorProxy : IDisposable
 		{
-			void OnEnable();
-
-			void OnDisable();
-
 			bool HasPreviewGUI();
 
 			string GetInfoString();

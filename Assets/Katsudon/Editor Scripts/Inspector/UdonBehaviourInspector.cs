@@ -514,22 +514,6 @@ namespace Katsudon.Editor
 				this.container = container;
 			}
 
-			public void OnEnable()
-			{
-				for(int i = 0; i < proxies.Length; i++)
-				{
-					proxies[i]?.OnEnable();
-				}
-			}
-
-			public void OnDisable()
-			{
-				for(int i = 0; i < proxies.Length; i++)
-				{
-					proxies[i]?.OnDisable();
-				}
-			}
-
 			public bool HasPreviewGUI()
 			{
 				return false;
