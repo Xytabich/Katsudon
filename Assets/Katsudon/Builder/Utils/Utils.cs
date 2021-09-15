@@ -73,7 +73,7 @@ namespace Katsudon
 			if(calleeType == null || !method.DeclaringType.IsAssignableFrom(calleeType)) return false;
 
 			var baseType = method.DeclaringType;
-			while(calleeType != baseType)
+			while(calleeType != baseType && calleeType != null)
 			{
 				id = new MethodIdentifier(cache, calleeType, method);
 				if(names.TryGetValue(id, out fullName)) return true;

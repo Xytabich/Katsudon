@@ -336,15 +336,15 @@ namespace Katsudon.Editor
 						var libraryPath = librariesBuild[i].path;
 						var libraryImporter = AssetImporter.GetAtPath(libraryPath);
 						var buildOptions = librariesBuild[i].options;
-						for(var j = 0; j < options.Count; j++)
+						for(var j = 0; j < buildOptions.Length; j++)
 						{
-							var programPath = options[j].programOut;
+							var programPath = buildOptions[j].programOut;
 							var importer = AssetImporter.GetAtPath(programPath);
-							importer.AddRemap(ProgramUtils.GetScriptIdentifier(), options[j].script);
+							importer.AddRemap(ProgramUtils.GetScriptIdentifier(), buildOptions[j].script);
 							AssetDatabase.WriteImportSettingsIfDirty(programPath);
 							Resources.UnloadAsset(importer);
 
-							libraryImporter.AddRemap(ProgramUtils.GetSubProgramIdentifier(options[j].script.GetClass()),
+							libraryImporter.AddRemap(ProgramUtils.GetSubProgramIdentifier(buildOptions[j].script.GetClass()),
 								AssetDatabase.LoadMainAssetAtPath(programPath));
 						}
 						AssetDatabase.WriteImportSettingsIfDirty(libraryPath);

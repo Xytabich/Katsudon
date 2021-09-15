@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 using Katsudon.Builder.Methods;
 using Katsudon.Meta;
@@ -159,6 +160,7 @@ namespace Katsudon.Builder
 			return (value & 0xFF) + (value >> 8);
 		}
 
+		[System.Serializable]
 		private class KatsudonBuildException : Exception
 		{
 			public KatsudonBuildException(MethodInfo method, int ilOffset, Exception innerException) :
@@ -168,6 +170,8 @@ namespace Katsudon.Builder
 			public KatsudonBuildException(MethodInfo method, string source, int line, int ilOffset, Exception innerException) :
 				base(BuildMessage(method, source, line, ilOffset, innerException))
 			{ }
+
+			protected KatsudonBuildException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
 			private static string BuildMessage(MethodInfo method, int ilOffset, Exception innerException)
 			{
