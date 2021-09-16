@@ -11,6 +11,7 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.Compilation;
 using UnityEngine;
+using VRC.Core;
 using VRC.SDKBase.Editor.BuildPipeline;
 using VRC.Udon.ProgramSources;
 
@@ -18,7 +19,7 @@ namespace Katsudon.Editor
 {
 	public static class BuildTracker
 	{
-		private static string BUILDED_FILE = "buildedList";
+		private static string BUILDED_FILE = "buildedInfo";
 		private static byte BUILDED_FILE_VERSION = 0;
 
 		private static string FORCEBUILD_FILE = "forceBuild";
@@ -37,6 +38,11 @@ namespace Katsudon.Editor
 		{
 			EditorApplication.playModeStateChanged += OnPlayModeChanged;
 			CompilationPipeline.assemblyCompilationFinished += OnAssemblyCompiled;
+			GetBuildedVersion(out var vrcSdkVersion, out var katsudonVersion);
+			if(vrcSdkVersion != SDKClientUtilities.GetSDKVersionDate() || katsudonVersion != KatsudonInfo.VERSION)
+			{
+				ForceRebuild();
+			}
 		}
 
 		private static void OnAssemblyCompiled(string assemblyPath, CompilerMessage[] messages)
@@ -66,7 +72,7 @@ namespace Katsudon.Editor
 		private static void OnScriptsReloaded()
 		{
 			bool rebuild = false;
-			var cache = GetBuildedCache();
+			var cache = GetBuildedList();
 			foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
 				if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
@@ -133,7 +139,7 @@ namespace Katsudon.Editor
 						newCache.Add(assembly.FullName);
 					}
 				}
-				SaveBuildedCache(newCache);
+				SaveBuildedInfo(newCache);
 
 				AssembliesInfo.instance.SaveCache();
 				ClearRebuild();
@@ -468,7 +474,29 @@ namespace Katsudon.Editor
 			}
 		}
 
-		private static HashSet<string> GetBuildedCache()
+		private static void GetBuildedVersion(out string vrcSdkVersion, out string katsudonVersion)
+		{
+			vrcSdkVersion = null;
+			katsudonVersion = null;
+			try
+			{
+				using(var reader = FileUtils.TryGetFileReader(BUILDED_FILE))
+				{
+					if(reader != null)
+					{
+						if(reader.ReadByte() != BUILDED_FILE_VERSION) throw new IOException("Invalid version");
+						vrcSdkVersion = reader.ReadString();
+						katsudonVersion = reader.ReadString();
+					}
+				}
+			}
+			catch(IOException)
+			{
+				FileUtils.DeleteFile(BUILDED_FILE);
+			}
+		}
+
+		private static HashSet<string> GetBuildedList()
 		{
 			var set = new HashSet<string>();
 			try
@@ -478,6 +506,8 @@ namespace Katsudon.Editor
 					if(reader != null)
 					{
 						if(reader.ReadByte() != BUILDED_FILE_VERSION) throw new IOException("Invalid version");
+						reader.ReadString();
+						reader.ReadString();
 						int count = reader.ReadInt32();
 						for(int i = 0; i < count; i++)
 						{
@@ -493,13 +523,15 @@ namespace Katsudon.Editor
 			return set;
 		}
 
-		private static void SaveBuildedCache(HashSet<string> set)
+		private static void SaveBuildedInfo(HashSet<string> set)
 		{
 			try
 			{
 				using(var writer = FileUtils.GetFileWriter(BUILDED_FILE))
 				{
 					writer.Write(BUILDED_FILE_VERSION);
+					writer.Write(SDKClientUtilities.GetSDKVersionDate());
+					writer.Write(KatsudonInfo.VERSION);
 					writer.Write(set.Count);
 					foreach(var name in set)
 					{

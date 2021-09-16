@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using Katsudon.Reflection;
 using VRC.Udon.Common.Interfaces;
 using VRC.Udon.Editor;
 using VRC.Udon.EditorBindings;
@@ -26,18 +26,25 @@ namespace Katsudon.Builder.Helpers
 
 		protected override void CreateTypesList()
 		{
-			var udonInterface = new TypeAccess<UdonEditorManager>(UdonEditorManager.Instance).GetInstanceField<UdonEditorInterface>("_udonEditorInterface");
-			var group = new TypeAccess<UdonEditorInterface>(udonInterface).GetInstanceField<TypeResolverGroup>("_typeResolverGroup");
-			List<IUAssemblyTypeResolver> list = new TypeAccess<TypeResolverGroup>(group).GetInstanceField<List<IUAssemblyTypeResolver>>("_registeredTypeResolvers");
+			var udonEditorInterface = typeof(UdonEditorManager).GetField("_udonEditorInterface",
+				BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UdonEditorManager.Instance);
+			var typeResolverGroup = typeof(UdonEditorInterface).GetField("_typeResolverGroup",
+				BindingFlags.Instance | BindingFlags.NonPublic).GetValue(udonEditorInterface);
+			var registeredTypeResolvers = (List<IUAssemblyTypeResolver>)typeof(TypeResolverGroup).GetField("_registeredTypeResolvers",
+				BindingFlags.Instance | BindingFlags.NonPublic).GetValue(typeResolverGroup);
 
 			var typeNames = new Dictionary<Type, string>();
-			var typesProperty = typeof(BaseTypeResolver).GetProperty("Types", BindingFlags.NonPublic | BindingFlags.Instance);
-			foreach(var resolver in list)
+
+			var resolverParam = Expression.Parameter(typeof(BaseTypeResolver));
+			var GetTypes = Expression.Lambda<Func<BaseTypeResolver, IReadOnlyDictionary<string, Type>>>(
+				Expression.Property(resolverParam, typeof(BaseTypeResolver).GetProperty("Types", BindingFlags.NonPublic | BindingFlags.Instance)),
+				resolverParam
+			).Compile();
+			foreach(var resolver in registeredTypeResolvers)
 			{
-				if(resolver is BaseTypeResolver)
+				if(resolver is BaseTypeResolver baseResolver)
 				{
-					var types = new PropertyAccess<IReadOnlyDictionary<string, Type>>(typesProperty, resolver).value;
-					foreach(var pair in types)
+					foreach(var pair in GetTypes(baseResolver))
 					{
 						if(pair.Key.EndsWith("Ref") && !pair.Value.Name.EndsWith("Ref"))
 						{
@@ -99,8 +106,9 @@ namespace Katsudon.Builder.Helpers
 			var constructors = new Dictionary<MethodIdentifier, string>();
 			var magicMethods = new Dictionary<string, MagicMethodInfo>();
 
-			var wrapperAccess = new TypeAccess<UdonWrapper>(UdonEditorManager.Instance.GetWrapper() as UdonWrapper);
-			var modules = wrapperAccess.GetInstanceField<IReadOnlyDictionary<string, IUdonWrapperModule>>("_wrapperModulesByName").value;
+			var modules = (IReadOnlyDictionary<string, IUdonWrapperModule>)typeof(UdonWrapper)
+				.GetField("_wrapperModulesByName", BindingFlags.Instance | BindingFlags.NonPublic)
+				.GetValue(UdonEditorManager.Instance.GetWrapper());
 
 			var typeNames = GetTypeNames();
 			var typeMembers = new Dictionary<string, MemberInfo>();
@@ -110,8 +118,8 @@ namespace Katsudon.Builder.Helpers
 				var type = UdonEditorManager.Instance.GetTypeFromTypeString(module.Key);
 				if(type != null)
 				{
-					var actions = new TypeAccess(module.Value.GetType(), module.Value)
-						.GetInstanceField<IReadOnlyDictionary<string, int>>("_parameterCounts").value;
+					var actions = (IReadOnlyDictionary<string, int>)module.Value.GetType().GetField("_parameterCounts",
+						BindingFlags.Instance | BindingFlags.NonPublic).GetValue(module.Value);
 
 					typeMembers.Clear();
 					CollectTypeMembers(type, cachedSb, typeMembers, typeNames);
