@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -31,7 +32,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			var target = method.PeekStack(parameters.Length);
 			if(!(target is ThisVariable))
 			{
-				for (int i = 0; i < parameters.Length; i++)
+				for(int i = 0; i < parameters.Length; i++)
 				{
 					if(parameters[i].ParameterType.IsByRef)
 					{
@@ -45,14 +46,23 @@ namespace Katsudon.Builder.AsmOpCodes
 			if(argsCount != 0)
 			{
 				var iterator = method.PopMultiple(argsCount);
+				ReadOnlyAttribute readOnly;
 				int index = 0;
 				while(iterator.MoveNext())
 				{
 					var parameter = iterator.Current;
 					if(!parameters[index].ParameterType.IsByRef)
 					{
-						parameter = method.GetTmpVariable(parameter.UseType(parameters[index].ParameterType)).Reserve();
-						reservedCache.Add((ITmpVariable)parameter);
+						if((readOnly = parameters[index].GetCustomAttribute<ReadOnlyAttribute>()) != null && readOnly.IsReadOnly)
+						{
+							parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
+							if(parameter is ITmpVariable tmp) reservedCache.Add(tmp);
+						}
+						else
+						{
+							parameter = method.GetTmpVariable(parameter.UseType(parameters[index].ParameterType)).Reserve();
+							reservedCache.Add((ITmpVariable)parameter);
+						}
 					}
 					argumentsCache.Add(parameter);
 					index++;
