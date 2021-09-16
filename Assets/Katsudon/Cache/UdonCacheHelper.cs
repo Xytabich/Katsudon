@@ -5,7 +5,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using UnityEditor;
-using UnityEngine;
+using VRC.Core;
 
 namespace Katsudon.Builder.Helpers
 {
@@ -22,7 +22,7 @@ namespace Katsudon.Builder.Helpers
 					if(type != null)
 					{
 						var cache = Activator.CreateInstance(type) as IUdonPartsCache;
-						if(cache.version == GetUdonVersion())
+						if(cache.version == SDKClientUtilities.GetSDKVersionDate())
 						{
 							instance = cache;
 							return cache;
@@ -55,7 +55,7 @@ namespace Katsudon.Builder.Helpers
 				AppendLine(sb, indent, "internal class UdonPartsCache : UdonPartsCacheBase {");
 				{
 					indent++;
-					AppendLineFormat(sb, indent, "public override string version => @\"{0}\";", GetUdonVersion());
+					AppendLineFormat(sb, indent, "public override string version => @\"{0}\";", SDKClientUtilities.GetSDKVersionDate());
 
 					AppendLine(sb, indent, "protected override void CreateCtorsList() {");
 					{
@@ -330,21 +330,6 @@ namespace Katsudon.Builder.Helpers
 			AppendTypeof(sb, pair.Key);
 			sb.Append(", ");
 			sb.Append(pair.Value);
-		}
-
-		private static string GetUdonVersion()
-		{
-			string currentVersion = "";
-			string versionTextPath = Application.dataPath + "/Udon/version.txt";
-			if(File.Exists(versionTextPath))
-			{
-				string[] versionFileLines = System.IO.File.ReadAllLines(versionTextPath);
-				if(versionFileLines.Length > 0)
-				{
-					currentVersion = versionFileLines[0];
-				}
-			}
-			return currentVersion;
 		}
 	}
 
