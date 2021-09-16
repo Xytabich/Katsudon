@@ -64,7 +64,7 @@ namespace Katsudon.Editor
 			{
 				var value = heapDump[i];
 				cachedSb.Clear();
-				ProgramAssetInspector.AppendObjectValue(cachedSb, value.strongBoxedObject.Value);
+				UdonProgramDisassemblyWindow.AppendObjectValue(cachedSb, value.strongBoxedObject.Value);
 				GUILayout.Label(cachedSb.ToString());
 			}
 			GUILayout.EndVertical();

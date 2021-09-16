@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Katsudon.Editor.Udon;
+﻿using Katsudon.Editor.Udon;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
-using VRC.Udon.Common.Interfaces;
+using UnityEngine.UIElements;
+using VRC.Udon;
 using VRC.Udon.ProgramSources;
-using VRC.Udon.VM.Common;
-
-#if UDON_DEBUG
-using VRC.Udon.Serialization.OdinSerializer;
-#endif
 
 namespace Katsudon.Editor
 {
@@ -20,15 +13,6 @@ namespace Katsudon.Editor
 	{
 		private bool hasScript = false;
 		private MonoScript script = null;
-
-		private bool showProgram = false;
-		private IUdonProgram program = null;
-		private string variablesAddresses;
-		private string variablesNames;
-		private string variablesValues;
-		private string disassemblyAddresses;
-		private List<GUIContent> disassembly = new List<GUIContent>();
-		private string fullText;
 
 		protected override void OnInit()
 		{
@@ -43,204 +27,36 @@ namespace Katsudon.Editor
 			}
 		}
 
-		public override void OnInspectorGUI()
+		public override VisualElement CreateInspectorGUI()
 		{
-			if(hasScript)
+			var root = new VisualElement();
+			root.style.overflow = Overflow.Visible;
+			root.AddToClassList(InspectorElement.customInspectorUssClassName);
+			root.AddToClassList(InspectorElement.iMGUIContainerUssClassName);
+			if(hasScript) root.Add(new IMGUIContainer(ScriptField));
+			root.Add(new Button(ShowDisassemblyWindow) { text = "Show disassembly" });
+			root.Add(new IMGUIContainer(OnInspectorGUI));
+			return root;
+		}
+
+		private void ScriptField()
+		{
+			if(script == null)
 			{
-				if(script == null)
+				script = ReplaceMissingClassGUI(target as SerializedUdonProgramAsset);
+			}
+			else
+			{
+				using(new EditorGUI.DisabledScope(true))
 				{
-					script = ReplaceMissingClassGUI(target as SerializedUdonProgramAsset);
-				}
-				else
-				{
-					using(new EditorGUI.DisabledScope(true))
-					{
-						EditorGUILayout.ObjectField("Class", script, typeof(MonoScript), false);
-					}
+					EditorGUILayout.ObjectField("Class", script, typeof(MonoScript), false);
 				}
 			}
+		}
 
-			if(showProgram != EditorGUILayout.Foldout(showProgram, "Show program"))
-			{
-				showProgram = !showProgram;
-				if(showProgram)
-				{
-					program = (target as SerializedUdonProgramAsset).RetrieveProgram();
-					var symbols = program.SymbolTable;
-
-					var cachedSb = new StringBuilder();
-					var cachedSb2 = new StringBuilder();
-					var cachedSb3 = new StringBuilder();
-					var cachedSb4 = new StringBuilder();
-					var fullTextSb = new StringBuilder();
-
-					var heapDump = new List<(uint address, IStrongBox strongBoxedObject, Type objectType)>();
-					var heap = program.Heap;
-					heap.DumpHeapObjects(heapDump);
-					heapDump.Sort((a, b) => a.address.CompareTo(b.address));
-
-					fullTextSb.AppendLine("VARIABLES:");
-					var exportedVariables = new HashSet<string>(symbols.GetExportedSymbols());
-					for(var i = 0; i < heapDump.Count; i++)
-					{
-						cachedSb4.Clear();
-						var address = heapDump[i].address;
-						cachedSb.AppendFormat("0x{0:X8}\n", address);
-						//cachedSb4.AppendFormat("0x{0:X8} ", address);
-						if(symbols.HasSymbolForAddress(address))
-						{
-							var symbol = symbols.GetSymbolFromAddress(address);
-							if(exportedVariables.Contains(symbol))
-							{
-								cachedSb2.Append("[export] ");
-								cachedSb4.Append("[export] ");
-							}
-							cachedSb2.AppendFormat("{0} ", heapDump[i].objectType);
-							cachedSb2.AppendLine(symbol);
-							cachedSb4.Append(symbol);
-						}
-						else
-						{
-							cachedSb2.AppendFormat("{0} ", heapDump[i].objectType);
-							cachedSb2.AppendLine("[Unknown]");
-							cachedSb4.Append("[Unknown]");
-						}
-						cachedSb4.Append(' ', 64 - cachedSb4.Length);
-						AppendObjectValue(cachedSb3, heapDump[i].strongBoxedObject.Value);
-						AppendObjectValue(cachedSb4, heapDump[i].strongBoxedObject.Value);
-						cachedSb3.AppendLine();
-						fullTextSb.AppendLine(cachedSb4.ToString());
-					}
-
-					variablesAddresses = cachedSb.ToString();
-					variablesNames = cachedSb2.ToString();
-					variablesValues = cachedSb3.ToString();
-
-					fullTextSb.AppendLine("PROGRAM:");
-					cachedSb2.Clear();
-					disassembly.Clear();
-					var publicMethods = program.EntryPoints;
-					var bytes = program.ByteCode;
-					uint index = 0;
-					while(index < bytes.Length)
-					{
-						cachedSb4.Clear();
-						if(publicMethods.TryGetSymbolFromAddress(index, out string name))
-						{
-							cachedSb2.AppendLine();
-							disassembly.Add(new GUIContent(string.Format("{0}:", name)));
-							fullTextSb.AppendLine(string.Format("{0}:", name));
-						}
-						uint address = index;
-						uint variableAddress;
-						OpCode op = (OpCode)UIntFromBytes(bytes, index);
-						index += 4;
-						cachedSb.Clear();
-						cachedSb.Append(op);
-						GUIContent content;
-						switch(op)
-						{
-							case OpCode.PUSH:
-								cachedSb.Append(", ");
-								variableAddress = UIntFromBytes(bytes, index);
-								cachedSb.AppendFormat("<i>{0}</i>", symbols.HasSymbolForAddress(variableAddress) ? symbols.GetSymbolFromAddress(variableAddress) : "[Unknown]");
-								index += 4;
-								cachedSb3.Clear();
-								AppendObjectValue(cachedSb3, heap.GetHeapVariable(variableAddress));
-								content = new GUIContent(cachedSb.ToString(), string.Format("0x{0:X8}: ({1}) {2}", variableAddress, heap.GetHeapVariableType(variableAddress), cachedSb3.ToString()));
-								break;
-							case OpCode.EXTERN:
-								cachedSb.Append(", \"");
-								cachedSb.Append(heap.GetHeapVariable(UIntFromBytes(bytes, index)));
-								cachedSb.Append("\"");
-								index += 4;
-								content = new GUIContent(cachedSb.ToString());
-								break;
-							case OpCode.JUMP:
-							case OpCode.JUMP_IF_FALSE:
-								cachedSb.Append(", ");
-								cachedSb.AppendFormat("0x{0:X8}", UIntFromBytes(bytes, index));
-								index += 4;
-								content = new GUIContent(cachedSb.ToString());
-								break;
-							case OpCode.JUMP_INDIRECT:
-								cachedSb.Append(", ");
-								variableAddress = UIntFromBytes(bytes, index);
-								cachedSb.AppendFormat("<i>{0}</i>", symbols.HasSymbolForAddress(variableAddress) ? symbols.GetSymbolFromAddress(variableAddress) : "[Unknown]");
-								index += 4;
-								content = new GUIContent(cachedSb.ToString(), string.Format("0x{0:X8}", variableAddress));
-								break;
-							default:
-								content = new GUIContent(cachedSb.ToString());
-								break;
-						}
-						cachedSb2.AppendFormat("0x{0:X8}\n", address);
-						disassembly.Add(content);
-
-						//cachedSb4.AppendFormat("0x{0:X8}\n", address);
-						//cachedSb4.Append(' ', 64 - cachedSb4.Length);
-						cachedSb4.Append(content.text);
-						//cachedSb4.Append(' ');
-						//cachedSb4.Append('(');
-						//cachedSb4.Append(content.tooltip);
-						//cachedSb4.Append(')');
-						fullTextSb.AppendLine(cachedSb4.ToString());
-					}
-					disassemblyAddresses = cachedSb2.ToString();
-					fullText = fullTextSb.ToString();
-				}
-				else
-				{
-					disassembly.Clear();
-					fullText = null;
-					variablesAddresses = null;
-					variablesNames = null;
-					variablesValues = null;
-					disassemblyAddresses = null;
-				}
-			}
-			if(showProgram)
-			{
-				if(program != null)
-				{
-					EditorGUILayout.BeginHorizontal();
-					if(GUILayout.Button("Copy program"))
-					{
-						GUIUtility.systemCopyBuffer = fullText;
-					}
-					EditorGUILayout.EndHorizontal();
-					GUILayout.Label("Variables:", EditorStyles.boldLabel);
-					EditorGUILayout.BeginHorizontal();
-					GUILayout.Label(variablesAddresses);
-					GUILayout.Label(variablesNames);
-					GUILayout.Label(variablesValues);
-					GUILayout.FlexibleSpace();
-					EditorGUILayout.EndHorizontal();
-
-					var style = new GUIStyle(EditorStyles.label);
-					style.border = RemoveVertical(style.border);
-					style.margin = RemoveVertical(style.margin);
-					style.padding = RemoveVertical(style.padding);
-					style.richText = true;
-					var height = style.lineHeight;
-					var heightProp = GUILayout.Height(height);
-
-					GUILayout.Label("Program:", EditorStyles.boldLabel);
-					EditorGUILayout.BeginHorizontal();
-					GUILayout.Label(disassemblyAddresses, style);
-					EditorGUILayout.BeginVertical();
-					for(var i = 0; i < disassembly.Count; i++)
-					{
-						GUILayout.Label(disassembly[i], style, heightProp);
-					}
-					EditorGUILayout.EndVertical();
-					GUILayout.FlexibleSpace();
-					EditorGUILayout.EndHorizontal();
-				}
-				else showProgram = false;
-			}
-
-			base.OnInspectorGUI();
+		private void ShowDisassemblyWindow()
+		{
+			UdonProgramDisassemblyWindow.Show((target as AbstractSerializedUdonProgramAsset).RetrieveProgram());
 		}
 
 		internal static MonoScript ReplaceMissingClassGUI(SerializedUdonProgramAsset program)
@@ -316,41 +132,6 @@ namespace Katsudon.Editor
 			}
 			GUI.color = oldColor;
 			return script;
-		}
-
-		public static void AppendObjectValue(StringBuilder sb, object value)
-		{
-			if(value is Array array)
-			{
-				if(array.Rank <= 1)
-				{
-					sb.Append(array.GetType());
-					sb.Append(' ');
-					sb.Append('{');
-					for(var i = 0; i < array.Length; i++)
-					{
-						if(i > 0) sb.Append(',');
-						sb.Append(' ');
-						sb.Append(array.GetValue(i));
-					}
-					sb.Append(' ');
-					sb.Append('}');
-					return;
-				}
-			}
-			sb.Append(value ?? "<null>");
-		}
-
-		private static uint UIntFromBytes(byte[] bytes, uint startIndex)
-		{
-			return (uint)((bytes[startIndex] << 24) + (bytes[startIndex + 1] << 16) + (bytes[startIndex + 2] << 8) + bytes[startIndex + 3]);
-		}
-
-		private static RectOffset RemoveVertical(RectOffset ro)
-		{
-			ro.top = 0;
-			ro.bottom = 0;
-			return ro;
 		}
 	}
 }
