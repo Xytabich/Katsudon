@@ -93,7 +93,7 @@ namespace Katsudon.Editor
 			programRoot.AddToClassList(Box.ussClassName);
 			programRoot.itemHeight = 20;
 			programRoot.style.flexGrow = 1f;
-			programRoot.style.minHeight = 128f;
+			programRoot.style.minHeight = 256f;
 			programRoot.makeItem = CreateRow;
 			programRoot.bindItem = UpdateRow;
 			root.Add(programRoot);
@@ -326,6 +326,13 @@ namespace Katsudon.Editor
 					return;
 				}
 			}
+			if(value is string)
+			{
+				sb.Append('"');
+				sb.Append(value);
+				sb.Append('"');
+				return;
+			}
 			sb.Append(value ?? "<null>");
 		}
 
@@ -355,6 +362,13 @@ namespace Katsudon.Editor
 					sb.Append('}');
 					return;
 				}
+			}
+			if(value is string)
+			{
+				sb.Append('"');
+				sb.Append(value);
+				sb.Append('"');
+				return;
 			}
 			sb.Append(value ?? "null");
 		}
@@ -403,6 +417,9 @@ namespace Katsudon.Editor
 							infoLabel.text = ".export " + symbol + ":";
 						}
 						else infoLabel.text = symbol + ":";
+						break;
+					case OpCode.EXTERN:
+						infoLabel.text = string.Format("{0}, \"{1}\"", info.opCode, program.Heap.GetHeapVariable(info.argument));
 						break;
 					default:
 						infoLabel.text = info.opCode.ToString();
