@@ -23,7 +23,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 				if(ILUtils.TryGetLdfld(method.currentOp, out field))
 				{
 					method.PopStack().Use();
-					method.PushStack(fieldsCollection.GetField(field));
+					method.PushStack(fieldsCollection.GetField(field), true);
 					return true;
 				}
 			}

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Katsudon.Info;
 
 namespace Katsudon.Builder.Methods
 {
@@ -11,7 +12,7 @@ namespace Katsudon.Builder.Methods
 		public bool isStatic { get; private set; }
 		public bool stackIsEmpty => stack.Count < 1;
 
-		public IUdonMachine machine => machineBlock.machine;
+		public IUdonMachine machine { get; private set; }
 
 		#region info
 		private string methodName;
@@ -27,6 +28,7 @@ namespace Katsudon.Builder.Methods
 		private int index;
 		private Stack<int> states = new Stack<int>();//TODO: cache
 		private List<IVariable> stack = new List<IVariable>();
+		private Stack<int> volatileStack = new Stack<int>();
 
 		private Dictionary<int, uint> methodToMachineAddress = null;
 		private List<MachineAddressLabel> initAddresses = new List<MachineAddressLabel>();
@@ -49,6 +51,7 @@ namespace Katsudon.Builder.Methods
 			this.addressPointers = addressPointers;
 
 			this.machineBlock = block;
+			this.machine = new MethodOpTracker((IRawUdonMachine)machineBlock.machine, this);
 			methodToMachineAddress = new Dictionary<int, uint>(operations.Count);//TODO: cache
 		}
 
@@ -102,9 +105,10 @@ namespace Katsudon.Builder.Methods
 			states.Pop();
 		}
 
-		public void PushStack(IVariable value)
+		public void PushStack(IVariable value, bool isVolatile = false)
 		{
 			if(value == null) throw new ArgumentNullException("value");
+			if(isVolatile) volatileStack.Push(stack.Count);
 			stack.Add(value);
 		}
 
@@ -114,6 +118,7 @@ namespace Katsudon.Builder.Methods
 			int index = stack.Count - 1;
 			IVariable value = stack[index];
 			stack.RemoveAt(index);
+			OnStackPop(stack.Count);
 			return value;
 		}
 
@@ -125,15 +130,19 @@ namespace Katsudon.Builder.Methods
 		public IEnumerator<IVariable> PopMultiple(int count)
 		{
 			int index = stack.Count - count;
-			int len = stack.Count;
-			for(var i = index; i < len; i++)
+			int endIndex = stack.Count - 1;
+			for(int i = endIndex; i >= index; i--)
+			{
+				OnStackPop(i);
+			}
+			for(var i = index; i <= endIndex; i++)
 			{
 				yield return stack[i];
 			}
 			stack.RemoveRange(index, count);
 		}
 
-		ITmpVariable IUdonProgramBlock.GetTmpVariable(Type type)
+		public ITmpVariable GetTmpVariable(Type type)
 		{
 			var tmp = machineBlock.GetTmpVariable(type);
 			//TODO: debug define
@@ -141,7 +150,7 @@ namespace Katsudon.Builder.Methods
 			return tmp;
 		}
 
-		ITmpVariable IUdonProgramBlock.GetTmpVariable(VariableMeta variable)
+		public ITmpVariable GetTmpVariable(VariableMeta variable)
 		{
 			var tmp = machineBlock.GetTmpVariable(variable);
 			//TODO: debug define
@@ -187,6 +196,34 @@ namespace Katsudon.Builder.Methods
 			return label;
 		}
 
+		private void OnStackPop(int index)
+		{
+			if(volatileStack.Count != 0 && volatileStack.Peek() == index)
+			{
+				volatileStack.Pop();
+			}
+		}
+
+		private void OnUnreliableAction()
+		{
+			if(volatileStack.Count == 0) return;
+			var created = new Dictionary<IVariable, IVariable>(volatileStack.Count);//TODO: cache
+			foreach(var index in volatileStack)
+			{
+				var variable = stack[index];
+				if(created.TryGetValue(variable, out var tmp))
+				{
+					tmp.Allocate();
+				}
+				else
+				{
+					tmp = GetTmpVariable(variable.OwnType());
+					created[variable] = tmp;
+				}
+				stack[index] = tmp;
+			}
+		}
+
 		private class MachineAddressLabel : IAddressLabel
 		{
 			public readonly int offset;
@@ -195,6 +232,123 @@ namespace Katsudon.Builder.Methods
 			public MachineAddressLabel(int offset)
 			{
 				this.offset = offset;
+			}
+		}
+
+		private class MethodOpTracker : IRawUdonMachine
+		{
+			public AsmTypeInfo typeInfo => machine.typeInfo;
+
+			public UdonMachine mainMachine => machine.mainMachine;
+
+			private IRawUdonMachine machine;
+			private MethodDescriptor method;
+
+			public MethodOpTracker(IRawUdonMachine machine, MethodDescriptor method)
+			{
+				this.machine = machine;
+				this.method = method;
+			}
+
+			public void AddCopy(IVariable fromVariable, IVariable toVariable)
+			{
+				machine.AddCopy(fromVariable, toVariable);
+			}
+
+			public void AddCopy(IVariable fromVariable, Func<IVariable> toVariableCtor)
+			{
+				machine.AddCopy(fromVariable, toVariableCtor);
+			}
+
+			public void AddCopy(IVariable fromVariable, IVariable toVariable, Type type)
+			{
+				machine.AddCopy(fromVariable, toVariable, type);
+			}
+
+			public void AddExtern(string name, params VariableMeta[] pushVariables)
+			{
+				method.OnUnreliableAction();
+				machine.AddExtern(name, pushVariables);
+			}
+
+			public void AddExtern(string name, IVariable outVariable, params VariableMeta[] inVariables)
+			{
+				method.OnUnreliableAction();
+				machine.AddExtern(name, outVariable, inVariables);
+			}
+
+			public void AddExtern(string name, Func<IVariable> outVariableCtor, params VariableMeta[] pushVariables)
+			{
+				method.OnUnreliableAction();
+				machine.AddExtern(name, outVariableCtor, pushVariables);
+			}
+
+			public void AddJump(IAddressLabel label)
+			{
+				method.OnUnreliableAction();
+				machine.AddJump(label);
+			}
+
+			public void AddJump(IVariable variable)
+			{
+				method.OnUnreliableAction();
+				machine.AddJump(variable);
+			}
+
+			public void AddBranch(IVariable condition, IAddressLabel labelIfFalse)
+			{
+				method.OnUnreliableAction();
+				machine.AddBranch(condition, labelIfFalse);
+			}
+
+			public IVariable GetConstVariable(object value)
+			{
+				return machine.GetConstVariable(value);
+			}
+
+			public IVariable GetConstVariable(object value, Type type)
+			{
+				return machine.GetConstVariable(value, type);
+			}
+
+			public IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour)
+			{
+				return machine.GetThisVariable(type);
+			}
+
+			public IVariable GetReturnAddressGlobal()
+			{
+				return machine.GetReturnAddressGlobal();
+			}
+
+			public IVariable CreateLabelVariable()
+			{
+				return machine.CreateLabelVariable();
+			}
+
+			public void ApplyLabel(IEmbedAddressLabel label)
+			{
+				machine.ApplyLabel(label);
+			}
+
+			public uint GetAddressCounter()
+			{
+				return machine.GetAddressCounter();
+			}
+
+			public void AddMethodMeta(UdonMethodMeta methodMeta)
+			{
+				machine.AddMethodMeta(methodMeta);
+			}
+
+			public void AddPush(VariableMeta variableInfo)
+			{
+				machine.AddPush(variableInfo);
+			}
+
+			public void ApplyReferences()
+			{
+				machine.ApplyReferences();
 			}
 		}
 	}

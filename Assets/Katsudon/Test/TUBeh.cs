@@ -48,8 +48,10 @@ public class TUBeh : TBase, TInt
 		var bcd = Image.Type.Sliced;
 		Debug.Log(abc | bcd);*/
 
-		object tmp = this;
-		Debug.Log(tmp as TuTuBeh);
+		// object tmp = this;
+		// Debug.Log(tmp as TuTuBeh);
+
+		TestInt(listCount, TestArg());
 
 		this.v = default;
 		ListUtils.Ctor(ref listArray, ref listCount, 10);
@@ -147,6 +149,17 @@ public class TUBeh : TBase, TInt
 			case MethodImplOptions.ForwardRef: Debug.Log(1); break;
 			case MethodImplOptions.AggressiveInlining: Debug.Log(2); break;
 		}
+	}
+
+	private void TestInt(int a, int b)
+	{
+		Debug.Log(a + ":" + b);
+	}
+
+	private int TestArg()
+	{
+		listCount = 1000;
+		return listCount;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -230,7 +230,8 @@ namespace Katsudon.Builder
 	{
 		bool stackIsEmpty { get; }
 
-		void PushStack(IVariable value);
+		/// <param name="isVolatile">Set to true if the variable can be changed outside of the method context</param>
+		void PushStack(IVariable value, bool isVolatile = false);
 
 		IVariable PopStack();
 
