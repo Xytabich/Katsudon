@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -11,10 +10,6 @@ namespace Katsudon.Builder.AsmOpCodes
 		public int order => 80;
 
 		private MethodBodyBuilder bodyBuilder;
-
-		private List<IVariable> argumentsCache = new List<IVariable>();//TODO: cache
-		private List<ITmpVariable> reservedCache = new List<ITmpVariable>();
-		private List<IVariable> localsCache = new List<IVariable>();
 
 		public InlineLocalCall(MethodBodyBuilder bodyBuilder)
 		{
@@ -42,6 +37,8 @@ namespace Katsudon.Builder.AsmOpCodes
 				return false;
 			}
 
+			var reserved = CollectionCache.GetList<ITmpVariable>();
+			var arguments = CollectionCache.GetList<IVariable>();
 			int argsCount = parameters.Length;
 			if(argsCount != 0)
 			{
@@ -56,30 +53,31 @@ namespace Katsudon.Builder.AsmOpCodes
 						if((readOnly = parameters[index].GetCustomAttribute<ReadOnlyAttribute>()) != null && readOnly.IsReadOnly)
 						{
 							parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
-							if(parameter is ITmpVariable tmp) reservedCache.Add(tmp);
+							if(parameter is ITmpVariable tmp) reserved.Add(tmp);
 						}
 						else
 						{
 							parameter = method.GetTmpVariable(parameter.UseType(parameters[index].ParameterType)).Reserve();
-							reservedCache.Add((ITmpVariable)parameter);
+							reserved.Add((ITmpVariable)parameter);
 						}
 					}
-					argumentsCache.Add(parameter);
+					arguments.Add(parameter);
 					index++;
 				}
 			}
 			method.PopStack();
 
 			var locals = methodInfo.GetMethodBody().LocalVariables;
+			var localVariables = CollectionCache.GetList<IVariable>();
 			for(var i = 0; i < locals.Count; i++)
 			{
-				localsCache.Add(method.GetTmpVariable(locals[i].LocalType).Reserve());
+				localVariables.Add(method.GetTmpVariable(locals[i].LocalType).Reserve());
 			}
 
 			var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetTmpVariable(methodInfo.ReturnType).Reserve();
 			var returnAddress = new EmbedAddressLabel();
 
-			bodyBuilder.Build(methodInfo, argumentsCache, localsCache, outVariable, returnAddress, method);
+			bodyBuilder.Build(methodInfo, arguments, localVariables, outVariable, returnAddress, method);
 
 			method.machine.ApplyLabel(returnAddress);
 
@@ -89,18 +87,19 @@ namespace Katsudon.Builder.AsmOpCodes
 				outVariable.Release();
 			}
 
-			argumentsCache.Clear();
-			for(int i = 0; i < reservedCache.Count; i++)
-			{
-				reservedCache[i].Release();
-			}
-			reservedCache.Clear();
+			CollectionCache.Release(arguments);
 
-			for(int i = 0; i < localsCache.Count; i++)
+			for(int i = 0; i < reserved.Count; i++)
 			{
-				((ITmpVariable)localsCache[i]).Release();
+				reserved[i].Release();
 			}
-			localsCache.Clear();
+			CollectionCache.Release(reserved);
+
+			for(int i = 0; i < localVariables.Count; i++)
+			{
+				((ITmpVariable)localVariables[i]).Release();
+			}
+			CollectionCache.Release(localVariables);
 			return true;
 		}
 

@@ -638,7 +638,7 @@ namespace Katsudon.Editor
 								syncType = (Networking.SyncType)EditorGUILayout.EnumPopup("Sync Method", syncType);
 								if(EditorGUI.EndChangeCheck())
 								{
-									var objects = new HashSet<GameObject>();//TODO: cache
+									var objects = CollectionCache.GetSet<GameObject>();
 									for(int j = 0; j < info.behaviours.Length; j++)
 									{
 										objects.Add(info.behaviours[j].gameObject);
@@ -650,6 +650,7 @@ namespace Katsudon.Editor
 										Undo.RecordObjects(list, "Sync Method Change");
 										list[0].SyncMethod = syncType;
 									}
+									CollectionCache.Release(objects);
 								}
 							}
 

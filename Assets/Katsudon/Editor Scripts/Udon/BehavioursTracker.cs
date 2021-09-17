@@ -103,7 +103,7 @@ namespace Katsudon.Editor.Udon
 
 				var roots = scene.GetRootGameObjects();
 				bool hasContainers = false;
-				var containers = new List<ReferencesContainer>();//FIX: cache
+				var containers = CollectionCache.GetList<ReferencesContainer>();
 				for(int i = 0; i < roots.Length; i++)
 				{
 					containers.Clear();
@@ -114,10 +114,11 @@ namespace Katsudon.Editor.Udon
 						sceneContainer.PickContainer(containers[j]);
 					}
 				}
+				CollectionCache.Release(containers);
 
 				if(!hasContainers)
 				{
-					var behaviours = new List<UdonBehaviour>();//FIX: cache
+					var behaviours = CollectionCache.GetList<UdonBehaviour>();
 					for(int i = 0; i < roots.Length; i++)
 					{
 						behaviours.Clear();
@@ -147,6 +148,7 @@ namespace Katsudon.Editor.Udon
 							}
 						}
 					}
+					CollectionCache.Release(behaviours);
 				}
 			}
 		}

@@ -37,7 +37,7 @@ namespace Katsudon.Editor.Meta
 					if(!arr[i].IsDynamic) assemblies.Add(arr[i].FullName, arr[i]);
 				}
 			}
-			var traceList = new List<UdonAssembliesMetaReader.TraceInfo>();//TODO: cache
+			var traceList = CollectionCache.GetList<UdonAssembliesMetaReader.TraceInfo>();
 			assembliesReader.SearchTrace(typeGuid, programOffset, traceList);
 			for(int i = traceList.Count - 1; i >= 0; i--)
 			{
@@ -49,6 +49,7 @@ namespace Katsudon.Editor.Meta
 						assembly.GetModule(trace.module).ResolveMethod(trace.methodToken), trace.ilOffset, line, column));
 				}
 			}
+			CollectionCache.Release(traceList);
 		}
 
 		public void Dispose()

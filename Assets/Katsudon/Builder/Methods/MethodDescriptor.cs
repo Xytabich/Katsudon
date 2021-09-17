@@ -207,7 +207,7 @@ namespace Katsudon.Builder.Methods
 		private void OnUnreliableAction()
 		{
 			if(volatileStack.Count == 0) return;
-			var created = new Dictionary<IVariable, IVariable>(volatileStack.Count);//TODO: cache
+			var created = CollectionCache.GetDictionary<IVariable, IVariable>();
 			foreach(var index in volatileStack)
 			{
 				var variable = stack[index];
@@ -222,6 +222,7 @@ namespace Katsudon.Builder.Methods
 				}
 				stack[index] = tmp;
 			}
+			CollectionCache.Release(created);
 		}
 
 		private class MachineAddressLabel : IAddressLabel

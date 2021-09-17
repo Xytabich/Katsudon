@@ -127,16 +127,16 @@ public class TUBeh : TBase, TInt
 		// self.evt = Convert.ToInt32;
 		// Debug.Log(self.evt.Invoke("0"));
 		// self.evt += Convert.ToInt32;
-		// evt -= Convert.ToInt32;
-		// Debug.Log(evt.Invoke("1"));
-		// evt -= Convert.ToInt32;
-		// evt += TstEvt;
-		// Debug.Log(evt.Invoke("0"));
-		// evt += Convert.ToInt32;
-		// Debug.Log(evt.Invoke("0"));
-		// evt -= Convert.ToInt32;
-		// evt -= TstEvt;
-		// Debug.Log(evt);
+		evt -= Convert.ToInt32;
+		Debug.Log(evt.Invoke("1"));
+		evt -= Convert.ToInt32;
+		evt += TstEvt;
+		Debug.Log(evt.Invoke("0"));
+		evt += Convert.ToInt32;
+		Debug.Log(evt.Invoke("0"));
+		evt -= Convert.ToInt32;
+		evt -= TstEvt;
+		Debug.Log(evt);
 
 		int v = (int)img.fillMethod;
 		Debug.Log(v.ToString());
@@ -163,7 +163,7 @@ public class TUBeh : TBase, TInt
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private int TstEvt(in string b)
+	private int TstEvt(string b)
 	{
 		return b == "1" ? 1 : 0;
 	}

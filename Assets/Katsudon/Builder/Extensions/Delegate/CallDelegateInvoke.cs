@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
@@ -12,9 +11,6 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 	{
 		public int order => 15;
 
-		private List<VariableMeta> argumentsCache = new List<VariableMeta>();//TODO: cache
-		private List<ITmpVariable> reservedCache = new List<ITmpVariable>();
-
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
@@ -22,6 +18,8 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			{
 				var parameters = methodInfo.GetParameters();
 
+				var reserved = CollectionCache.GetList<ITmpVariable>();
+				var arguments = CollectionCache.GetList<VariableMeta>();
 				int argsCount = parameters.Length;
 				if(argsCount != 0)
 				{
@@ -35,9 +33,9 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 						else
 						{
 							parameter = method.GetTmpVariable(parameter.UseType(type)).Reserve();
-							reservedCache.Add((ITmpVariable)parameter);
+							reserved.Add((ITmpVariable)parameter);
 						}
-						argumentsCache.Add(parameter.UseType(type));
+						arguments.Add(parameter.UseType(type));
 						index++;
 					}
 				}
@@ -74,7 +72,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 						var target = ElementGetter(method, action, DelegateUtility.TARGET_OFFSET).Reserve();
 						for(int i = 0; i < argsCount; i++)
 						{
-							method.machine.SetVariableExtern(target, ElementGetter(method, action, i + DelegateUtility.ARGUMENTS_OFFSET), argumentsCache[i]);
+							method.machine.SetVariableExtern(target, ElementGetter(method, action, i + DelegateUtility.ARGUMENTS_OFFSET), arguments[i]);
 						}
 
 						method.machine.SendEventExtern(target, ElementGetter(method, action, DelegateUtility.METHOD_NAME_OFFSET));
@@ -100,7 +98,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 						for(int i = 0; i < argsCount; i++)
 						{
-							rawMachine.AddPush(argumentsCache[i]);
+							rawMachine.AddPush(arguments[i]);
 						}
 
 						if(outVariable != null)
@@ -122,15 +120,14 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					action.Release();
 				}
 				actions.Release();
-				if(argsCount != 0)
+
+				CollectionCache.Release(arguments);
+
+				for(int i = 0; i < reserved.Count; i++)
 				{
-					argumentsCache.Clear();
-					for(int i = 0; i < reservedCache.Count; i++)
-					{
-						reservedCache[i].Release();
-					}
-					reservedCache.Clear();
+					reserved[i].Release();
 				}
+				CollectionCache.Release(reserved);
 
 				return true;
 			}

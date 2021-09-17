@@ -40,7 +40,7 @@ namespace Katsudon.Builder
 			IAddressLabel returnAddress, IUdonProgramBlock machineBlock, PropertiesBlock properties)
 		{
 			var locals = method.GetMethodBody().LocalVariables;
-			var localVars = new List<IVariable>(locals.Count);//FIX: cache
+			var localVars = CollectionCache.GetList<IVariable>();
 			for(var i = 0; i < locals.Count; i++)
 			{
 				localVars.Add(new UnnamedVariable("loc", locals[i].LocalType));
@@ -52,18 +52,19 @@ namespace Katsudon.Builder
 			{
 				properties.AddVariable(variable);
 			}
+			CollectionCache.Release(localVars);
 		}
 
 		public void Build(MethodInfo method, IList<IVariable> arguments, IList<IVariable> locals,
 			IVariable returnVariable, IAddressLabel returnAddress, IUdonProgramBlock machineBlock)
 		{
-			List<Operation> operations = new List<Operation>();//FIX: cache
+			var operations = CollectionCache.GetList<Operation>();
 			foreach(var op in new MethodReader(method, null))
 			{
 				operations.Add(op);
 			}
 
-			var addressPointers = new List<UdonAddressPointer>();//FIX: cache
+			var addressPointers = CollectionCache.GetList<UdonAddressPointer>();
 			addressPointers.Add(new UdonAddressPointer(machineBlock.machine.GetAddressCounter(), 0));
 			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, locals, machineBlock, addressPointers);
 			try
@@ -127,6 +128,11 @@ namespace Katsudon.Builder
 				//TODO: debug define
 				UnityEngine.Debug.LogException(e.InnerException);
 				throw exception;
+			}
+			finally
+			{
+				CollectionCache.Release(operations);
+				CollectionCache.Release(addressPointers);
 			}
 		}
 

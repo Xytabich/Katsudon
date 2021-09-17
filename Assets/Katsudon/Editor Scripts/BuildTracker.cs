@@ -203,8 +203,8 @@ namespace Katsudon.Editor
 					var path = AssetDatabase.GUIDToAssetPath(lib.Key);
 					var importer = AssetImporter.GetAtPath(path);
 					var map = importer.GetExternalObjectMap();
-					var assetsRemap = new Dictionary<MonoScript, SerializedUdonProgramAsset>();
-					var keys = new List<AssetImporter.SourceAssetIdentifier>(map.Keys); //FIX: cache
+					var assetsRemap = CollectionCache.GetDictionary<MonoScript, SerializedUdonProgramAsset>();
+					var keys = CollectionCache.GetList<AssetImporter.SourceAssetIdentifier>(map.Keys);
 					for(int i = keys.Count - 1; i >= 0; i--)
 					{
 						var key = keys[i];
@@ -246,6 +246,7 @@ namespace Katsudon.Editor
 							}
 						}
 					}
+					CollectionCache.Release(keys);
 					AssetDatabase.WriteImportSettingsIfDirty(path);
 					Resources.UnloadAsset(importer);
 
@@ -270,6 +271,7 @@ namespace Katsudon.Editor
 
 						buildOptions[i] = new BuildOption(list[i], programPath);
 					}
+					CollectionCache.Release(assetsRemap);
 					librariesBuild.Add(new LibraryInfo(path, buildOptions));
 				}
 				AssetDatabase.StopAssetEditing();

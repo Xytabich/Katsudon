@@ -166,12 +166,14 @@ namespace Katsudon.Editor.Udon
 		{
 			var symbols = program.SymbolTable;
 			var heap = program.Heap;
-			List<IUdonVariable> variables = new List<IUdonVariable>();//FIX: cache
+			var variables = CollectionCache.GetList<IUdonVariable>();
 			foreach(var symbol in symbols.GetExportedSymbols())
 			{
 				variables.Add(CreateUdonVariable(symbol, symbols.GetSymbolType(symbol)));
 			}
-			return new UdonVariableTable(variables);
+			var table = new UdonVariableTable(variables);
+			CollectionCache.Release(variables);
+			return table;
 		}
 
 		private static IUdonVariable CreateUdonVariable(string symbolName, Type declaredType)
