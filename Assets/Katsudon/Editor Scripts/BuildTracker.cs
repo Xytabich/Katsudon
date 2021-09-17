@@ -281,7 +281,7 @@ namespace Katsudon.Editor
 			var refreshingTime = (DateTime.Now - operationTime);
 			operationTime = DateTime.Now;
 
-			if(options.Count == 0 && libraries == null)
+			if(options.Count == 0 && (librariesBuild == null || librariesBuild.Count == 0))
 			{
 				buildInProcess = false;
 				return false;

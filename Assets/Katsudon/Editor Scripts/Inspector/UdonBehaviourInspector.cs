@@ -5,6 +5,7 @@ using Katsudon.Editor.Udon;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.ProgramSources;
 
@@ -473,6 +474,7 @@ namespace Katsudon.Editor
 				{
 					Undo.undoRedoPerformed -= serializedProxies.Update;
 					serializedProxies.Dispose();
+					serializedProxies = null;
 				}
 				for(int i = 0; i < behaviours.Length; i++)
 				{
@@ -615,31 +617,38 @@ namespace Katsudon.Editor
 						GUI.changed = false;
 						try
 						{
-							using(new EditorGUI.DisabledScope(true)) EditorGUILayout.ObjectField("Program Asset", info.program, typeof(SerializedUdonProgramAsset), true);
+							using(new EditorGUI.DisabledScope(true))
 							{
-								int manualSync = -1;
-								for(int j = 0; j < info.behaviours.Length; j++)
+								EditorGUILayout.ObjectField("Program Asset", info.program, typeof(SerializedUdonProgramAsset), true);
+							}
+							{
+								Networking.SyncType syncType = info.behaviours[0].SyncMethod;
+								bool hasDifferentValues = false;
+								for(int j = 1; j < info.behaviours.Length; j++)
 								{
-									if(manualSync == -1)
+									if(info.behaviours[j].SyncMethod != syncType)
 									{
-										manualSync = info.behaviours[j].Reliable ? 1 : 0;
-									}
-									else if(manualSync != (info.behaviours[j].Reliable ? 1 : 0))
-									{
-										manualSync = -1;
+										hasDifferentValues = true;
 										break;
 									}
 								}
+								if(hasDifferentValues) syncType = (Networking.SyncType)Enum.ToObject(typeof(Networking.SyncType), -1);
 
-								bool isActive = manualSync != 0;
-								EditorGUI.showMixedValue = (manualSync == -1);
 								EditorGUI.BeginChangeCheck();
-								isActive = EditorGUILayout.Toggle("Manual Sync", isActive);
+								syncType = (Networking.SyncType)EditorGUILayout.EnumPopup("Sync Method", syncType);
 								if(EditorGUI.EndChangeCheck())
 								{
+									var objects = new HashSet<GameObject>();//TODO: cache
 									for(int j = 0; j < info.behaviours.Length; j++)
 									{
-										info.behaviours[j].Reliable = isActive;
+										objects.Add(info.behaviours[j].gameObject);
+									}
+									Undo.IncrementCurrentGroup();
+									foreach(var obj in objects)
+									{
+										var list = obj.GetComponents<UdonBehaviour>();
+										Undo.RecordObjects(list, "Sync Method Change");
+										list[0].SyncMethod = syncType;
 									}
 								}
 							}
