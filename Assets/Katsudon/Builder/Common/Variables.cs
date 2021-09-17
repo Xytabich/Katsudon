@@ -1,86 +1,7 @@
 ﻿using System;
-using VRC.Udon;
 
 namespace Katsudon.Builder
 {
-	public interface IVariable : IAddressLabel
-	{
-		string name { get; }
-
-		Type type { get; }
-
-		/// <summary>
-		/// Called when a variable is used by any operator
-		/// </summary>
-		void Use();
-
-		/// <summary>
-		/// Additional number of possible uses.
-		/// Use this if the variable is used more than once in the same context.
-		/// </summary>
-		void Allocate(int count = 1);
-
-		void SetAddress(uint address);
-	}
-
-	public interface IExportableVariable : IVariable
-	{
-		bool export { get; }
-	}
-
-	public interface ISyncableVariable : IVariable
-	{
-		SyncMode syncMode { get; }
-	}
-
-	public interface ISignificantVariable : IVariable
-	{
-		object value { get; }
-	}
-
-	public interface ISelfPointingVariable : IVariable
-	{
-		bool isSelf { get; }
-	}
-
-	public interface IConstVariable : IVariable
-	{
-		object value { get; }
-	}
-
-	public interface IFixedVariableAddress : IVariable
-	{
-
-	}
-
-	/// <summary>
-	/// A value that will only be known at the end of the build.
-	/// Can be used in opcodes.
-	/// </summary>
-	public interface IDeferredValue<out T>
-	{
-		/// <summary>
-		/// Returns the value to which this object will be replaced
-		/// </summary>
-		T GetValue();
-	}
-
-	public interface IDeferredVariableName : IVariable
-	{
-		bool hasName { get; }
-
-		void Apply(INamePicker namePicker);
-	}
-
-	public interface IReferenceVariable : IVariable
-	{
-		IVariable GetValueVariable();
-
-		void LoadValue(IUdonProgramBlock block);
-
-		void StoreValue(IUdonProgramBlock block);
-	}
-
 	public class NamedVariable : IVariable
 	{
 		public string name { get; private set; }
@@ -118,7 +39,7 @@ namespace Katsudon.Builder
 		{
 			get
 			{
-				if(_name == null) throw new InvalidOperationException("Variable has no value");
+				if(_name == null) throw new InvalidOperationException("Variable has no name");
 				return _name;
 			}
 		}
@@ -216,12 +137,5 @@ namespace Katsudon.Builder
 		public void Allocate(int count = 1) { }
 
 		void IVariable.SetAddress(uint address) { }
-	}
-
-	public class ThisVariable : UnnamedVariable, ISelfPointingVariable
-	{
-		public bool isSelf => true;
-
-		public ThisVariable(Type type) : base("this", type) { }
 	}
 }

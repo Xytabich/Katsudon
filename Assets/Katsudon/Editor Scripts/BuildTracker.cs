@@ -28,6 +28,7 @@ namespace Katsudon.Editor
 		private static string ERROR_FILE = "buildError";
 		private static byte ERROR_FILE_VERSION = 0;
 
+		private static bool buildInProcess = false;
 		private static bool rebuildCacheLoaded = false;
 		private static bool rebuildRequestSaved = false;
 		private static bool rebuildRequested = false;
@@ -38,11 +39,6 @@ namespace Katsudon.Editor
 		{
 			EditorApplication.playModeStateChanged += OnPlayModeChanged;
 			CompilationPipeline.assemblyCompilationFinished += OnAssemblyCompiled;
-			GetBuildedVersion(out var vrcSdkVersion, out var katsudonVersion);
-			if(vrcSdkVersion != SDKClientUtilities.GetSDKVersionDate() || katsudonVersion != KatsudonInfo.VERSION)
-			{
-				ForceRebuild();
-			}
 		}
 
 		private static void OnAssemblyCompiled(string assemblyPath, CompilerMessage[] messages)
@@ -72,15 +68,22 @@ namespace Katsudon.Editor
 		private static void OnScriptsReloaded()
 		{
 			bool rebuild = false;
-			var cache = GetBuildedList();
-			foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+			GetBuildedInfo(out var cache, out var vrcSdkVersion, out var katsudonVersion);
+			if(vrcSdkVersion != SDKClientUtilities.GetSDKVersionDate() || katsudonVersion != KatsudonInfo.VERSION)
 			{
-				if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
+				rebuild = true;
+			}
+			else
+			{
+				foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
 				{
-					if(!cache.Contains(assembly.FullName))
+					if(!assembly.IsDynamic && Utils.IsUdonAsm(assembly))
 					{
-						rebuild = true;
-						break;
+						if(!cache.Contains(assembly.FullName))
+						{
+							rebuild = true;
+							break;
+						}
 					}
 				}
 			}
@@ -148,6 +151,9 @@ namespace Katsudon.Editor
 
 		private static bool BuildAssemblies()
 		{
+			if(buildInProcess) return false;
+			buildInProcess = true;
+
 			var startTime = DateTime.Now;
 			var operationTime = DateTime.Now;
 
@@ -275,103 +281,111 @@ namespace Katsudon.Editor
 			var refreshingTime = (DateTime.Now - operationTime);
 			operationTime = DateTime.Now;
 
-			if(options.Count > 0 || libraries != null)
+			if(options.Count == 0 && libraries == null)
 			{
-				bool buildError = false;
-				AssetDatabase.StartAssetEditing();
-				try
+				buildInProcess = false;
+				return false;
+			}
+
+			bool buildError = false;
+			AssetDatabase.StartAssetEditing();
+			try
+			{
+				using(var builder = new AssembliesBuilder())
 				{
-					using(var builder = new AssembliesBuilder())
+					for(int i = options.Count - 1; i >= 0; i--)
 					{
-						for(int i = options.Count - 1; i >= 0; i--)
+						builder.BuildClass(options[i].script.GetClass(), options[i].programOut, MonoImporter.GetExecutionOrder(options[i].script));
+					}
+					if(librariesBuild != null)
+					{
+						for(int i = librariesBuild.Count - 1; i >= 0; i--)
 						{
-							builder.BuildClass(options[i].script.GetClass(), options[i].programOut, MonoImporter.GetExecutionOrder(options[i].script));
-						}
-						if(librariesBuild != null)
-						{
-							for(int i = librariesBuild.Count - 1; i >= 0; i--)
+							var buildOptions = librariesBuild[i].options;
+							for(int j = 0; j < buildOptions.Length; j++)
 							{
-								var buildOptions = librariesBuild[i].options;
-								for(int j = 0; j < buildOptions.Length; j++)
-								{
-									builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
-										MonoImporter.GetExecutionOrder(buildOptions[j].script));
-								}
+								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
+									MonoImporter.GetExecutionOrder(buildOptions[j].script));
 							}
 						}
 					}
 				}
-				catch(Exception e)
-				{
-					Debug.LogException(e);
-					SaveError(e);
-					buildError = true;
-				}
-				AssetDatabase.StopAssetEditing();
-				AssetDatabase.SaveAssets();
-				AssetDatabase.Refresh();
-				if(buildError) return false;
-
-				GC.Collect();
-				Resources.UnloadUnusedAssets();
-				var buildingTime = (DateTime.Now - operationTime);
-				operationTime = DateTime.Now;
-
-				AssetDatabase.StartAssetEditing();
-				for(var i = 0; i < options.Count; i++)
-				{
-					var programPath = options[i].programOut;
-					var importer = AssetImporter.GetAtPath(programPath);
-					importer.AddRemap(ProgramUtils.GetScriptIdentifier(), options[i].script);
-					AssetDatabase.WriteImportSettingsIfDirty(programPath);
-					Resources.UnloadAsset(importer);
-
-					if(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(options[i].script, out string guid, out long fileId))
-					{
-						var scriptPath = AssetDatabase.GUIDToAssetPath(guid);
-						importer = AssetImporter.GetAtPath(scriptPath);
-						importer.AddRemap(ProgramUtils.GetMainProgramIdentifier(), AssetDatabase.LoadMainAssetAtPath(programPath));
-						AssetDatabase.WriteImportSettingsIfDirty(scriptPath);
-						Resources.UnloadAsset(importer);
-					}
-				}
-				if(librariesBuild != null)
-				{
-					for(int i = librariesBuild.Count - 1; i >= 0; i--)
-					{
-						var libraryPath = librariesBuild[i].path;
-						var libraryImporter = AssetImporter.GetAtPath(libraryPath);
-						var buildOptions = librariesBuild[i].options;
-						for(var j = 0; j < buildOptions.Length; j++)
-						{
-							var programPath = buildOptions[j].programOut;
-							var importer = AssetImporter.GetAtPath(programPath);
-							importer.AddRemap(ProgramUtils.GetScriptIdentifier(), buildOptions[j].script);
-							AssetDatabase.WriteImportSettingsIfDirty(programPath);
-							Resources.UnloadAsset(importer);
-
-							libraryImporter.AddRemap(ProgramUtils.GetSubProgramIdentifier(buildOptions[j].script.GetClass()),
-								AssetDatabase.LoadMainAssetAtPath(programPath));
-						}
-						AssetDatabase.WriteImportSettingsIfDirty(libraryPath);
-						Resources.UnloadAsset(libraryImporter);
-					}
-				}
-				AssetDatabase.StopAssetEditing();
-				AssetDatabase.SaveAssets();
-				AssetDatabase.Refresh();
-
-				GC.Collect();
-				Resources.UnloadUnusedAssets();
-				var linkingTime = (DateTime.Now - operationTime);
-
-				Debug.LogFormat("[Katsudon] Build finished in {0}:\nCollecting: {1}\nRefreshing: {2}\nBuilding & Saving: {3}\nLinking: {4}",
-					DateTime.Now - startTime, collectingTime, refreshingTime, buildingTime, linkingTime);
-
-				FileUtils.DeleteFile(ERROR_FILE);
-				return true;
 			}
-			return false;
+			catch(Exception e)
+			{
+				Debug.LogException(e);
+				SaveError(e);
+				buildError = true;
+			}
+			AssetDatabase.StopAssetEditing();
+			AssetDatabase.SaveAssets();
+			AssetDatabase.Refresh();
+			if(buildError)
+			{
+				buildInProcess = false;
+				return false;
+			}
+
+			GC.Collect();
+			Resources.UnloadUnusedAssets();
+			var buildingTime = (DateTime.Now - operationTime);
+			operationTime = DateTime.Now;
+
+			AssetDatabase.StartAssetEditing();
+			for(var i = 0; i < options.Count; i++)
+			{
+				var programPath = options[i].programOut;
+				var importer = AssetImporter.GetAtPath(programPath);
+				importer.AddRemap(ProgramUtils.GetScriptIdentifier(), options[i].script);
+				AssetDatabase.WriteImportSettingsIfDirty(programPath);
+				Resources.UnloadAsset(importer);
+
+				if(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(options[i].script, out string guid, out long fileId))
+				{
+					var scriptPath = AssetDatabase.GUIDToAssetPath(guid);
+					importer = AssetImporter.GetAtPath(scriptPath);
+					importer.AddRemap(ProgramUtils.GetMainProgramIdentifier(), AssetDatabase.LoadMainAssetAtPath(programPath));
+					AssetDatabase.WriteImportSettingsIfDirty(scriptPath);
+					Resources.UnloadAsset(importer);
+				}
+			}
+			if(librariesBuild != null)
+			{
+				for(int i = librariesBuild.Count - 1; i >= 0; i--)
+				{
+					var libraryPath = librariesBuild[i].path;
+					var libraryImporter = AssetImporter.GetAtPath(libraryPath);
+					var buildOptions = librariesBuild[i].options;
+					for(var j = 0; j < buildOptions.Length; j++)
+					{
+						var programPath = buildOptions[j].programOut;
+						var importer = AssetImporter.GetAtPath(programPath);
+						importer.AddRemap(ProgramUtils.GetScriptIdentifier(), buildOptions[j].script);
+						AssetDatabase.WriteImportSettingsIfDirty(programPath);
+						Resources.UnloadAsset(importer);
+
+						libraryImporter.AddRemap(ProgramUtils.GetSubProgramIdentifier(buildOptions[j].script.GetClass()),
+							AssetDatabase.LoadMainAssetAtPath(programPath));
+					}
+					AssetDatabase.WriteImportSettingsIfDirty(libraryPath);
+					Resources.UnloadAsset(libraryImporter);
+				}
+			}
+			AssetDatabase.StopAssetEditing();
+			AssetDatabase.SaveAssets();
+			AssetDatabase.Refresh();
+
+			GC.Collect();
+			Resources.UnloadUnusedAssets();
+			var linkingTime = (DateTime.Now - operationTime);
+
+			Debug.LogFormat("[Katsudon] Build finished in {0}:\nCollecting: {1}\nRefreshing: {2}\nBuilding & Saving: {3}\nLinking: {4}",
+				DateTime.Now - startTime, collectingTime, refreshingTime, buildingTime, linkingTime);
+
+			FileUtils.DeleteFile(ERROR_FILE);
+
+			buildInProcess = false;
+			return true;
 		}
 
 		public static bool IsValidScript(MonoScript script)
@@ -474,8 +488,9 @@ namespace Katsudon.Editor
 			}
 		}
 
-		private static void GetBuildedVersion(out string vrcSdkVersion, out string katsudonVersion)
+		private static void GetBuildedInfo(out HashSet<string> list, out string vrcSdkVersion, out string katsudonVersion)
 		{
+			list = new HashSet<string>();
 			vrcSdkVersion = null;
 			katsudonVersion = null;
 			try
@@ -487,31 +502,10 @@ namespace Katsudon.Editor
 						if(reader.ReadByte() != BUILDED_FILE_VERSION) throw new IOException("Invalid version");
 						vrcSdkVersion = reader.ReadString();
 						katsudonVersion = reader.ReadString();
-					}
-				}
-			}
-			catch(IOException)
-			{
-				FileUtils.DeleteFile(BUILDED_FILE);
-			}
-		}
-
-		private static HashSet<string> GetBuildedList()
-		{
-			var set = new HashSet<string>();
-			try
-			{
-				using(var reader = FileUtils.TryGetFileReader(BUILDED_FILE))
-				{
-					if(reader != null)
-					{
-						if(reader.ReadByte() != BUILDED_FILE_VERSION) throw new IOException("Invalid version");
-						reader.ReadString();
-						reader.ReadString();
 						int count = reader.ReadInt32();
 						for(int i = 0; i < count; i++)
 						{
-							set.Add(reader.ReadString());
+							list.Add(reader.ReadString());
 						}
 					}
 				}
@@ -520,7 +514,6 @@ namespace Katsudon.Editor
 			{
 				FileUtils.DeleteFile(BUILDED_FILE);
 			}
-			return set;
 		}
 
 		private static void SaveBuildedInfo(HashSet<string> set)

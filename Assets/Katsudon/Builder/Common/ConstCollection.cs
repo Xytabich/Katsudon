@@ -46,104 +46,28 @@ namespace Katsudon.Builder
 			}
 		}
 
-		private class ConstVariable : IVariable, IConstVariable, ISignificantVariable, IDeferredVariableName
+		private class ConstVariable : UnnamedVariable, IConstVariable, ISignificantVariable
 		{
-			public string name
-			{
-				get
-				{
-					if(_name == null) throw new InvalidOperationException("Variable has no name");
-					return _name;
-				}
-			}
-
-			public Type type { get; private set; }
-
-			public uint address
-			{
-				get
-				{
-					if(!_address.HasValue) UnityEngine.Debug.Log("Const has no address:" + type + ":" + value);
-					return _address.Value;
-				}
-			}
-
 			public object value { get; private set; }
 
 			public bool isUsed = false;
 
-			bool IDeferredVariableName.hasName => _name != null;
-
-			private uint? _address = null;
-			private string _name = null;
-
-			public ConstVariable(object value, Type type)
+			public ConstVariable(object value, Type type) : base("const", type)
 			{
-				this.type = type;
 				this.value = value;
 			}
 
-			public void Use()
+			public override void Use()
 			{
 				isUsed = true;
 			}
-
-			public void Allocate(int count = 1) { }
-
-			public void Apply(INamePicker namePicker)
-			{
-				_name = namePicker.PickName("const");
-			}
-
-			void IVariable.SetAddress(uint address)
-			{
-				this._address = address;
-			}
 		}
 
-		private class NullConstVariable : IVariable, ISignificantVariable, IDeferredVariableName
+		private class NullConstVariable : UnnamedVariable, ISignificantVariable
 		{
-			public string name
-			{
-				get
-				{
-					if(_name == null) throw new InvalidOperationException("Null const has no name");
-					return _name;
-				}
-			}
-
-			public Type type => typeof(object);
-
 			public object value => null;
 
-			public uint address
-			{
-				get
-				{
-					if(!_address.HasValue) UnityEngine.Debug.Log("Null const has no address");
-					return _address.Value;
-				}
-			}
-
-
-			bool IDeferredVariableName.hasName => _name != null;
-
-			private uint? _address = null;
-			private string _name = null;
-
-			public void Use() { }
-
-			public void Allocate(int count = 1) { }
-
-			public void Apply(INamePicker namePicker)
-			{
-				_name = namePicker.PickName("null");
-			}
-
-			void IVariable.SetAddress(uint address)
-			{
-				this._address = address;
-			}
+			public NullConstVariable() : base("null", typeof(object)) { }
 		}
 	}
 }

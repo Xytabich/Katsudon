@@ -312,40 +312,10 @@ namespace Katsudon.Builder
 		GameObject
 	}
 
-	public interface IAddressLabel
+	public class ThisVariable : UnnamedVariable, ISelfPointingVariable
 	{
-		uint address { get; }
-	}
+		public bool isSelf => true;
 
-	public interface IEmbedAddressLabel : IAddressLabel
-	{
-		void Init(Func<uint> pointerGetter);
-
-		void Apply();
-	}
-
-	public class EmbedAddressLabel : IEmbedAddressLabel
-	{
-		uint IAddressLabel.address
-		{
-			get
-			{
-				if(!_address.HasValue) throw new Exception("Address is not assigned");
-				return _address.Value;
-			}
-		}
-
-		private uint? _address;
-		private Func<uint> pointerGetter;
-
-		void IEmbedAddressLabel.Init(Func<uint> pointerGetter)
-		{
-			this.pointerGetter = pointerGetter;
-		}
-
-		void IEmbedAddressLabel.Apply()
-		{
-			_address = pointerGetter();
-		}
+		public ThisVariable(Type type) : base("this", type) { }
 	}
 }

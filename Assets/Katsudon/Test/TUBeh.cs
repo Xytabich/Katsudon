@@ -48,8 +48,8 @@ public class TUBeh : TBase, TInt
 		var bcd = Image.Type.Sliced;
 		Debug.Log(abc | bcd);*/
 
-		// object tmp = this;
-		// Debug.Log(tmp as TuTuBeh);
+		object tmp = this;
+		Debug.Log(tmp as TuTuBeh);
 
 		TestInt(listCount, TestArg());
 
