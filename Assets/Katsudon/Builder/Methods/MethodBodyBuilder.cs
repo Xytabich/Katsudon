@@ -64,7 +64,7 @@ namespace Katsudon.Builder
 				operations.Add(op);
 			}
 
-			var addressPointers = CollectionCache.GetList<UdonAddressPointer>();
+			var addressPointers = new List<UdonAddressPointer>();
 			addressPointers.Add(new UdonAddressPointer(machineBlock.machine.GetAddressCounter(), 0));
 			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, locals, machineBlock, addressPointers);
 			try
@@ -132,7 +132,6 @@ namespace Katsudon.Builder
 			finally
 			{
 				CollectionCache.Release(operations);
-				CollectionCache.Release(addressPointers);
 			}
 		}
 

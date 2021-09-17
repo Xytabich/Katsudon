@@ -80,13 +80,11 @@ namespace Katsudon.Meta
 							for(uint j = 8; j < size; j += 8)
 							{
 								uint address = reader.ReadUInt32();
-								if(udonPosition < address)
-								{
-									outList.Add(new TraceInfo(stringsList[assemblyIndex], stringsList[moduleIndex], methodToken, il));
-									return;
-								}
+								if(udonPosition < address) break;
 								il = reader.ReadInt32();
 							}
+							outList.Add(new TraceInfo(stringsList[assemblyIndex], stringsList[moduleIndex], methodToken, il));
+							return;
 						}
 						else
 						{

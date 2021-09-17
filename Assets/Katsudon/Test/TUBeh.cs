@@ -68,7 +68,7 @@ public class TUBeh : TBase, TInt
 		//Array.BinarySearch(b, a);
 		// (testComponent as Image).enabled = false;
 
-		// var tint = this as TInt;
+		var tint = this as TInt;
 		// if(img.fillMethod == Image.FillMethod.Horizontal)
 		// {
 		// 	img.fillMethod = Image.FillMethod.Vertical;
@@ -82,8 +82,8 @@ public class TUBeh : TBase, TInt
 		// 	img.fillMethod = Image.FillMethod.Radial360;
 		// 	if(img.sprite != null) goto _label2;
 		// 	_outLabel:
-		// 	tint.TestA(img.name);
-		// 	Test(this);
+		tint.TestA(img.name);
+		Test(this);
 
 		// 		Debug.Log((abc & ibc) + ":" + (abc | ibc));
 		// Debug.Log(GetComponentInChildren<Image>(false));
@@ -127,16 +127,16 @@ public class TUBeh : TBase, TInt
 		// self.evt = Convert.ToInt32;
 		// Debug.Log(self.evt.Invoke("0"));
 		// self.evt += Convert.ToInt32;
-		evt -= Convert.ToInt32;
-		Debug.Log(evt.Invoke("1"));
-		evt -= Convert.ToInt32;
-		evt += TstEvt;
-		Debug.Log(evt.Invoke("0"));
-		evt += Convert.ToInt32;
-		Debug.Log(evt.Invoke("0"));
-		evt -= Convert.ToInt32;
-		evt -= TstEvt;
-		Debug.Log(evt);
+		// evt -= Convert.ToInt32;
+		// Debug.Log(evt.Invoke("1"));
+		// evt -= Convert.ToInt32;
+		// evt += TstEvt;
+		// Debug.Log(evt.Invoke("0"));
+		// evt += Convert.ToInt32;
+		// Debug.Log(evt.Invoke("0"));
+		// evt -= Convert.ToInt32;
+		// evt -= TstEvt;
+		// Debug.Log(evt);
 
 		int v = (int)img.fillMethod;
 		Debug.Log(v.ToString());

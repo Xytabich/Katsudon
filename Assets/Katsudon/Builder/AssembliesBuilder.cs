@@ -28,7 +28,6 @@ namespace Katsudon.Builder
 		private StringBuilder cachedSb = new StringBuilder();
 		private PrimitiveConvertersList convertersList;
 
-		private List<UdonMethodMeta> metaCache = new List<UdonMethodMeta>();
 		private UdonAssembliesMetaWriter metaWriter;
 
 		private Dictionary<Type, object> modules = new Dictionary<Type, object>();
@@ -183,8 +182,9 @@ namespace Katsudon.Builder
 				typeOperationBuilders[i].Register(methodBodyBuilder, this);
 			}
 
-			metaCache.Clear();
-			var machine = new UdonMachine(metaCache, classInfo, constCollection, externsCollection, fieldsCollection);
+
+			var typeMeta = CollectionCache.GetList<UdonMethodMeta>();
+			var machine = new UdonMachine(typeMeta, classInfo, constCollection, externsCollection, fieldsCollection);
 			var programBlock = new ProgramBlock(machine, propertiesBlock, executionOrder);
 			programBlock.AddMethodBuilder(behaviourMethodBuilder);
 			programBlock.AddMethodBuilder(new InterfaceMethodBuilder(interfaceMethodsMap, methodBodyBuilder, convertersList, methodsCollection));
@@ -234,8 +234,9 @@ namespace Katsudon.Builder
 				AssetDatabase.CreateAsset(programAsset, programPath);
 			}
 			programAsset.StoreProgram(program);
-			metaCache.Sort();
-			metaWriter.WriteType(classInfo.guid, metaCache);
+			typeMeta.Sort();
+			metaWriter.WriteType(classInfo.guid, typeMeta);
+			CollectionCache.Release(typeMeta);
 		}
 
 		private static void MapInterfaceMethods(Type[] interfaces, Type type, Dictionary<MethodInfo, MethodInfo> interfaceMethods)

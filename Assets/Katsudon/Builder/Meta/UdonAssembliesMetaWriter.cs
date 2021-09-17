@@ -104,35 +104,22 @@ namespace Katsudon.Meta
 			long blockInfoPos = 0;
 
 			int blocksCount = 0;
-			int pointerIndex = 0;
 			int lastIlOffset = 0;
-			while(offset < meta.endAddress)
+			foreach(var pointer in meta.pointers)
 			{
-				if(offset != nextMethod)
+				if(pointer.udonAddress < nextMethod)
 				{
-					if(pointerIndex < meta.pointers.Count)
+					if(!blockStarted)
 					{
-						var pointer = meta.pointers[pointerIndex];
-						if(offset == pointer.udonAddress)
-						{
-							if(!blockStarted)
-							{
-								blocksCount++;
-								blockStarted = true;
-								writer.Write(pointer.udonAddress);
-								blockInfoPos = stream.Position;
-								writer.Write((uint)0);
-								writer.Write((byte)ADDRESS_BLOCK);
-								writer.Write((int)0);
-								writer.Write((uint)0);
-							}
-							writer.Write(pointer.udonAddress);
-							writer.Write(pointer.ilOffset);
-							lastIlOffset = pointer.ilOffset;
-							pointerIndex++;
-						}
+						blocksCount++;
+						blockStarted = true;
+						writer.Write(pointer.udonAddress);
+						blockInfoPos = stream.Position;
+						stream.Seek(sizeof(uint) + sizeof(byte) + sizeof(int) + sizeof(uint), SeekOrigin.Current);
 					}
-					offset += 4;
+					writer.Write(pointer.udonAddress);
+					writer.Write(pointer.ilOffset);
+					lastIlOffset = pointer.ilOffset;
 				}
 				else
 				{
@@ -145,7 +132,7 @@ namespace Katsudon.Meta
 						tmpPos = stream.Position;
 						stream.Position = blockInfoPos;
 						writer.Write(innerMeta.startAddress);
-						stream.Seek(1, SeekOrigin.Current);
+						writer.Write((byte)ADDRESS_BLOCK);
 						writer.Write(lastIlOffset);
 						writer.Write((uint)((tmpPos - blockInfoPos) - (sizeof(uint) + sizeof(byte) + sizeof(int) + sizeof(uint))));
 						stream.Position = tmpPos;
@@ -169,12 +156,13 @@ namespace Katsudon.Meta
 					offset = innerMeta.endAddress;
 				}
 			}
+
 			if(blockStarted)
 			{
 				tmpPos = stream.Position;
 				stream.Position = blockInfoPos;
 				writer.Write(meta.endAddress);
-				stream.Seek(1, SeekOrigin.Current);
+				writer.Write((byte)ADDRESS_BLOCK);
 				writer.Write(lastIlOffset);
 				writer.Write((uint)((tmpPos - blockInfoPos) - (sizeof(uint) + sizeof(byte) + sizeof(int) + sizeof(uint))));
 				stream.Position = tmpPos;
