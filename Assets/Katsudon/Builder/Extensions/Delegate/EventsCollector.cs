@@ -8,7 +8,7 @@ using Katsudon.Members;
 namespace Katsudon.Builder.Extensions.DelegateExtension
 {
 	[MemberHandler]
-	public class EventsCollector : IMemberHandler//TODO: add custom event builder for auto-generated methods
+	public class EventsCollector : IMemberHandler
 	{
 		int IMemberHandler.order => 20;
 

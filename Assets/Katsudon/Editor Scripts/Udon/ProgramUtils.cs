@@ -77,6 +77,28 @@ namespace Katsudon.Editor.Udon
 			return GetProgramByScript(MonoScript.FromMonoBehaviour(behaviour));
 		}
 
+		public static bool HasProgramRecord(MonoScript script)
+		{
+			if(EditorUtility.IsPersistent(script))
+			{
+				var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(script));
+				foreach(var pair in importer.GetExternalObjectMap())
+				{
+					if(IsProgramRecord(pair.Key))
+					{
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		public static bool IsProgramRecord(AssetImporter.SourceAssetIdentifier identifier)
+		{
+			return identifier.type.IsAssignableFrom(typeof(SerializedUdonProgramAsset)) &&
+				identifier.name.StartsWith("Katsudon-") && identifier.name.EndsWith("-Program");
+		}
+
 		public static AssetImporter.SourceAssetIdentifier GetProgramIdentifier(MonoScript script)
 		{
 			return AssetDatabase.IsMainAsset(script) ? GetMainProgramIdentifier() : GetSubProgramIdentifier(script.GetClass());
