@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq.Expressions;
 using Katsudon.Utility;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -10,467 +10,470 @@ using VRC.Udon;
 
 namespace Katsudon.Editor.Udon
 {
-	internal static class BehavioursTracker
+	public static class BehavioursTracker
 	{
 		public const HideFlags SERVICE_OBJECT_FLAGS = HideFlags.DontSave | HideFlags.HideInInspector;
 
-		private static SceneBehavioursContainer sceneContainer = null;
-		private static TmpBehavioursContaner tmpContainer = null;
-		private static HashSet<Scene> loadedScenes = null;
+		private delegate IDisposable TrackObjectDelegate(UnityEngine.Object obj, Action<UnityEngine.Object> onChanged);
+		private static TrackObjectDelegate _trackObject = null;
 
-		internal static IBehavioursContainer GetOrCreateContainer(Scene scene)
+		private static Dictionary<GameObject, ReferencesContainer> containers = new Dictionary<GameObject, ReferencesContainer>();
+		private static Dictionary<UdonBehaviour, GameObject> behaviours = new Dictionary<UdonBehaviour, GameObject>();
+		private static Dictionary<MonoBehaviour, IDisposable> proxies = new Dictionary<MonoBehaviour, IDisposable>();
+		private static HashSet<Scene> loadedScenes = new HashSet<Scene>();
+
+		public static MonoBehaviour GetProxyByBehaviour(UdonBehaviour behaviour)
 		{
-			if(!scene.IsValid())
-			{
-				if(tmpContainer == null) tmpContainer = new TmpBehavioursContaner();
-				return tmpContainer;
-			}
-
-			if(sceneContainer == null) sceneContainer = new SceneBehavioursContainer();
-			PickFromScene(scene);
-			return sceneContainer;
+			if(behaviour == null) return null;
+			var container = GetContainer(behaviour.gameObject);
+			if(container == null) return null;
+			return container.GetProxyByBehaviour(behaviour);
 		}
 
-		internal static bool TryGetContainer(Scene scene, out IBehavioursContainer container)
+		public static UdonBehaviour GetBehaviourByProxy(MonoBehaviour proxy)
 		{
-			container = null;
-			if(!scene.IsValid())
+			if(proxy == null) return null;
+			var container = GetContainer(proxy.gameObject);
+			if(container == null) return null;
+			return container.GetBehaviourByProxy(proxy);
+		}
+
+		public static void RegisterPair(UdonBehaviour behaviour, MonoBehaviour proxy)
+		{
+			var group = Undo.GetCurrentGroup();
+			var obj = behaviour.gameObject;
+			var container = GetContainer(obj);
+			if(container == null)
 			{
-				if(tmpContainer == null) return false;
-				container = tmpContainer;
-				return true;
+				container = obj.AddComponent<ReferencesContainer>();
+				container.hideFlags = SERVICE_OBJECT_FLAGS;
+				CacheContainer(container);
+			}
+			container.AddPair(behaviour, proxy);
+			Undo.CollapseUndoOperations(group);
+			TrackBehaviour(behaviour);
+			TrackProxy(proxy);
+		}
+
+		public static MonoBehaviour GetOrCreateProxy(UdonBehaviour behaviour, MonoScript script)
+		{
+			if(PrefabUtility.IsPartOfPrefabAsset(behaviour) || !behaviour.gameObject.scene.IsValid())
+			{
+				return GetTmpProxy(behaviour, script);
 			}
 
-			if(sceneContainer == null) return false;
-			container = sceneContainer;
-			return true;
+			var proxy = GetProxyByBehaviour(behaviour);
+			if(proxy == null || proxy.GetType() != script.GetClass())
+			{
+				var group = Undo.GetCurrentGroup();
+				if(proxy != null) UnRegisterPair(behaviour);
+				proxy = CreateProxy(behaviour.gameObject, behaviour, script);
+				RegisterPair(behaviour, proxy);
+				Undo.CollapseUndoOperations(group);
+			}
+			return proxy;
+		}
+
+		public static void ReleasePrefabBehaviour(UdonBehaviour behaviour)
+		{
+			OnBehaviourDestroyed(behaviour);
 		}
 
 		[InitializeOnLoadMethod]
 		private static void Init()
 		{
-			for(int i = 0; i < EditorSceneManager.sceneCount; i++)
-			{
-				var scene = EditorSceneManager.GetSceneAt(i);
-				if(EditorSceneManager.IsPreviewScene(scene) && scene.name == "Katsudon-Proxies")
-				{
-					EditorSceneManager.ClosePreviewScene(scene);
-					continue;
-				}
-				PickFromScene(scene);
-			}
-
+			EditorApplication.update += UpdateTick;
 			ObjectFactory.componentWasAdded += OnComponentAdded;
-
-			EditorSceneManager.sceneClosed += OnSceneClosed;
+			EditorSceneManager.sceneClosing += OnSceneClosed;
 			EditorSceneManager.sceneOpened += OnSceneOpened;
-			EditorSceneManager.sceneLoaded += OnSceneLoaded;
-			EditorSceneManager.activeSceneChangedInEditMode += ActiveSceneChanged;
+			EditorSceneManager.activeSceneChangedInEditMode += OnSceneChanged;
+			EditorApplication.playModeStateChanged += OnPlayModeChanged;
+
+			UpdateReferencesContainer();
 		}
 
-		private static void ActiveSceneChanged(Scene previousActiveScene, Scene newActiveScene)
+		private static void OnPlayModeChanged(PlayModeStateChange state)
 		{
-			PickFromScene(newActiveScene);
+			if(state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.EnteredEditMode)
+			{
+				if(containers.Count > 0)
+				{
+					// Fixing missing references when changing play mode
+					var keys = CollectionCache.GetList<UdonBehaviour>(behaviours.Keys);
+					foreach(var behaviour in keys)
+					{
+						if(!TmpContainer.IsTmpBehaviour(behaviour))
+						{
+							behaviours.Remove(behaviour);
+						}
+					}
+					CollectionCache.Release(keys);
+					foreach(var pair in proxies)
+					{
+						pair.Value.Dispose();
+					}
+					proxies.Clear();
+					foreach(var pair in containers)
+					{
+						pair.Value.RetryTrack();
+					}
+					UpdateReferencesContainer();
+				}
+			}
 		}
 
-		private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+		private static void UpdateTick()
 		{
-			PickFromScene(scene);
+			UpdateReferencesContainer();
+			if(BehavioursTracker.behaviours.Count > 0)
+			{
+				var behaviours = CollectionCache.GetList<UdonBehaviour>(BehavioursTracker.behaviours.Keys);
+				foreach(var behaviour in behaviours)
+				{
+					if(behaviour == null)
+					{
+						OnBehaviourDestroyed(behaviour);
+					}
+				}
+				CollectionCache.Release(behaviours);
+			}
+			if(containers.Count > 0)
+			{
+				var containers = CollectionCache.GetList<GameObject>(BehavioursTracker.containers.Keys);
+				foreach(var container in containers)
+				{
+					if(container == null)
+					{
+						BehavioursTracker.containers.Remove(container);
+					}
+				}
+				CollectionCache.Release(containers);
+			}
+		}
+
+		private static void UpdateReferencesContainer()
+		{
+			var cacheContainers = ReferencesContainer.cacheContainers;
+			if(cacheContainers != null && cacheContainers.Count > 0)
+			{
+				foreach(var container in cacheContainers)
+				{
+					if(container != null) CacheContainer(container);
+				}
+				cacheContainers.Clear();
+			}
+			var trackBehaviours = ReferencesContainer.trackBehaviours;
+			if(trackBehaviours != null && trackBehaviours.Count > 0)
+			{
+				foreach(var behaviour in trackBehaviours)
+				{
+					if(behaviour != null) TrackBehaviour(behaviour);
+				}
+				trackBehaviours.Clear();
+			}
+			var trackProxies = ReferencesContainer.trackProxies;
+			if(trackProxies != null && trackProxies.Count > 0)
+			{
+				foreach(var proxy in trackProxies)
+				{
+					if(proxy != null) TrackProxy(proxy);
+				}
+				trackProxies.Clear();
+			}
 		}
 
 		private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
 		{
-			if(mode == OpenSceneMode.AdditiveWithoutLoading) return;
-			PickFromScene(scene);
-		}
-
-		private static void OnSceneClosed(Scene scene)
-		{
-			if(loadedScenes != null)
+			if(mode != OpenSceneMode.AdditiveWithoutLoading)
 			{
-				loadedScenes.Remove(scene);
+				LoadScene(scene);
 			}
 		}
 
-		private static void PickFromScene(Scene scene)
+		private static void OnSceneChanged(Scene fromScene, Scene toScene)
+		{
+			loadedScenes.Remove(fromScene);
+			LoadScene(toScene);
+		}
+
+		private static void OnSceneClosed(Scene scene, bool removingScene)
+		{
+			loadedScenes.Remove(scene);
+		}
+
+		private static void LoadScene(Scene scene)
 		{
 			if(!scene.IsValid()) return;
-			if(loadedScenes == null || !loadedScenes.Contains(scene))
+			if(loadedScenes.Add(scene))
 			{
-				if(loadedScenes == null) loadedScenes = new HashSet<Scene>();
-				if(sceneContainer == null) sceneContainer = new SceneBehavioursContainer();
-				loadedScenes.Add(scene);
-
-				var roots = scene.GetRootGameObjects();
-				bool hasContainers = false;
-				var containers = CollectionCache.GetList<ReferencesContainer>();
-				for(int i = 0; i < roots.Length; i++)
+				foreach(var obj in scene.GetRootGameObjects())
 				{
-					containers.Clear();
-					roots[i].GetComponentsInChildren<ReferencesContainer>(true, containers);
-					hasContainers |= containers.Count > 0;
-					for(int j = containers.Count - 1; j >= 0; j--)
+					foreach(var behaviour in obj.GetComponentsInChildren<UdonBehaviour>(true))
 					{
-						sceneContainer.PickContainer(containers[j]);
+						ProxyUtils.GetProxyByBehaviour(behaviour);
 					}
-				}
-				CollectionCache.Release(containers);
-
-				if(!hasContainers)
-				{
-					var behaviours = CollectionCache.GetList<UdonBehaviour>();
-					for(int i = 0; i < roots.Length; i++)
-					{
-						behaviours.Clear();
-						roots[i].GetComponentsInChildren<UdonBehaviour>(true, behaviours);
-						for(int j = behaviours.Count - 1; j >= 0; j--)
-						{
-							var behaviour = behaviours[j];
-							if(behaviour.programSource == null)
-							{
-								var program = ProgramUtils.ProgramFieldGetter(behaviour);
-								if(program != null)
-								{
-									var script = ProgramUtils.GetScriptByProgram(program);
-									if(script != null)
-									{
-										try
-										{
-											var proxy = ProxyUtils.CreateProxy(behaviour, script);
-											sceneContainer.AddBehaviour(behaviour, proxy);
-										}
-										catch(Exception e)
-										{
-											Debug.LogException(e, script);
-										}
-									}
-								}
-							}
-						}
-					}
-					CollectionCache.Release(behaviours);
 				}
 			}
 		}
 
-		private static void OnComponentAdded(Component comp)
+		private static void TrackBehaviour(UdonBehaviour behaviour)
 		{
-			if(comp is UdonBehaviour ubeh)
+			if(!behaviours.ContainsKey(behaviour))
 			{
-				if(sceneContainer != null)
-				{
-					var program = ProgramUtils.ProgramFieldGetter(ubeh);
-					if(program != null)
-					{
-						foreach(var item in DragAndDrop.objectReferences)
-						{
-							if(item is UdonBehaviour beh)
-							{
-								sceneContainer.RemoveBehaviour(beh);
-							}
-						}
-						var script = ProgramUtils.GetScriptByProgram(program);
-						if(script != null) ProxyUtils.GetOrCreateProxy(ubeh, script);
-					}
-				}
-			}
-			else if(comp is MonoBehaviour proxy && Utils.IsUdonAsm(proxy.GetType()))
-			{
-				if(sceneContainer != null && !object.ReferenceEquals(DragAndDrop.GetGenericData("Katsudon.ComponentDrag"), null))
-				{
-					foreach(var item in DragAndDrop.objectReferences)
-					{
-						if(item is MonoBehaviour dragProxy)
-						{
-							sceneContainer.RemoveProxy(dragProxy, true);
-						}
-					}
-				}
-
-				ProxyUtils.GetOrCreateBehaviour(proxy);
+				behaviours[behaviour] = behaviour.gameObject;
 			}
 		}
 
-		private class TmpBehavioursContaner : IBehavioursContainer
+		private static void TrackProxy(MonoBehaviour proxy)
 		{
-			private Dictionary<UdonBehaviour, MonoBehaviour> behaviours = new Dictionary<UdonBehaviour, MonoBehaviour>();
-			private Scene scene;
-			private GameObject root;
-
-			public TmpBehavioursContaner()
+			if(!proxies.ContainsKey(proxy))
 			{
-				scene = EditorSceneManager.NewPreviewScene();
-				scene.name = "Katsudon-Proxies";
-				root = new GameObject();
-				root.SetActive(false);
-				root.hideFlags = HideFlags.HideAndDontSave;
-				EditorSceneManager.MoveGameObjectToScene(root, scene);
+				proxies[proxy] = TrackObject(proxy, OnProxyChanged);
 			}
+		}
 
-			public MonoBehaviour CreateProxy(UdonBehaviour behaviour, MonoScript script)
+		private static void OnBehaviourDestroyed(UdonBehaviour behaviour)
+		{
+			if(!object.ReferenceEquals(behaviour, null))
 			{
-				var proxyType = script.GetClass();
-				var proxy = (MonoBehaviour)root.AddComponent(proxyType);
-				if(proxy == null) throw new NullReferenceException(string.Format("{0} cannot be added as a component", proxyType));
-
-				proxy.enabled = false;
-				proxy.hideFlags = SERVICE_OBJECT_FLAGS;
-				return proxy;
-			}
-
-			public void AddBehaviour(UdonBehaviour behaviour, MonoBehaviour proxy)
-			{
-				if(behaviours.TryGetValue(behaviour, out var oldProxy))
+				if(TmpContainer.OnDestroy(behaviour))
 				{
-					if(oldProxy != null && oldProxy != proxy)
-					{
-						GameObject.DestroyImmediate(oldProxy);
-					}
+					return;
 				}
-				behaviours[behaviour] = proxy;
-			}
-
-			public bool TryGetBehaviour(MonoBehaviour proxy, out UdonBehaviour behaviour)
-			{
-				throw new NotImplementedException();
-			}
-
-			public bool TryGetProxy(UdonBehaviour behaviour, out MonoBehaviour proxy)
-			{
-				if(behaviours.TryGetValue(behaviour, out proxy))
+				if(behaviours.TryGetValue(behaviour, out var gameObject))
 				{
-					if(proxy == null)
-					{
-						behaviours.Remove(behaviour);
-						return false;
-					}
-					return true;
-				}
-				return false;
-			}
-
-			public void RemoveBehaviour(UdonBehaviour behaviour)
-			{
-				if(behaviours.TryGetValue(behaviour, out var proxy))
-				{
-					behaviours.Remove(behaviour);
-					if(proxy != null) GameObject.DestroyImmediate(proxy);
+					if(gameObject != null) UnRegisterPair(gameObject, (UdonBehaviour)behaviour);
+					else behaviours.Remove(behaviour);
 				}
 			}
 		}
 
-		private class SceneBehavioursContainer : IBehavioursContainer
+		private static void OnProxyChanged(UnityEngine.Object obj)
 		{
-			private static Func<int, int> _objectDirtyIDGetter = null;
-			private static Func<int, int> GetObjectDirtyID
+			if(!object.ReferenceEquals(obj, null))
 			{
-				get
+				if(obj == null)
 				{
-					if(_objectDirtyIDGetter == null)
-					{
-						_objectDirtyIDGetter = (Func<int, int>)Delegate.CreateDelegate(
-							typeof(Func<int, int>),
-							typeof(EditorUtility).GetMethod("GetDirtyIndex", BindingFlags.NonPublic | BindingFlags.Static)
-						);
-					}
-					return _objectDirtyIDGetter;
-				}
-			}
-
-			private Dictionary<MonoBehaviour, int> proxies = new Dictionary<MonoBehaviour, int>();
-			private Dictionary<UdonBehaviour, int> behaviours = new Dictionary<UdonBehaviour, int>();
-			private List<ReferencesContainer> containers = new List<ReferencesContainer>();
-			private List<int> freeContainerIds = new List<int>();
-
-			public SceneBehavioursContainer()
-			{
-				EditorApplication.update += Update;
-			}
-
-			public void PickContainer(ReferencesContainer container)
-			{
-				int id = PickContainerId();
-				container.Init(id, OnRemoveContainer, RemoveBehaviour);
-				containers[id] = container;
-
-				var iterator = container.EnumeratePairs();
-				while(iterator.MoveNext())
-				{
-					behaviours.Add(iterator.Current.behaviour, id);
-					proxies.Add(iterator.Current.proxy, id);
-				}
-			}
-
-			public MonoBehaviour CreateProxy(UdonBehaviour behaviour, MonoScript script)
-			{
-				var proxyType = script.GetClass();
-				var proxy = (MonoBehaviour)behaviour.gameObject.AddComponent(proxyType);
-				if(proxy == null) throw new NullReferenceException(string.Format("{0} cannot be added as a component", proxyType));
-
-				proxy.enabled = false;
-				proxy.hideFlags = SERVICE_OBJECT_FLAGS;
-				return proxy;
-			}
-
-			public void AddBehaviour(UdonBehaviour behaviour, MonoBehaviour proxy)
-			{
-				var container = GetOrCreateContainer(behaviour.gameObject);
-				proxies[proxy] = container.id;
-				behaviours[behaviour] = container.id;
-				container.AddPair(behaviour, proxy);
-			}
-
-			public void RemoveBehaviour(UdonBehaviour behaviour)
-			{
-				if(behaviours.TryGetValue(behaviour, out var id))
-				{
-					var pair = containers[id].FindPair(behaviour);
-					RemovePairFromContainer(id, pair.behaviour);
-					behaviours.Remove(pair.behaviour);
-					proxies.Remove(pair.proxy);
-					if(pair.proxy != null) Undo.DestroyObjectImmediate(pair.proxy);
-				}
-			}
-
-			public void RemoveProxy(MonoBehaviour proxy, bool removeBehaviour = false)
-			{
-				if(proxies.TryGetValue(proxy, out var id))
-				{
-					var pair = containers[id].FindPair(proxy);
-					RemovePairFromContainer(id, pair.behaviour);
-					behaviours.Remove(pair.behaviour);
-					proxies.Remove(pair.proxy);
-					if(removeBehaviour && pair.behaviour != null) Undo.DestroyObjectImmediate(pair.behaviour);
-				}
-			}
-
-			public bool TryGetProxy(UdonBehaviour behaviour, out MonoBehaviour proxy)
-			{
-				proxy = null;
-				if(behaviours.TryGetValue(behaviour, out var id))
-				{
-					var container = containers[id];
-					var pair = container.FindPair(behaviour);
-					if(pair.proxy == null)
-					{
-						RemovePairFromContainer(id, pair.behaviour);
-						behaviours.Remove(pair.behaviour);
-						proxies.Remove(pair.proxy);
-						return false;
-					}
-					proxy = pair.proxy;
-					return true;
-				}
-				return false;
-			}
-
-			public bool TryGetBehaviour(MonoBehaviour proxy, out UdonBehaviour behaviour)
-			{
-				behaviour = null;
-				if(proxies.TryGetValue(proxy, out var id))
-				{
-					var container = containers[id];
-					var pair = container.FindPair(proxy);
-					if(pair.behaviour == null)
-					{
-						RemovePairFromContainer(id, pair.behaviour);
-						behaviours.Remove(pair.behaviour);
-						proxies.Remove(pair.proxy);
-						return false;
-					}
-					behaviour = pair.behaviour;
-					return true;
-				}
-				return false;
-			}
-
-			private void Update()
-			{
-				// Unfortunately, this is the most reliable way
-				for(int i = containers.Count - 1; i >= 0; i--)
-				{
-					containers[i]?.UpdateReferences();
-				}
-			}
-
-			private int PickContainerId()
-			{
-				int index;
-				if(freeContainerIds.Count > 0)
-				{
-					index = freeContainerIds[freeContainerIds.Count - 1];
-					freeContainerIds.RemoveAt(freeContainerIds.Count - 1);
+					proxies.Remove((MonoBehaviour)obj);
 				}
 				else
 				{
-					index = containers.Count;
-					containers.Add(null);
-				}
-				return index;
-			}
-
-			private ReferencesContainer GetOrCreateContainer(GameObject obj)
-			{
-				var container = obj.GetComponent<ReferencesContainer>();
-				if(container != null && container.id >= 0) return container;
-
-				if(container == null)
-				{
-					container = obj.AddComponent<ReferencesContainer>();
-					container.hideFlags = SERVICE_OBJECT_FLAGS;
-				}
-				int id = PickContainerId();
-				container.Init(id, OnRemoveContainer, RemoveBehaviour);
-				containers[id] = container;
-				Undo.ClearUndo(container);
-				return container;
-			}
-
-			private void RemovePairFromContainer(int id, UdonBehaviour behaviour)
-			{
-				var container = containers[id];
-				container.RemovePair(behaviour);
-				if(container.pairsCount < 1)
-				{
-					containers[id] = null;
-					freeContainerIds.Add(id);
-
-					GameObject.DestroyImmediate(container);
-					Undo.ClearUndo(container);
-				}
-			}
-
-			private void OnRemoveContainer(int id)
-			{
-				var container = containers[id];
-				if(container == null) return;
-
-				containers[id] = null;
-				freeContainerIds.Add(id);
-
-				var iterator = container.EnumeratePairs();
-				if(iterator != null)
-				{
-					while(iterator.MoveNext())
-					{
-						behaviours.Remove(iterator.Current.behaviour);
-						proxies.Remove(iterator.Current.proxy);
-					}
+					var behaviour = GetBehaviourByProxy((MonoBehaviour)obj);
+					ProxyUtils.CopyFieldsToBehaviour((MonoBehaviour)obj, behaviour);
 				}
 			}
 		}
 
-		internal interface IBehavioursContainer
+		private static void OnComponentAdded(Component component)
 		{
-			MonoBehaviour CreateProxy(UdonBehaviour behaviour, MonoScript script);
+			if(component is MonoBehaviour proxy)
+			{
+				if(Utils.IsUdonAsm(proxy.GetType()))
+				{
+					GetOrCreateBehaviour(proxy);
+				}
+			}
+		}
 
-			void AddBehaviour(UdonBehaviour behaviour, MonoBehaviour proxy);
+		private static MonoBehaviour GetTmpProxy(UdonBehaviour behaviour, MonoScript script)
+		{
+			behaviours[behaviour] = null;
+			return TmpContainer.GetOrCreateProxy(behaviour, script);
+		}
 
-			bool TryGetProxy(UdonBehaviour behaviour, out MonoBehaviour proxy);
+		private static MonoBehaviour CreateProxy(GameObject obj, UdonBehaviour behaviour, MonoScript script)
+		{
+			var proxy = (MonoBehaviour)obj.AddComponent(script.GetClass());
+			proxy.enabled = false;
+			proxy.hideFlags = SERVICE_OBJECT_FLAGS;
+			ProxyUtils.CopyFieldsToProxy(behaviour, proxy);
+			return proxy;
+		}
 
-			bool TryGetBehaviour(MonoBehaviour proxy, out UdonBehaviour behaviour);
+		private static UdonBehaviour GetOrCreateBehaviour(MonoBehaviour proxy)
+		{
+			var behaviour = GetBehaviourByProxy(proxy);
+			if(behaviour == null)
+			{
+				var group = Undo.GetCurrentGroup();
+				proxy.enabled = false;
+				proxy.hideFlags = SERVICE_OBJECT_FLAGS;
 
-			void RemoveBehaviour(UdonBehaviour behaviour);
+				behaviour = proxy.gameObject.AddComponent<UdonBehaviour>();
+				RegisterPair(behaviour, proxy);
+
+				ProxyUtils.InitBehaviour(behaviour, proxy);
+				Undo.CollapseUndoOperations(group);
+
+				var scene = proxy.gameObject.scene;
+				if(EditorApplication.isPlaying && scene.IsValid() && !EditorSceneManager.IsPreviewScene(scene))
+				{
+					UdonManager.Instance.RegisterUdonBehaviour(behaviour);
+				}
+			}
+			return behaviour;
+		}
+
+		private static void UnRegisterPair(UdonBehaviour behaviour)
+		{
+			UnRegisterPair(behaviour.gameObject, behaviour);
+		}
+
+		private static void UnRegisterPair(GameObject obj, UdonBehaviour behaviour)
+		{
+			behaviours.Remove(behaviour);
+			var container = GetContainer(obj);
+			if(container != null)
+			{
+				var group = Undo.GetCurrentGroup();
+				Undo.RecordObject(container, "Behaviour Remove");
+				var proxy = container.RemovePair(behaviour);
+				if(!object.ReferenceEquals(proxy, null))
+				{
+					if(proxies.TryGetValue(proxy, out var disposable))
+					{
+						proxies.Remove(proxy);
+						disposable.Dispose();
+					}
+					if(proxy != null)
+					{
+						Undo.DestroyObjectImmediate(proxy);
+					}
+				}
+				if(!container.hasPairs)
+				{
+					containers.Remove(obj);
+					Undo.DestroyObjectImmediate(container);
+				}
+				Undo.CollapseUndoOperations(group);
+			}
+		}
+
+		private static void CacheContainer(ReferencesContainer container)
+		{
+			containers[container.gameObject] = container;
+		}
+
+		private static ReferencesContainer GetContainer(GameObject obj)
+		{
+			if(!containers.TryGetValue(obj, out var container) || container == null)
+			{
+				container = obj.GetComponent<ReferencesContainer>();
+				if(container != null) CacheContainer(container);
+			}
+			return container;
+		}
+
+		public static IDisposable TrackObject(UnityEngine.Object obj, Action<UnityEngine.Object> onChanged)
+		{
+			if(_trackObject == null)
+			{
+				var objParam = Expression.Parameter(typeof(UnityEngine.Object));
+				var callbackParam = Expression.Parameter(typeof(Action<UnityEngine.Object>));
+
+				var serviceType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.DataWatchService");
+				_trackObject = Expression.Lambda<TrackObjectDelegate>(
+					Expression.Call(Expression.Field(null, serviceType.GetField("sharedInstance")), serviceType.GetMethod("AddWatch"), objParam, callbackParam),
+					objParam, callbackParam
+				).Compile();
+			}
+			return _trackObject.Invoke(obj, onChanged);
+		}
+
+		[ExecuteInEditMode]
+		private class TmpContainer : MonoBehaviour
+		{
+			private static TmpContainer instance = null;
+
+			private Dictionary<UdonBehaviour, TmpProxy> tmpProxies = new Dictionary<UdonBehaviour, TmpProxy>();
+
+			private TmpContainer()
+			{
+				instance = this;
+			}
+
+			public static MonoBehaviour GetOrCreateProxy(UdonBehaviour behaviour, MonoScript script)
+			{
+				InitInstance();
+				if(instance.tmpProxies.TryGetValue(behaviour, out var info))
+				{
+					return info.proxy;
+				}
+				else
+				{
+					var proxy = CreateProxy(instance.gameObject, behaviour, script);
+					instance.tmpProxies[behaviour] = new TmpProxy(proxy, behaviour, instance);
+					return proxy;
+				}
+			}
+
+			public static bool IsTmpBehaviour(UdonBehaviour behaviour)
+			{
+				if(instance == null) return false;
+				return instance.tmpProxies.ContainsKey(behaviour);
+			}
+
+			public static bool OnDestroy(UdonBehaviour behaviour)
+			{
+				if(instance == null) return false;
+				if(instance.tmpProxies.TryGetValue(behaviour, out var info))
+				{
+					instance.tmpProxies.Remove(behaviour);
+					info.Dispose();
+					return true;
+				}
+				return false;
+			}
+
+			private static void InitInstance()
+			{
+				if(instance == null)
+				{
+					var scene = EditorSceneManager.NewPreviewScene();
+					var obj = new GameObject("TMP");
+					obj.hideFlags = SERVICE_OBJECT_FLAGS;
+					EditorSceneManager.MoveGameObjectToScene(obj, scene);
+					instance = obj.AddComponent<TmpContainer>();
+				}
+			}
+
+			private class TmpProxy : IDisposable
+			{
+				public readonly MonoBehaviour proxy;
+
+				private UdonBehaviour behaviour;
+				private TmpContainer container;
+				private IDisposable trackerHandle;
+
+				public TmpProxy(MonoBehaviour proxy, UdonBehaviour behaviour, TmpContainer container)
+				{
+					this.proxy = proxy;
+					this.behaviour = behaviour;
+					this.container = container;
+					trackerHandle = TrackObject(proxy, OnChanged);
+				}
+
+				public void Dispose()
+				{
+					if(proxy != null)
+					{
+						GameObject.DestroyImmediate(proxy);
+						trackerHandle.Dispose();
+					}
+				}
+
+				private void OnChanged(UnityEngine.Object obj)
+				{
+					if(obj == null)
+					{
+						container.tmpProxies.Remove(behaviour);
+					}
+					else
+					{
+						ProxyUtils.CopyFieldsToBehaviour(proxy, behaviour);
+					}
+				}
+			}
 		}
 	}
 }

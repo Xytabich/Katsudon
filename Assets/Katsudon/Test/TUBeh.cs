@@ -21,6 +21,8 @@ public class TUBeh : TBase, TInt
 	public Sprite sprite;
 	public TuTuBeh other;
 
+	public GameObject innerObj;
+
 	public object testComponent;
 	public MethodImplOptions enumVar;
 
@@ -53,18 +55,9 @@ public class TUBeh : TBase, TInt
 
 		TestInt(listCount, TestArg());
 
-		this.v = default;
-		ListUtils.Ctor(ref listArray, ref listCount, 10);
-		ListUtils.Add(ref listArray, ref listCount, 101);
-		print(listArray[0]);
-		ListUtils.RemoveAt(ref listArray, ref listCount, 0);
-		print(listCount);
-
-		print(this.DisableInteractive());
-		this.DisableInteractive(true);
-		print(this.DisableInteractive());
-		this.DisableInteractive(false);
-		print(this.DisableInteractive());
+		print(img);
+		print(other);
+		print(innerObj);
 		//Array.BinarySearch(b, a);
 		// (testComponent as Image).enabled = false;
 

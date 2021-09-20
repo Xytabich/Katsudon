@@ -21,10 +21,32 @@ namespace Katsudon.Editor
 		private SerializedProperty serializedProgramAssetProp;
 		private EditorState state;
 
+		private bool isPrefabEditor = false;
+		private UdonBehaviour[] prefabBehaviours;
+
 		protected override void OnInit()
 		{
 			serializedProgramAssetProp = serializedObject.FindProperty("serializedProgramAsset");
 			InitEditor();
+		}
+
+		protected override void OnEnable()
+		{
+			isPrefabEditor = PrefabUtility.IsPartOfPrefabAsset(targets[0]);
+			if(isPrefabEditor) prefabBehaviours = Array.ConvertAll(targets, t => (UdonBehaviour)t);
+			base.OnEnable();
+		}
+
+		protected override void OnDisable()
+		{
+			base.OnDisable();
+			if(isPrefabEditor)
+			{
+				for(int i = 0; i < prefabBehaviours.Length; i++)
+				{
+					BehavioursTracker.ReleasePrefabBehaviour(prefabBehaviours[i]);
+				}
+			}
 		}
 
 		public override void OnInspectorGUI()
@@ -100,9 +122,8 @@ namespace Katsudon.Editor
 
 				bool hasNoProxy = Array.Exists(ubehProxies, p => p == null);
 				var editor = hasNoProxy ? null : CreateEditor(ubehProxies);
-				var serializedObject = hasNoProxy ? null : new SerializedObject(ubehProxies);
 				SetProxy(CreateMultiProxy(new ProgramEditor[] {
-					new ProgramEditor(editor, serializedObject, program, behaviours, ubehProxies)
+					new ProgramEditor(editor, program, behaviours, ubehProxies)
 				}));
 			}
 			else if(state == EditorState.EditDifferent)
@@ -128,8 +149,7 @@ namespace Katsudon.Editor
 
 					bool hasNoProxy = Array.Exists(ubehProxies, p => p == null);
 					var editor = hasNoProxy ? null : CreateEditor(ubehProxies);
-					var serializedObject = hasNoProxy ? null : new SerializedObject(ubehProxies);
-					editors[index] = new ProgramEditor(editor, serializedObject, item.Key, behaviours, ubehProxies);
+					editors[index] = new ProgramEditor(editor, item.Key, behaviours, ubehProxies);
 					index++;
 				}
 				SetProxy(CreateMultiProxy(editors));
@@ -437,69 +457,19 @@ namespace Katsudon.Editor
 			EditDifferent
 		}
 
-		private class ProgramEditor : IDisposable
+		private class ProgramEditor
 		{
 			public UnityEditor.Editor editor;
-			public SerializedObject serializedProxies;
 			public SerializedUdonProgramAsset program;
 			public UdonBehaviour[] behaviours;
 			public MonoBehaviour[] proxies;
 
-			public ProgramEditor(UnityEditor.Editor editor, SerializedObject serializedProxies, SerializedUdonProgramAsset program, UdonBehaviour[] behaviours, MonoBehaviour[] proxies)
+			public ProgramEditor(UnityEditor.Editor editor, SerializedUdonProgramAsset program, UdonBehaviour[] behaviours, MonoBehaviour[] proxies)
 			{
 				this.editor = editor;
-				this.serializedProxies = serializedProxies;
 				this.program = program;
 				this.behaviours = behaviours;
 				this.proxies = proxies;
-
-				if(serializedProxies != null)
-				{
-					Undo.undoRedoPerformed += serializedProxies.Update;
-				}
-			}
-
-			public void SetSerializedProxes(SerializedObject serializedProxies)
-			{
-				this.serializedProxies = serializedProxies;
-				if(serializedProxies != null)
-				{
-					Undo.undoRedoPerformed += serializedProxies.Update;
-				}
-			}
-
-			public void Dispose()
-			{
-				if(serializedProxies != null)
-				{
-					Undo.undoRedoPerformed -= serializedProxies.Update;
-					serializedProxies.Dispose();
-					serializedProxies = null;
-				}
-				for(int i = 0; i < behaviours.Length; i++)
-				{
-					if(behaviours[i] == null)
-					{
-						if(!object.ReferenceEquals(behaviours[i], null))
-						{
-							if(BehavioursTracker.TryGetContainer(default, out var container))
-							{
-								container.RemoveBehaviour(behaviours[i]);
-							}
-						}
-						continue;
-					}
-
-					// Remove temporary objects
-					var scene = behaviours[i].gameObject.scene;
-					if(!scene.IsValid())
-					{
-						if(BehavioursTracker.TryGetContainer(default, out var container))
-						{
-							container.RemoveBehaviour(behaviours[i]);
-						}
-					}
-				}
 			}
 		}
 
@@ -576,26 +546,20 @@ namespace Katsudon.Editor
 					{
 						EditorGUILayout.BeginVertical(EditorStyles.inspectorDefaultMargins);
 						using(new EditorGUI.DisabledScope(true)) EditorGUILayout.ObjectField("Program Asset", info.program, typeof(SerializedUdonProgramAsset), true);
-						if(Array.Exists(info.behaviours, PrefabUtility.IsPartOfPrefabAsset))
+						if(ProgramAssetInspector.ReplaceMissingClassGUI(info.program) != null)
 						{
-							EditorGUILayout.HelpBox("The behavior cannot be edited in the prefab preview mode, you must switch to the prefab edit mode to view and change the behavior", MessageType.Warning);
-						}
-						else
-						{
-							if(ProgramAssetInspector.ReplaceMissingClassGUI(info.program) != null)
+							var ubehProxies = Array.ConvertAll(info.behaviours, ProxyUtils.GetProxyByBehaviour);
+							if(ubehProxies[0] != null)
 							{
-								var ubehProxies = Array.ConvertAll(info.behaviours, ProxyUtils.GetProxyByBehaviour);
 								var editor = CreateEditor(ubehProxies);
-								var serializedObject = new SerializedObject(ubehProxies);
 								info.proxies = ubehProxies;
 								info.editor = editor;
-								info.SetSerializedProxes(serializedObject);
 								proxies[i] = container.CreateProxy(editor);
 
 								EditorGUIUtility.ExitGUI();
 							}
-							EditorGUILayout.HelpBox("No MonoBehaviour found for program, please provide a link to the script for normal work", MessageType.Warning);
 						}
+						EditorGUILayout.HelpBox("No MonoBehaviour found for program, provide a link to the script for normal work", MessageType.Warning);
 						EditorGUILayout.EndVertical();
 						continue;
 					}
@@ -667,15 +631,6 @@ namespace Katsudon.Editor
 						EditorGUILayout.EndVertical();
 					}
 					EditorGUILayout.EndVertical();
-					if(!SOEquals(info.serializedProxies, info.editor.serializedObject))
-					{
-						Undo.RecordObjects(info.behaviours, "UdonBehaviour Change");
-						for(int j = 0; j < info.proxies.Length; j++)
-						{
-							ProxyUtils.CopyFieldsToBehaviour(info.proxies[j], info.behaviours[j]);
-						}
-						info.serializedProxies.Update();
-					}
 				}
 			}
 
@@ -722,23 +677,6 @@ namespace Katsudon.Editor
 				{
 					proxies[i]?.Dispose();
 				}
-				for(int i = 0; i < editors.Length; i++)
-				{
-					editors[i].Dispose();
-				}
-			}
-
-			private static bool SOEquals(SerializedObject a, SerializedObject b)
-			{
-				var isFirst = true;
-				var pa = a.GetIterator();
-				var pb = b.GetIterator();
-				while(pa.Next(isFirst) && pb.Next(isFirst))
-				{
-					if(!SerializedProperty.DataEquals(pa, pb)) return false;
-					isFirst = false;
-				}
-				return true;
 			}
 		}
 

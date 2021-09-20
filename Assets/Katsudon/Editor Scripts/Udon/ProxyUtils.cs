@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using VRC.Udon;
 using VRC.Udon.Common;
@@ -19,13 +17,6 @@ namespace Katsudon.Editor.Udon
 
 		private static Func<UdonBehaviour, bool> isInitializedGetter = null;
 
-		public static MonoBehaviour GetProxyByProgram(UdonBehaviour behaviour, SerializedUdonProgramAsset program)
-		{
-			var script = ProgramUtils.GetScriptByProgram(program);
-			if(script == null) return null;
-			return GetOrCreateProxy(behaviour, script);
-		}
-
 		public static MonoBehaviour GetProxyByBehaviour(UdonBehaviour behaviour)
 		{
 			if(behaviour.programSource != null) return null;
@@ -34,62 +25,16 @@ namespace Katsudon.Editor.Udon
 			return GetProxyByProgram(behaviour, program);
 		}
 
+		public static MonoBehaviour GetProxyByProgram(UdonBehaviour behaviour, SerializedUdonProgramAsset program)
+		{
+			var script = ProgramUtils.GetScriptByProgram(program);
+			if(script == null) return null;
+			return BehavioursTracker.GetOrCreateProxy(behaviour, script);
+		}
+
 		public static UdonBehaviour GetBehaviourByProxy(MonoBehaviour proxy)
 		{
-			if(BehavioursTracker.TryGetContainer(proxy.gameObject.scene, out var container) && container.TryGetBehaviour(proxy, out var behaviour))
-			{
-				return behaviour;
-			}
-			return null;
-		}
-
-		internal static MonoBehaviour GetOrCreateProxy(UdonBehaviour behaviour, MonoScript script)
-		{
-			if(PrefabUtility.IsPartOfPrefabAsset(behaviour)) return null;
-
-			MonoBehaviour proxy = null;
-			var container = BehavioursTracker.GetOrCreateContainer(behaviour.gameObject.scene);
-			if(!container.TryGetProxy(behaviour, out proxy) || proxy.GetType() != script.GetClass())
-			{
-				if(proxy != null) container.RemoveBehaviour(behaviour);
-				proxy = CreateProxy(behaviour, script);
-				container.AddBehaviour(behaviour, proxy);
-			}
-			return proxy;
-		}
-
-		internal static UdonBehaviour GetOrCreateBehaviour(MonoBehaviour proxy)
-		{
-			UdonBehaviour behaviour = null;
-			var scene = proxy.gameObject.scene;
-			var container = BehavioursTracker.GetOrCreateContainer(scene);
-			if(!container.TryGetBehaviour(proxy, out behaviour))
-			{
-				proxy.enabled = false;
-				proxy.hideFlags = BehavioursTracker.SERVICE_OBJECT_FLAGS;
-
-				behaviour = proxy.gameObject.AddComponent<UdonBehaviour>();
-				container.AddBehaviour(behaviour, proxy);
-
-				var programAsset = ProgramUtils.GetProgramByBehaviour(proxy);
-				behaviour.AssignProgramAndVariables(programAsset, CreateVariableTable(programAsset.RetrieveProgram()));
-
-				CopyFieldsToBehaviour(proxy, behaviour);
-
-				if(EditorApplication.isPlaying && scene.IsValid() && !EditorSceneManager.IsPreviewScene(scene))
-				{
-					UdonManager.Instance.RegisterUdonBehaviour(behaviour);
-				}
-			}
-			return behaviour;
-		}
-
-		internal static MonoBehaviour CreateProxy(UdonBehaviour behaviour, MonoScript script)
-		{
-			var container = BehavioursTracker.GetOrCreateContainer(behaviour.gameObject.scene);
-			var proxy = container.CreateProxy(behaviour, script);
-			CopyFieldsToProxy(behaviour, proxy);
-			return proxy;
+			return BehavioursTracker.GetBehaviourByProxy(proxy);
 		}
 
 		public static void CopyFieldsToBehaviour(MonoBehaviour proxy, UdonBehaviour behaviour)
@@ -123,6 +68,7 @@ namespace Katsudon.Editor.Udon
 							behaviour.publicVariables.TrySetVariableValue(symbol, converted);
 						}
 					}
+					EditorUtility.SetDirty(behaviour);
 				}
 			}
 		}
@@ -162,6 +108,14 @@ namespace Katsudon.Editor.Udon
 			}
 		}
 
+		public static void InitBehaviour(UdonBehaviour behaviour, MonoBehaviour proxy)
+		{
+			var programAsset = ProgramUtils.GetProgramByBehaviour(proxy);
+			behaviour.AssignProgramAndVariables(programAsset, CreateVariableTable(programAsset.RetrieveProgram()));
+
+			CopyFieldsToBehaviour(proxy, behaviour);
+		}
+
 		private static IUdonVariableTable CreateVariableTable(IUdonProgram program)
 		{
 			var symbols = program.SymbolTable;
@@ -181,6 +135,7 @@ namespace Katsudon.Editor.Udon
 			Type udonVariableType = typeof(UdonVariable<>).MakeGenericType(declaredType);
 			return (IUdonVariable)Activator.CreateInstance(udonVariableType, symbolName, declaredType.IsValueType ? Activator.CreateInstance(declaredType) : null);
 		}
+
 		private static bool IsInitialized(UdonBehaviour udonBehaviour)
 		{
 			if(isInitializedGetter == null)
