@@ -157,6 +157,7 @@ namespace Katsudon.Editor
 			var startTime = DateTime.Now;
 			var operationTime = DateTime.Now;
 
+			EditorUtility.DisplayProgressBar("Katsudon", "Collecting scripts for build", 0f);
 			var allScripts = MonoImporter.GetAllRuntimeMonoScripts();
 			var options = new List<BuildOption>();
 			Dictionary<string, List<MonoScript>> libraries = null;
@@ -192,6 +193,7 @@ namespace Katsudon.Editor
 
 			var collectingTime = (DateTime.Now - operationTime);
 			operationTime = DateTime.Now;
+			EditorUtility.DisplayProgressBar("Katsudon", "Collecting scripts for build", 0.5f);
 
 			List<LibraryInfo> librariesBuild = null;
 			if(libraries != null)
@@ -285,6 +287,7 @@ namespace Katsudon.Editor
 
 			if(options.Count == 0 && (librariesBuild == null || librariesBuild.Count == 0))
 			{
+				EditorUtility.ClearProgressBar();
 				buildInProcess = false;
 				return false;
 			}
@@ -295,17 +298,23 @@ namespace Katsudon.Editor
 			{
 				using(var builder = new AssembliesBuilder())
 				{
+					float step = 1f / options.Count;
 					for(int i = options.Count - 1; i >= 0; i--)
 					{
+						EditorUtility.DisplayProgressBar("Katsudon", "Building scripts", 1f - i * step);
 						builder.BuildClass(options[i].script.GetClass(), options[i].programOut, MonoImporter.GetExecutionOrder(options[i].script));
 					}
 					if(librariesBuild != null)
 					{
-						for(int i = librariesBuild.Count - 1; i >= 0; i--)
+						int count = librariesBuild.Count;
+						for(int i = count - 1; i >= 0; i--)
 						{
 							var buildOptions = librariesBuild[i].options;
+							step = 1f / buildOptions.Length;
+							string text = string.Format("Building ({0}/{1}): {2}", count - i, count, Path.GetFileName(librariesBuild[i].path));
 							for(int j = 0; j < buildOptions.Length; j++)
 							{
+								EditorUtility.DisplayProgressBar("Katsudon", text, 1f - j * step);
 								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
 									MonoImporter.GetExecutionOrder(buildOptions[j].script));
 							}
@@ -324,6 +333,7 @@ namespace Katsudon.Editor
 			AssetDatabase.Refresh();
 			if(buildError)
 			{
+				EditorUtility.ClearProgressBar();
 				buildInProcess = false;
 				return false;
 			}
@@ -333,6 +343,7 @@ namespace Katsudon.Editor
 			var buildingTime = (DateTime.Now - operationTime);
 			operationTime = DateTime.Now;
 
+			EditorUtility.DisplayProgressBar("Katsudon", "Linking", 1f);
 			AssetDatabase.StartAssetEditing();
 			for(var i = 0; i < options.Count; i++)
 			{
@@ -386,6 +397,7 @@ namespace Katsudon.Editor
 
 			FileUtils.DeleteFile(ERROR_FILE);
 
+			EditorUtility.ClearProgressBar();
 			buildInProcess = false;
 			return true;
 		}
