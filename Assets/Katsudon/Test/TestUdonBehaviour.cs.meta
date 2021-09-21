@@ -10,8 +10,9 @@ MonoImporter:
   serializedVersion: 2
   defaultReferences:
   - img: {instanceID: 0}
-  - sprite: {instanceID: 0}
+  - sprite: {fileID: 21300000, guid: f310c3dbad3125d4e8fc2e00bdc2acb4, type: 3}
   - other: {instanceID: 0}
+  - innerObj: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

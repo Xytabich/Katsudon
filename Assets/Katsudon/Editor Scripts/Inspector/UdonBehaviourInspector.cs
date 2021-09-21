@@ -585,6 +585,8 @@ namespace Katsudon.Editor
 							{
 								EditorGUILayout.ObjectField("Program Asset", info.program, typeof(SerializedUdonProgramAsset), true);
 							}
+
+							EditorGUILayout.BeginVertical(new GUIStyle(EditorStyles.helpBox));
 							{
 								Networking.SyncType syncType = info.behaviours[0].SyncMethod;
 								bool hasDifferentValues = false;
@@ -616,7 +618,24 @@ namespace Katsudon.Editor
 									}
 									CollectionCache.Release(objects);
 								}
+
+								switch(syncType)
+								{
+									case VRC.SDKBase.Networking.SyncType.None:
+										EditorGUILayout.LabelField("Replication will be disabled.", EditorStyles.wordWrappedLabel);
+										break;
+									case VRC.SDKBase.Networking.SyncType.Continuous:
+										EditorGUILayout.LabelField("Continuous replication is intended for frequently-updated variables of small size, and will be tweened. Ideal for physics objects and objects that must be in sync with players.", EditorStyles.wordWrappedLabel);
+										break;
+									case VRC.SDKBase.Networking.SyncType.Manual:
+										EditorGUILayout.LabelField("Manual replication is intended for infrequently-updated variables of small or large size, and will not be tweened. Ideal for infrequently modified abstract data.", EditorStyles.wordWrappedLabel);
+										break;
+									default:
+										EditorGUILayout.LabelField("Unknown method", EditorStyles.wordWrappedLabel);
+										break;
+								}
 							}
+							EditorGUILayout.EndVertical();
 
 							proxies[i].OnInspectorGUI();
 						}

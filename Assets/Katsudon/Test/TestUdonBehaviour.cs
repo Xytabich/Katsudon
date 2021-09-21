@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Katsudon;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
 
-public class TUBeh : TBase, TInt
+public class TestUdonBehaviour : TBase, TInt
 {
-	//public TUBeh other;
+	//public TestUdonBehaviour other;
 
 	//public float tg => test;
 	//public float tp { get => test; set => test = value; }
@@ -26,6 +27,7 @@ public class TUBeh : TBase, TInt
 	public object testComponent;
 	public MethodImplOptions enumVar;
 
+	[Sync(SyncMode.Linear)]
 	public int counter = 0;
 
 	// private TimeSpan dt = DateTime.Now - new DateTime(1999, 9, 16).AddMonths(129);
@@ -171,7 +173,7 @@ public class TUBeh : TBase, TInt
 		counter++;
 	}
 
-	public override void Test(TUBeh var)
+	public override void Test(TestUdonBehaviour var)
 	{
 		var.test = 111f;
 		base.Test(var);
@@ -231,12 +233,12 @@ public class TUBeh : TBase, TInt
 		return test;
 	}
 
-	public float GetTested(TUBeh test)
+	public float GetTested(TestUdonBehaviour test)
 	{
 		return this.test = test.test;
 	}
 
-	public void GGTT(TUBeh test)
+	public void GGTT(TestUdonBehaviour test)
 	{
 		test.GGTT(this);
 	}

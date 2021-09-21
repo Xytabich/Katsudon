@@ -4,10 +4,8 @@
         "Cinemachine",
         "VRC.Udon",
         "VRC.Udon.Editor",
-        "Unity.TextMeshPro",
-        "Katsudon.Reflection"
+        "Unity.TextMeshPro"
     ],
-    "optionalUnityReferences": [],
     "includePlatforms": [
         "Editor"
     ],
@@ -16,5 +14,7 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": []
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Katsudon.Editor.UIElements;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -45,7 +46,7 @@ namespace Katsudon.Editor
 		private VisualElement heapFieldsNameRoot;
 		private VisualElement heapFieldsValueRoot;
 		private VisualElement heapFieldInfoRoot;
-		private ListView programRoot;
+		private ListView programRowsRoot;
 
 		private StringBuilder cachedSb = new StringBuilder();
 		private IUdonProgram program;
@@ -60,17 +61,24 @@ namespace Katsudon.Editor
 			var root = (VisualElement)Activator.CreateInstance(splitterType);
 			root.style.flexGrow = 1f;
 
-			var heapRoot = (VisualElement)Activator.CreateInstance(splitterType);
+			var heapRoot = new VisualElement();
 			heapRoot.style.flexGrow = 1f;
-			heapRoot.style.flexDirection = FlexDirection.Row;
 			heapRoot.style.minHeight = 128f;
+			heapRoot.style.flexBasis = 128f;
+
+			AddToolbarLabel(heapRoot, "Heap:");
+
+			var heapFieldsInfoRoot = (VisualElement)Activator.CreateInstance(splitterType);
+			heapFieldsInfoRoot.style.flexGrow = 1f;
+			heapFieldsInfoRoot.style.flexDirection = FlexDirection.Row;
 
 			var heapFieldsScroll = new ScrollView(ScrollViewMode.VerticalAndHorizontal);
 			heapFieldsScroll.AddToClassList(Box.ussClassName);
 			heapFieldsScroll.style.flexGrow = 0.8f;
+			heapFieldsScroll.style.flexBasis = 256f;
 			heapFieldsScroll.style.minWidth = 256f;
 
-			var heapFieldsRoot = (VisualElement)Activator.CreateInstance(splitterType);
+			var heapFieldsRoot = new VisualSplitter();
 			heapFieldsRoot.style.flexDirection = FlexDirection.Row;
 
 			heapFieldsRoot.AddToClassList(ListView.ussClassName);
@@ -80,22 +88,33 @@ namespace Katsudon.Editor
 			heapFieldsValueRoot = AddFlexColumn(heapFieldsRoot, SelectHeapField);
 
 			heapFieldsScroll.Add(heapFieldsRoot);
-			heapRoot.Add(heapFieldsScroll);
+			heapFieldsInfoRoot.Add(heapFieldsScroll);
 
 			heapFieldInfoRoot = new ScrollView(ScrollViewMode.VerticalAndHorizontal);
 			heapFieldInfoRoot.AddToClassList(Box.ussClassName);
 			heapFieldInfoRoot.style.flexGrow = 0.2f;
-			heapFieldInfoRoot.style.minWidth = 128f;
-			heapRoot.Add(heapFieldInfoRoot);
+			heapFieldInfoRoot.style.flexBasis = 256f;
+			heapFieldInfoRoot.style.minWidth = 256f;
+			heapFieldsInfoRoot.Add(heapFieldInfoRoot);
+			heapRoot.Add(heapFieldsInfoRoot);
+
 			root.Add(heapRoot);
 
-			programRoot = new ListView();
-			programRoot.AddToClassList(Box.ussClassName);
-			programRoot.itemHeight = 20;
+			var programRoot = new VisualElement();
 			programRoot.style.flexGrow = 1f;
 			programRoot.style.minHeight = 256f;
-			programRoot.makeItem = CreateRow;
-			programRoot.bindItem = UpdateRow;
+			programRoot.style.flexBasis = 256f;
+
+			AddToolbarLabel(programRoot, "Program:");
+
+			programRowsRoot = new ListView();
+			programRowsRoot.AddToClassList(Box.ussClassName);
+			programRowsRoot.itemHeight = 20;
+			programRowsRoot.style.flexGrow = 1f;
+			programRowsRoot.makeItem = CreateRow;
+			programRowsRoot.bindItem = UpdateRow;
+			programRoot.Add(programRowsRoot);
+
 			root.Add(programRoot);
 
 			this.rootVisualElement.Add(root);
@@ -161,7 +180,7 @@ namespace Katsudon.Editor
 						break;
 				}
 			}
-			programRoot.itemsSource = programRows;
+			programRowsRoot.itemsSource = programRows;
 		}
 
 		private void InitHeapFields(IUdonSymbolTable symbols, List<(uint address, IStrongBox strongBoxedObject, Type objectType)> heapDump)
@@ -267,16 +286,20 @@ namespace Katsudon.Editor
 		{
 			var element = new VisualElement();
 			element.style.width = width;
+			element.style.minWidth = width;
+			element.style.maxWidth = width;
 			element.RegisterCallback<PointerDownEvent>(onEvent);
 			root.Add(element);
 			return element;
 		}
 
-		private static VisualElement AddFlexColumn(VisualElement root, EventCallback<PointerDownEvent> onEvent, float grow = 1f)
+		private static VisualElement AddFlexColumn(VisualElement root, EventCallback<PointerDownEvent> onEvent)
 		{
 			var element = new VisualElement();
 			element.style.minWidth = 64f;
-			element.style.flexGrow = grow;
+			element.style.flexBasis = 64f;
+			element.style.flexGrow = 1f;
+			element.style.flexShrink = 0f;
 			element.RegisterCallback<PointerDownEvent>(onEvent);
 			root.Add(element);
 			return element;
@@ -303,6 +326,18 @@ namespace Katsudon.Editor
 			label.style.flexWrap = Wrap.NoWrap;
 			label.style.flexShrink = 1f;
 			label.style.height = 20f;
+			root.Add(label);
+		}
+
+		private static void AddToolbarLabel(VisualElement root, string text)
+		{
+			var label = new Label(text);
+			label.AddToClassList(ProgressBar.ussClassName);
+			label.style.height = 24f;
+			label.style.flexShrink = 1f;
+			label.style.paddingLeft = 4f;
+			label.style.unityTextAlign = TextAnchor.MiddleLeft;
+			label.style.unityFontStyleAndWeight = FontStyle.Bold;
 			root.Add(label);
 		}
 
