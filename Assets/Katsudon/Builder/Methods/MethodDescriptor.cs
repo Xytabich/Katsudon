@@ -55,7 +55,7 @@ namespace Katsudon.Builder.Methods
 			methodToMachineAddress = new Dictionary<int, uint>(operations.Count);//TODO: cache
 		}
 
-		//TODO: debug define
+#if KATSUDON_DEBUG
 		public void CheckState()
 		{
 			if(states.Count > 0) throw new Exception("States remained on the stack, a state was not freed somewhere.");
@@ -64,6 +64,7 @@ namespace Katsudon.Builder.Methods
 				throw new Exception(string.Format("Values remained on the stack, a value was not used somewhere.\nStack: {0}", string.Join(", ", stack)));
 			}
 		}
+#endif
 
 		public void ApplyProperties()
 		{
@@ -145,27 +146,30 @@ namespace Katsudon.Builder.Methods
 		public ITmpVariable GetTmpVariable(Type type)
 		{
 			var tmp = machineBlock.GetTmpVariable(type);
-			//TODO: debug define
+#if KATSUDON_DEBUG
 			(tmp as ITmpVariableDebug).allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+#endif
 			return tmp;
 		}
 
 		public ITmpVariable GetTmpVariable(VariableMeta variable)
 		{
 			var tmp = machineBlock.GetTmpVariable(variable);
-			//TODO: debug define
+#if KATSUDON_DEBUG
 			(tmp as ITmpVariableDebug).allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+#endif
 			return tmp;
 		}
 
 		IVariable IUdonProgramBlock.GetReadonlyVariable(VariableMeta variable)
 		{
 			var tmp = machineBlock.GetReadonlyVariable(variable);
-			//TODO: debug define
+#if KATSUDON_DEBUG
 			if(tmp is ITmpVariableDebug debug)
 			{
 				debug.allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
 			}
+#endif
 			return tmp;
 		}
 

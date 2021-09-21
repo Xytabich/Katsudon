@@ -11,14 +11,16 @@ namespace Katsudon.Builder
 		public IUdonMachine machine { get; private set; }
 
 		private Dictionary<Type, Stack<TmpVariable>> releasedVariables = new Dictionary<Type, Stack<TmpVariable>>();
+#if KATSUDON_DEBUG
 		private HashSet<TmpVariable> variablesInUse = new HashSet<TmpVariable>();
+#endif
 
 		public UdonProgramBlock(UdonMachine udonMachine, PrimitiveConvertersList convertersList)
 		{
 			this.machine = new UdonBlockBuilder(udonMachine, this, convertersList);
 		}
 
-		//TODO: debug define
+#if KATSUDON_DEBUG
 		public void CheckVariables()
 		{
 			if(variablesInUse.Count > 0)
@@ -30,6 +32,7 @@ namespace Katsudon.Builder
 				}
 			}
 		}
+#endif
 
 		public void ApplyProperties(PropertiesBlock properties)
 		{
@@ -55,8 +58,9 @@ namespace Katsudon.Builder
 			{
 				variable = new TmpVariable("tmp", type, this);
 			}
-			//TODO: debug define
+#if KATSUDON_DEBUG
 			if(!variablesInUse.Add(variable)) throw new Exception("This variable is already in use");
+#endif
 			return variable;
 		}
 
@@ -94,8 +98,9 @@ namespace Katsudon.Builder
 
 		private void ReleaseVariable(TmpVariable variable)
 		{
-			//TODO: debug define
+#if KATSUDON_DEBUG
 			if(!variablesInUse.Remove(variable)) throw new Exception("This variable is not used:\n\t" + variable.ToString().Replace("\n", "\n\t"));
+#endif
 
 			Stack<TmpVariable> list;
 			if(!releasedVariables.TryGetValue(variable.type, out list))
@@ -314,7 +319,9 @@ namespace Katsudon.Builder
 			public int usesLeft = 1;
 			public bool isHandle = false;
 
+#if KATSUDON_DEBUG
 			public string allocatedFrom { get; set; }
+#endif
 
 			bool ITmpVariable.isHandle => isHandle;
 
@@ -367,8 +374,11 @@ namespace Katsudon.Builder
 
 			public override string ToString()
 			{
-				//TODO: debug define
+#if KATSUDON_DEBUG
 				return "Tmp: " + type + "; allocated from:\n\t" + string.Join("\n\t", allocatedFrom.Split('\n'));
+#else
+				return "Tmp: " + type;
+#endif
 			}
 		}
 	}
@@ -470,9 +480,10 @@ namespace Katsudon.Builder
 		void Release();
 	}
 
-	//TODO: debug define
 	internal interface ITmpVariableDebug : ITmpVariable
 	{
+#if KATSUDON_DEBUG
 		string allocatedFrom { get; set; }
+#endif
 	}
 }

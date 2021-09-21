@@ -102,7 +102,9 @@ namespace Katsudon.Builder
 						throw new IlOffsetInfoException(methodDescriptor.currentOp.offset, e);
 					}
 				}
+#if KATSUDON_DEBUG
 				methodDescriptor.CheckState();
+#endif
 				methodDescriptor.ApplyProperties();
 
 				if(BuildMeta(method, addressPointers, machineBlock.machine.GetAddressCounter(), out var meta))
@@ -130,8 +132,9 @@ namespace Katsudon.Builder
 					}
 				}
 				if(exception == null) new KatsudonBuildException(method, ilOffset.ilOffset, e.InnerException);
-				//TODO: debug define
+#if KATSUDON_DEBUG
 				UnityEngine.Debug.LogException(e.InnerException);
+#endif
 				throw exception;
 			}
 			finally
