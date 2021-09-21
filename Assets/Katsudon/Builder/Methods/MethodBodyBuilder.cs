@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
+using Katsudon.Builder.Helpers;
 using Katsudon.Builder.Methods;
 using Katsudon.Meta;
 
@@ -13,6 +14,7 @@ namespace Katsudon.Builder
 	public class MethodBodyBuilder : IComparer<IOperationBuider>, IOperationBuildersRegistry
 	{
 		private SortedSet<IOperationBuider>[] builders = new SortedSet<IOperationBuider>[384];
+		private HashSet<MethodIdentifier> inBuild = new HashSet<MethodIdentifier>();
 
 		public void RegisterOpBuilder(OpCode code, IOperationBuider builder)
 		{
@@ -58,6 +60,9 @@ namespace Katsudon.Builder
 		public void Build(MethodInfo method, IList<IVariable> arguments, IList<IVariable> locals,
 			IVariable returnVariable, IAddressLabel returnAddress, IUdonProgramBlock machineBlock)
 		{
+			var id = new MethodIdentifier(UdonCacheHelper.cache, method);
+			if(!inBuild.Add(id)) throw new Exception(string.Format("Recursion detected: method {0}:{1} is already in the build process", method.DeclaringType, method));
+
 			var operations = CollectionCache.GetList<Operation>();
 			foreach(var op in new MethodReader(method, null))
 			{
@@ -132,6 +137,7 @@ namespace Katsudon.Builder
 			finally
 			{
 				CollectionCache.Release(operations);
+				inBuild.Remove(id);
 			}
 		}
 
