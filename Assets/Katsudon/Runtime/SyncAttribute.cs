@@ -16,8 +16,8 @@ namespace Katsudon
 	public enum SyncMode
 	{
 		NotSynced,
-		None, // No interpolation
-		Linear, // Lerp
-		Smooth, // Some kind of smoothed syncing, no idea what curve they apply to it
+		None,
+		Linear,
+		Smooth,
 	}
 }

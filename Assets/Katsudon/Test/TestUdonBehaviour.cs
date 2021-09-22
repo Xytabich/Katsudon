@@ -7,6 +7,7 @@ using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
 
+[DefaultExecutionOrder(1000)]
 public class TestUdonBehaviour : TBase, TInt
 {
 	//public TestUdonBehaviour other;

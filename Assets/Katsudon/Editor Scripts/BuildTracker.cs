@@ -302,7 +302,7 @@ namespace Katsudon.Editor
 					for(int i = options.Count - 1; i >= 0; i--)
 					{
 						EditorUtility.DisplayProgressBar("Katsudon", "Building scripts", 1f - i * step);
-						builder.BuildClass(options[i].script.GetClass(), options[i].programOut, MonoImporter.GetExecutionOrder(options[i].script));
+						builder.BuildClass(options[i].script.GetClass(), options[i].programOut, GetExecutionOrder(options[i].script));
 					}
 					if(librariesBuild != null)
 					{
@@ -315,8 +315,7 @@ namespace Katsudon.Editor
 							for(int j = 0; j < buildOptions.Length; j++)
 							{
 								EditorUtility.DisplayProgressBar("Katsudon", text, 1f - j * step);
-								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut,
-									MonoImporter.GetExecutionOrder(buildOptions[j].script));
+								builder.BuildClass(buildOptions[j].script.GetClass(), buildOptions[j].programOut, GetExecutionOrder(buildOptions[j].script));
 							}
 						}
 					}
@@ -430,6 +429,17 @@ namespace Katsudon.Editor
 				return false;
 			}
 			return true;
+		}
+
+		private static int GetExecutionOrder(MonoScript script)
+		{
+			int order = MonoImporter.GetExecutionOrder(script);
+			if(order == 0)
+			{
+				var attrib = script.GetClass().GetCustomAttribute<DefaultExecutionOrder>();
+				if(attrib != null) order = attrib.order;
+			}
+			return order;
 		}
 
 		private static void ClearRebuild()
