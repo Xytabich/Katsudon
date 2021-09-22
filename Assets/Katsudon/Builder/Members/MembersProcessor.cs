@@ -48,11 +48,19 @@ namespace Katsudon.Members
 
 		public void ProcessMembers(Type type, AsmTypeInfo info)
 		{
-			var members = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
-			SortedSet<IMemberHandler> list;
+			const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+			ProcessMembers(type.GetFields(flags), MemberTypes.Field, info);
+			ProcessMembers(type.GetProperties(flags), MemberTypes.Property, info);
+			ProcessMembers(type.GetEvents(flags), MemberTypes.Event, info);
+			ProcessMembers(type.GetMethods(flags), MemberTypes.Method, info);
+			ProcessMembers(type.GetNestedTypes(flags), MemberTypes.NestedType, info);
+		}
+
+		private void ProcessMembers(MemberInfo[] members, MemberTypes type, AsmTypeInfo info)
+		{
 			for(var i = 0; i < members.Length; i++)
 			{
-				if(builders.TryGetValue(members[i].MemberType, out list))
+				if(builders.TryGetValue(type, out var list))
 				{
 					foreach(var handler in list)
 					{

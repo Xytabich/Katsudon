@@ -146,6 +146,12 @@ public class TestUdonBehaviour : TBase, TInt
 		}
 	}
 
+	[OnVariableChanged(nameof(counter))]
+	private void OnCounterChanged(int oldValue)
+	{
+		Debug.Log(counter + ":" + oldValue);
+	}
+
 	private void TestInt(int a, int b)
 	{
 		Debug.Log(a + ":" + b);

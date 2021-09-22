@@ -19,7 +19,12 @@ namespace Katsudon.Members
 		{
 			var method = member as MethodInfo;
 			if(method.IsStatic || method.IsPublic) return false;
-			return ContainsMethod(method);
+			if(ContainsMethod(method))
+			{
+				MethodsCollector.CheckRefParameters(method);
+				return true;
+			}
+			return false;
 		}
 
 		private bool ContainsMethod(MethodInfo methodInfo)
@@ -46,7 +51,6 @@ namespace Katsudon.Members
 				methods[type] = list;
 			}
 			if(list == null) return false;
-			MethodsCollector.CheckRefParameters(methodInfo);
 			return list.Contains(methodInfo);
 		}
 

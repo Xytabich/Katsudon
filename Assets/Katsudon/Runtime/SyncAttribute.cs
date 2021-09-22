@@ -3,7 +3,7 @@
 namespace Katsudon
 {
 	[AttributeUsage(AttributeTargets.Field)]
-	public class SyncAttribute : Attribute
+	public sealed class SyncAttribute : Attribute
 	{
 		public readonly SyncMode mode;
 

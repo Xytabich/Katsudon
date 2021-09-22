@@ -153,6 +153,7 @@ namespace Katsudon.Editor
 				if(publicMethods.TryGetSymbolFromAddress(index, out string name))
 				{
 					rowInfo.opCode = OpCode.ANNOTATION;
+					rowInfo.argument = index;
 					programRows.Add(rowInfo);
 				}
 				OpCode op = (OpCode)UIntFromBytes(bytes, index);
