@@ -6,7 +6,7 @@ This compiler is mainly intended for those who are already familiar with scripti
 
 ### Setup
 First of all, download and import these packages:
-- [VRChat SDK3](https://vrchat.com/home/download)
+- [VRChat SDK3 for Worlds](https://vrchat.com/home/download)
 - The latest Katsudon [release](https://github.com/Xytabich/Katsudon/releases/latest)
 
 Next comes the [environment setup](https://github.com/Xytabich/Katsudon/wiki/How-to-work).
