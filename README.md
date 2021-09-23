@@ -1,23 +1,21 @@
-***IN DEVELOPMENT***
-
-Katsudon (yeah, i have a "great" fantasy for naming) is a compiler of IL assemblies (including plugins) directly into the UDON VRChat program.
+Katsudon is a compiler of IL assemblies (including plugins) directly into the UDON VRChat program.
 
 The utility was created for more convenient work with the unity, as close as possible to the usual one. Whenever possible, many standard methods of working with objects and other things will be implemented here.
+This compiler is mainly intended for those who are already familiar with scripting in Unity, but due to some limitations of Udon some things may be different. You can read more about this on the [wiki](https://github.com/Xytabich/Katsudon/wiki/Difference-from-regular-use-of-C%23).
 
-To add an assembly to the build list, you need to mark it with an attribute.
-```csharp
-[assembly: UdonAsm]
-```
-Or you can create an assembly folder via the menu: `Create/UDON Assembly Folder`
+### Setup
+First of all, download and import these packages:
+- [VRChat SDK3](https://vrchat.com/home/download)
+- The latest Katsudon [release](https://github.com/Xytabich/Katsudon/releases/latest)
 
-All classes are compiled and stored directly in SerializedUdonProgramAsset, bypassing UdonAssemblyProgramAsset. This creates less garbage in the project, and the program is used to link the script and the UdonBehaviour on scene. Therefore, be careful not to delete this asset, otherwise the links on the scene will be broken.
+Next comes the [environment setup](https://github.com/Xytabich/Katsudon/wiki/How-to-work).
+Then you can transfer your scripts to this environment (do not forget to take into account the limitations of Katsudon) or create new ones.
 
-### Notes
-- At the moment, this utility is under development, so many things may not be implemented, as well as optimizations are not implemented everywhere
-- The compiler does not yet have a normal "user protection", so in case of an error raw exceptions may be thrown
-- If there are errors referring to `UdonPartsCache.cs` just delete this file
-- For optimization, use the `-checked` option at compilation, since the `unchecked` context is not provided in udon and is emulated by several operations, which affects performance. If you need bitwise conversion, specify explicitly that the context is `unchecked`. A folder created with `Create/UDON Assembly Folder` uses the `checked` context by default.
-- Arithmetic operations always use the `unchecked` context
-- All default values declared for the class fields are assigned at the time of the build, for example: `private DateTime startTime = DateTime.Now;` will have a value at the time of the build, and not at the time of loading the UdonBehaviour, so such things should be assigned in Start or other methods.
+All the highlights are on the [wiki](https://github.com/Xytabich/Katsudon/wiki).
+
+### Remarks
+- Katsudon was designed to automatically support Udon's functionality, so there are such things as a dynamically updated list of udon functionality (also known as Udon cache).
+Therefore, you can often use Katsudon for the latest versions of the VRChat SDK. But in the event of a new functionality, updates will be carried out.
+- At the moment this utility is in the alpha stage, so many things may not be implemented and some parts may not be optimized.
 
 [![Trello](https://img.shields.io/badge/Trello-Katsudon%20Board-yellow?style=flat&logo=trello)](https://trello.com/b/jyjguAFA) - What has been done and what is planned
