@@ -19,4 +19,6 @@ All the highlights are on the [wiki](https://github.com/Xytabich/Katsudon/wiki).
 Therefore, you can often use Katsudon for the latest versions of the VRChat SDK. But in the event of a new functionality, updates will be carried out.
 - At the moment this utility is in the alpha stage, so many things may not be implemented and some parts may not be optimized.
 
-[![Trello](https://img.shields.io/badge/Trello-Katsudon%20Board-yellow?style=flat&logo=trello)](https://trello.com/b/jyjguAFA) - What has been done and what is planned
+[![Discord](https://img.shields.io/badge/Discord-Xytabich%20Server-blueviolet?style=social&logo=discord)](https://discord.com/invite/884160784643543061) - For questions, suggestions and bug reports
+
+[![Trello](https://img.shields.io/badge/Trello-Katsudon%20Board-yellow?style=social&logo=trello)](https://trello.com/b/jyjguAFA) - What has been done and what is planned
