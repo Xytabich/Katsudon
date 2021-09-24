@@ -5,37 +5,40 @@ namespace Katsudon.Builder
 {
 	public static class ILUtils
 	{
-		public static bool TryGetLdarg(Operation op, out int index)
+		public static bool TryGetLdarg(Operation op, out int index, bool isInstance)
 		{
 			switch((int)op.opCode.Value)
 			{
 				case 0x02:
 					index = 0;
-					return true;
+					break;
 				case 0x03:
 					index = 1;
-					return true;
+					break;
 				case 0x04:
 					index = 2;
-					return true;
+					break;
 				case 0x05:
 					index = 3;
-					return true;
+					break;
 				case 0x0E:
 					index = (byte)op.rawArgument;
-					return true;
+					break;
 				case 0x0F:
 					index = (byte)op.rawArgument;
-					return true;
+					break;
 				case 0xFE09:
 					index = (short)op.rawArgument;
-					return true;
+					break;
 				case 0xFE0A:
 					index = (short)op.rawArgument;
-					return true;
+					break;
+				default:
+					index = -1;
+					return false;
 			}
-			index = -1;
-			return false;
+			if(isInstance) index--;
+			return true;
 		}
 
 		public static bool TryGetLdloc(Operation op, out int index)
@@ -78,15 +81,17 @@ namespace Katsudon.Builder
 			return false;
 		}
 
-		public static bool TryGetStarg(Operation op, out int index)
+		public static bool TryGetStarg(Operation op, out int index, bool isInstance)
 		{
 			switch((int)op.opCode.Value)
 			{
 				case 0x10:
 					index = (byte)op.rawArgument;
+					if(isInstance) index--;
 					return true;
 				case 0xFE0B:
 					index = (short)op.rawArgument;
+					if(isInstance) index--;
 					return true;
 			}
 			index = -1;

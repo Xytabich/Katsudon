@@ -39,7 +39,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 						if((readOnly = parameters[index].GetCustomAttribute<ReadOnlyAttribute>()) != null && readOnly.IsReadOnly)
 						{
 							parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
-							if(parameter is ITmpVariable tmp) reserved.Add(tmp);
+							if(parameter is ITmpVariable tmp) reserved.Add(tmp.Reserve());
 						}
 						else
 						{

@@ -116,9 +116,9 @@ namespace Katsudon
 			int argIndex;
 			if(!method.isStatic)
 			{
-				if(ILUtils.TryGetLdarg(op, out argIndex))
+				if(ILUtils.TryGetLdarg(op, out argIndex, !method.isStatic))
 				{
-					if(argIndex == 0)
+					if(argIndex < 0)
 					{
 						method.PushState();
 						if(method.Next())
@@ -158,7 +158,7 @@ namespace Katsudon
 					}
 				}
 			}
-			if(ILUtils.TryGetStarg(op, out argIndex))
+			if(ILUtils.TryGetStarg(op, out argIndex, !method.isStatic))
 			{
 				variable = method.GetArgumentVariable(argIndex);
 				if(!variable.type.IsAssignableFrom(targetType))

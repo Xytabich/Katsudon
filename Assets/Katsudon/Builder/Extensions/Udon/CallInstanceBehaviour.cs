@@ -36,15 +36,18 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 				if(popCount > 0)
 				{
 					target.Allocate(popCount);
-					var iterator = method.PopMultiple(popCount);
-					int argIndex = 0;
+					var iterator = method.PopMultiple(popCount + 1);
+					int argIndex = -1;
 					while(iterator.MoveNext())
 					{
-						method.machine.SetVariableExtern(target, info.parametersName[argIndex], iterator.Current.UseType(parameters[argIndex].ParameterType));
+						if(argIndex >= 0)
+						{
+							method.machine.SetVariableExtern(target, info.parametersName[argIndex], iterator.Current.UseType(parameters[argIndex].ParameterType));
+						}
 						argIndex++;
 					}
 				}
-				method.PopStack();
+				else method.PopStack();
 
 				method.machine.SendEventExtern(target, info.name);
 

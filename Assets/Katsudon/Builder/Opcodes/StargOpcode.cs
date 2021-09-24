@@ -10,9 +10,8 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			int argIndex;
-			if(ILUtils.TryGetStarg(method.currentOp, out argIndex))
+			if(ILUtils.TryGetStarg(method.currentOp, out argIndex, !method.isStatic))
 			{
-				if(!method.isStatic) argIndex--;
 				var arg = method.GetArgumentVariable(argIndex);
 				method.machine.AddCopy(method.PopStack(), arg, arg.type);
 			}

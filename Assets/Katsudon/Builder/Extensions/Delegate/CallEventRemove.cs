@@ -49,6 +49,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					var fieldName = assemblies.GetField(field.DeclaringType, field).name;
 					var variable = method.GetTmpVariable(field.FieldType).Reserve();
 					var fieldVariable = method.GetTmpVariable(field.FieldType);
+					target.Allocate();
 					method.machine.GetVariableExtern(target, fieldName, fieldVariable);
 					CallDelegateRemove.Build(method, false, fieldVariable, action, variable);
 					method.machine.SetVariableExtern(target, fieldName, variable);

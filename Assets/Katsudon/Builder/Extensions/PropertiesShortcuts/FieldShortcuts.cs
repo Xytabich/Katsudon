@@ -44,9 +44,9 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 			foreach(var op in reader)
 			{
 				if(op.opCode == OpCodes.Nop) continue;
-				if(ILUtils.TryGetLdarg(op, out index))
+				if(ILUtils.TryGetLdarg(op, out index, true))
 				{
-					if(index != (waitThis ? 0 : 1)) break;
+					if(index != (waitThis ? -1 : 0)) break;
 					waitThis = false;
 					continue;
 				}
@@ -85,7 +85,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 					branch = Convert.ToInt32(op.argument);
 					continue;
 				}
-				if(ILUtils.TryGetLdarg(op, out index)) continue;
+				if(ILUtils.TryGetLdarg(op, out index, true)) continue;
 				if(waitLdLoc)
 				{
 					if(!ILUtils.TryGetLdloc(op, out index)) break;

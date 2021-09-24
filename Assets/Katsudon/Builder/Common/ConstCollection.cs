@@ -62,12 +62,5 @@ namespace Katsudon.Builder
 				isUsed = true;
 			}
 		}
-
-		private class NullConstVariable : UnnamedVariable, ISignificantVariable
-		{
-			public object value => null;
-
-			public NullConstVariable() : base("null", typeof(object)) { }
-		}
 	}
 }

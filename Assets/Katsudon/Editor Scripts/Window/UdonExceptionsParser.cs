@@ -13,7 +13,7 @@ namespace Katsudon.Editor
 {
 	public class UdonExceptionsParser : EditorWindow
 	{
-		private static Regex udonMessagePattern = new Regex(@"The VM encountered an error![\n\s]+Exception Message:[\n\s]+An exception occurred during EXTERN to '.*?'\.[\n\s]+Parameter Addresses:[0-9a-fA-Fx,\s]+[\s\n]+([^\s\n].*)[\n\s-]+Program Counter was at:\s*(\d+)[\n\s-]+[\n\s\S]+Heap Dump:[\n\s]+0x00000000:\s*([0-9a-fA-F\-]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		private static Regex udonMessagePattern = new Regex(@"The VM encountered an error![\n\s]+Exception Message:[\n\s]+([\n\s\S]+?)[\n\s-]+Program Counter was at:\s*(\d+)[\n\s-]+[\n\s\S]+Heap Dump:[\n\s]+0x00000000:\s*([0-9a-fA-F\-]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 		private static Regex katsudonMessagePattern = new Regex(@"^(.+?)[\s\n]+\{KatsudonExceptionInfo:([0-9a-fA-F\-]+):(\d+)\}", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
 		private TextField guidField;
@@ -209,7 +209,7 @@ namespace Katsudon.Editor
 			GetWindow<UdonExceptionsParser>("Udon Exceptions Parser");
 		}
 
-		[InitializeOnLoadMethod]
+		[RuntimeInitializeOnLoadMethod]
 		private static void TrackConsole()
 		{
 			Application.logMessageReceived += OnConsoleLog;
@@ -218,7 +218,7 @@ namespace Katsudon.Editor
 		private static void OnConsoleLog(string condition, string stackTrace, LogType type)
 		{
 			if(type == LogType.Error)
-			{
+			{Debug.Log(condition);
 				int offset = 0;
 				if(MatchMessage(condition, ref offset, out var guid, out var address, out var msg))
 				{

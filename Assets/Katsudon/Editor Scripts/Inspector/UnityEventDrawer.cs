@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Katsudon.Editor.Udon;
+using Katsudon.Utility;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
@@ -235,7 +236,7 @@ namespace Katsudon.Editor
 				var duplicateNames = comps.Where(c => c != null).Select(c => c.GetType().Name).GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
 				foreach(Component comp in comps)
 				{
-					if(comp == null || Utils.IsUdonAsm(comp.GetType())) continue;
+					if(comp == null || Utils.IsUdonAsm(comp.GetType()) || comp is ReferencesContainer) continue;
 					if(comp is UdonBehaviour ubeh)
 					{
 						var proxy = ProxyUtils.GetProxyByBehaviour(ubeh);

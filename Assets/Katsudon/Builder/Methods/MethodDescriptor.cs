@@ -217,6 +217,7 @@ namespace Katsudon.Builder.Methods
 				var variable = stack[index];
 				if(created.TryGetValue(variable, out var tmp))
 				{
+					variable.Use();
 					tmp.Allocate();
 				}
 				else
@@ -226,6 +227,7 @@ namespace Katsudon.Builder.Methods
 				}
 				stack[index] = tmp;
 			}
+			volatileStack.Clear();
 			CollectionCache.Release(created);
 		}
 

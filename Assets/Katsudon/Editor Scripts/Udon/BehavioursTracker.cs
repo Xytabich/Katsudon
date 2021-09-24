@@ -69,6 +69,7 @@ namespace Katsudon.Editor.Udon
 				if(proxy != null) UnRegisterPair(behaviour);
 				proxy = CreateProxy(behaviour.gameObject, behaviour, script);
 				RegisterPair(behaviour, proxy);
+				ProxyUtils.CopyFieldsToProxy(behaviour, proxy);
 				Undo.CollapseUndoOperations(group);
 			}
 			return proxy;
@@ -286,7 +287,6 @@ namespace Katsudon.Editor.Udon
 			var proxy = (MonoBehaviour)obj.AddComponent(script.GetClass());
 			proxy.enabled = false;
 			proxy.hideFlags = SERVICE_OBJECT_FLAGS;
-			ProxyUtils.CopyFieldsToProxy(behaviour, proxy);
 			return proxy;
 		}
 
@@ -403,6 +403,7 @@ namespace Katsudon.Editor.Udon
 				{
 					var proxy = CreateProxy(instance.gameObject, behaviour, script);
 					instance.tmpProxies[behaviour] = new TmpProxy(proxy, behaviour, instance);
+					ProxyUtils.CopyFieldsToProxy(behaviour, proxy);
 					return proxy;
 				}
 			}

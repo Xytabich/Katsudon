@@ -138,4 +138,11 @@ namespace Katsudon.Builder
 
 		void IVariable.SetAddress(uint address) { }
 	}
+
+	public class NullConstVariable : UnnamedVariable, ISignificantVariable
+	{
+		public object value => null;
+
+		public NullConstVariable() : base("null", typeof(object)) { }
+	}
 }

@@ -22,12 +22,13 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var variable = method.PeekStack(0);
 			if(variable.type == type) return true;
+			method.PopStack();
 			if(convertersList.TryConvert(method, variable, type, out var converted))
 			{
-				method.PopStack();
 				method.PushStack(converted);
 				return true;
 			}
+			method.PushStack(variable);
 			return false;
 		}
 

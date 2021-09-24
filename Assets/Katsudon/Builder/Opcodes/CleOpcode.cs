@@ -33,6 +33,14 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void ProcessOp(IMethodDescriptor method, bool? unsigned, IVariable a, IVariable b, Func<IVariable> retVariableCtor, out IVariable constVariable)
 		{
+			if(b is NullConstVariable)// strange "is null" check
+			{
+				var converted = retVariableCtor();
+				method.machine.AddExtern("SystemObject.__ReferenceEquals__SystemObject_SystemObject__SystemBoolean",
+					converted, a.OwnType(), method.machine.GetConstVariable(null).OwnType());
+				constVariable = null;
+				return;
+			}
 			BinaryOperatorExtension.LogicBinaryOperation(method, ProcessOperation, BinaryOperator.LessThanOrEqual, unsigned, a, b, retVariableCtor, out constVariable);
 		}
 

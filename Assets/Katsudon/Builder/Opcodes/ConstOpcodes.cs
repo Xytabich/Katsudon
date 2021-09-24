@@ -1,5 +1,4 @@
-﻿using System;
-using System.Reflection.Emit;
+﻿using System.Reflection.Emit;
 
 namespace Katsudon.Builder.AsmOpCodes
 {
@@ -21,7 +20,7 @@ namespace Katsudon.Builder.AsmOpCodes
 	}
 
 	[OperationBuilder]
-	public class NullConst : IOperationBuider
+	public class NullConstBuilder : IOperationBuider
 	{
 		public int order => 0;
 
@@ -33,7 +32,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			container.RegisterOpBuilder(OpCodes.Ldnull, new NullConst());
+			container.RegisterOpBuilder(OpCodes.Ldnull, new NullConstBuilder());
 		}
 	}
 

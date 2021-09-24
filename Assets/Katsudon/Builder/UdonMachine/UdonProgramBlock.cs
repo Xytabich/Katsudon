@@ -28,7 +28,7 @@ namespace Katsudon.Builder
 				variablesInUse.RemoveWhere(UnusedVariablesFilter);
 				if(variablesInUse.Count > 0)
 				{
-					throw new Exception(string.Format("Method has unreleased tmp variables ({2}):\n{3}", variablesInUse.Count, string.Join("\n", variablesInUse)));
+					throw new Exception(string.Format("Method has unreleased tmp variables ({0}):\n{1}", variablesInUse.Count, string.Join("\n", variablesInUse)));
 				}
 			}
 		}
@@ -197,7 +197,7 @@ namespace Katsudon.Builder
 					}
 
 					var type = variableInfo.preferredType;
-					if(type != variable.type && NumberCodeUtils.IsConvertible(variable.type))
+					if(type != variable.type && NumberCodeUtils.IsConvertible(type))
 					{
 						if(convertersList.TryConvert(block, variable, type, out var converted))
 						{

@@ -17,16 +17,16 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var variable = method.PeekStack(0);
+			var variable = method.PopStack();
 			if(NumberCodeUtils.IsConvertible(variable.type) && NumberCodeUtils.IsPrimitive(NumberCodeUtils.GetCode((Type)method.currentOp.argument)))
 			{
 				if(convertersList.TryConvert(method, variable, (Type)method.currentOp.argument, out var converted))
 				{
-					method.PopStack();
 					method.PushStack(converted);
 					return true;
 				}
 			}
+			method.PushStack(variable);
 			return false;
 		}
 

@@ -1,5 +1,4 @@
 ﻿using System.Reflection.Emit;
-using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.AsmOpCodes
 {

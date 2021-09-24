@@ -42,30 +42,33 @@ namespace Katsudon.Builder.AsmOpCodes
 			int argsCount = parameters.Length;
 			if(argsCount != 0)
 			{
-				var iterator = method.PopMultiple(argsCount);
+				var iterator = method.PopMultiple(argsCount + 1);
 				ReadOnlyAttribute readOnly;
-				int index = 0;
+				int index = -1;
 				while(iterator.MoveNext())
 				{
-					var parameter = iterator.Current;
-					if(!parameters[index].ParameterType.IsByRef)
+					if(index >= 0)
 					{
-						if((readOnly = parameters[index].GetCustomAttribute<ReadOnlyAttribute>()) != null && readOnly.IsReadOnly)
+						var parameter = iterator.Current;
+						if(!parameters[index].ParameterType.IsByRef)
 						{
-							parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
-							if(parameter is ITmpVariable tmp) reserved.Add(tmp);
+							if((readOnly = parameters[index].GetCustomAttribute<ReadOnlyAttribute>()) != null && readOnly.IsReadOnly)
+							{
+								parameter = method.GetReadonlyVariable(parameter.UseType(parameters[index].ParameterType));
+								if(parameter is ITmpVariable tmp) reserved.Add(tmp.Reserve());
+							}
+							else
+							{
+								parameter = method.GetTmpVariable(parameter.UseType(parameters[index].ParameterType)).Reserve();
+								reserved.Add((ITmpVariable)parameter);
+							}
 						}
-						else
-						{
-							parameter = method.GetTmpVariable(parameter.UseType(parameters[index].ParameterType)).Reserve();
-							reserved.Add((ITmpVariable)parameter);
-						}
+						arguments.Add(parameter);
 					}
-					arguments.Add(parameter);
 					index++;
 				}
 			}
-			method.PopStack();
+			else method.PopStack();
 
 			var locals = methodInfo.GetMethodBody().LocalVariables;
 			var localVariables = CollectionCache.GetList<IVariable>();

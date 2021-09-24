@@ -57,7 +57,7 @@ namespace Katsudon.Editor
 				File.WriteAllText(infoPath, "[assembly: " + typeof(UdonAsmAttribute) + "]");
 
 				var definitionPath = Path.Combine(pathName, name + ".asmdef");
-				File.WriteAllText(definitionPath, JsonUtility.ToJson(new AssemblyDefinition(name, "Katsudon.Runtime")));
+				File.WriteAllText(definitionPath, JsonUtility.ToJson(new AssemblyDefinition(name, "Katsudon.Runtime", "VRC.Udon")));
 
 				AssetDatabase.Refresh();
 				ProjectWindowUtil.ShowCreatedAsset(AssetDatabase.LoadAssetAtPath(definitionPath, typeof(UnityEngine.Object)));
