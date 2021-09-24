@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: 1a635c115fbbb164d9d71e7804bd42c8
+NativeFormatImporter:
+  externalObjects:
+  - first:
+      type: UnityEditor:MonoScript
+      assembly: UnityEditor
+      name: Katsudon-Script
+    second: {fileID: 11500000, guid: 967b0ca1e8d2c2940a599dcad172d875, type: 3}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
