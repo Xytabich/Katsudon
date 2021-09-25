@@ -1,7 +1,5 @@
 using System;
 using UnityEngine;
-using VRC.SDK3.Components;
-using VRC.Udon;
 
 public class PackingMachine : MonoBehaviour
 {

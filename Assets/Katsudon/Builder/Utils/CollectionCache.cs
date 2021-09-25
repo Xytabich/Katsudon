@@ -31,6 +31,11 @@ public static class CollectionCache
 		return InnerCache<Dictionary<K, V>, KeyValuePair<K, V>>.GetCollection();
 	}
 
+	public static SortedList<K, V> GetSortedList<K, V>()
+	{
+		return InnerCache<SortedList<K, V>, KeyValuePair<K, V>>.GetCollection();
+	}
+
 	public static void Release<T>(List<T> collection)
 	{
 		collection.Clear();
@@ -53,6 +58,12 @@ public static class CollectionCache
 	{
 		collection.Clear();
 		InnerCache<Dictionary<K, V>, KeyValuePair<K, V>>.ReleaseCollection(collection);
+	}
+
+	public static void Release<K, V>(SortedList<K, V> collection)
+	{
+		collection.Clear();
+		InnerCache<SortedList<K, V>, KeyValuePair<K, V>>.ReleaseCollection(collection);
 	}
 
 	private static class InnerCache<T, V> where T : IReadOnlyCollection<V>, new()

@@ -1,5 +1,4 @@
 ﻿using System.Reflection.Emit;
-using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.AsmOpCodes
 {
@@ -18,7 +17,9 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			IVariable variable = null;
 			CgtOpcode.ProcessOp(method, unsigned, a, b, () => (variable = method.GetTmpVariable(typeof(bool))), out variable);
+			var handle = new StoreBranchingStackHandle(method, methodAddress);
 			method.machine.AddBranch(variable, method.GetMachineAddressLabel(methodAddress));
+			handle.Dispose();
 			return true;
 		}
 

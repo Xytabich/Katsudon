@@ -2,17 +2,21 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Katsudon.Info;
+using VRC.Udon.VM.Common;
 
 namespace Katsudon.Builder.Methods
 {
-	public class MethodDescriptor : IMethodDescriptor
+	public class MethodDescriptor : IMethodDescriptor, IMethodProgramRW, IDisposable
 	{
-		public Operation currentOp => operations[index];
+		public Operation currentOp => operations[_index];
 
 		public bool isStatic { get; private set; }
 		public bool stackIsEmpty => stack.Count < 1;
 
 		public IUdonMachine machine { get; private set; }
+
+		int IMethodProgramRW.index { get { return _index; } set { _index = value; } }
+		int IMethodProgramRW.operationsCount => operations.Count;
 
 		#region info
 		private string methodName;
@@ -25,13 +29,13 @@ namespace Katsudon.Builder.Methods
 		private IUdonProgramBlock machineBlock;
 		#endregion
 
-		private int index;
-		private Stack<int> states = new Stack<int>();//TODO: cache
-		private List<IVariable> stack = new List<IVariable>();
-		private Stack<int> volatileStack = new Stack<int>();
+		private int _index;
+		private List<IVariable> stack;
+		private Stack<int> volatileStack;
+		private SortedList<int, StoredStack> storedStacks;
 
-		private Dictionary<int, uint> methodToMachineAddress = null;
-		private List<MachineAddressLabel> initAddresses = new List<MachineAddressLabel>();
+		private Dictionary<int, uint> methodToMachineAddress;
+		private List<MachineAddressLabel> initAddresses;
 
 		private uint lastUdonAddress;
 		private IList<UdonAddressPointer> addressPointers;
@@ -45,20 +49,24 @@ namespace Katsudon.Builder.Methods
 			this.returnVariable = returnVariable;
 			this.returnAddress = returnAddress;
 			this.locals = locals;
-			this.index = -1;
+			this._index = -1;
 
 			this.lastUdonAddress = block.machine.GetAddressCounter();
 			this.addressPointers = addressPointers;
 
 			this.machineBlock = block;
 			this.machine = new MethodOpTracker((IRawUdonMachine)machineBlock.machine, this);
-			methodToMachineAddress = new Dictionary<int, uint>(operations.Count);//TODO: cache
+
+			stack = CollectionCache.GetList<IVariable>();
+			volatileStack = CollectionCache.GetStack<int>();
+			storedStacks = CollectionCache.GetSortedList<int, StoredStack>();
+			methodToMachineAddress = CollectionCache.GetDictionary<int, uint>();
+			initAddresses = CollectionCache.GetList<MachineAddressLabel>();
 		}
 
 #if KATSUDON_DEBUG
 		public void CheckState()
 		{
-			if(states.Count > 0) throw new Exception("States remained on the stack, a state was not freed somewhere.");
 			if(stack.Count > 0)
 			{
 				throw new Exception(string.Format("Values remained on the stack, a value was not used somewhere.\nStack: {0}", string.Join(", ", stack)));
@@ -74,36 +82,46 @@ namespace Katsudon.Builder.Methods
 			}
 		}
 
-		public bool Next(bool skipNop = true)
+		public void Dispose()
+		{
+			CollectionCache.Release(stack);
+			CollectionCache.Release(volatileStack);
+			CollectionCache.Release(storedStacks);
+			CollectionCache.Release(methodToMachineAddress);
+			CollectionCache.Release(initAddresses);
+		}
+
+		public bool Next()
 		{
 			do
 			{
-				index++;
-				if(index >= operations.Count) return false;
+				_index++;
+				if(_index >= operations.Count) return false;
 				if(machineBlock.machine.GetAddressCounter() != lastUdonAddress)
 				{
 					lastUdonAddress = machineBlock.machine.GetAddressCounter();
 					addressPointers.Add(new UdonAddressPointer(lastUdonAddress, currentOp.offset));
 				}
-				methodToMachineAddress[currentOp.offset] = machineBlock.machine.GetAddressCounter();
+				if(storedStacks.Count > 0 && storedStacks.Keys[0] == currentOp.offset)
+				{
+					var stored = storedStacks.Values[0];
+					storedStacks.RemoveAt(0);
+					var stackHandle = ApplyStoredStack(stored);
+					methodToMachineAddress[currentOp.offset] = machineBlock.machine.GetAddressCounter();
+					stackHandle.Dispose();
+				}
+				else
+				{
+					methodToMachineAddress[currentOp.offset] = machineBlock.machine.GetAddressCounter();
+				}
 			}
 			while(currentOp.opCode.Value == 0x00);
 			return true;
 		}
 
-		public void PushState()
+		public StateHandle GetStateHandle()
 		{
-			states.Push(index);
-		}
-
-		public void PopState()
-		{
-			index = states.Pop();
-		}
-
-		public void DropState()
-		{
-			states.Pop();
+			return new StateHandle(this);
 		}
 
 		public void PushStack(IVariable value, bool isVolatile = false)
@@ -141,6 +159,23 @@ namespace Katsudon.Builder.Methods
 				yield return stack[i];
 			}
 			stack.RemoveRange(index, count);
+		}
+
+		public IDisposable StoreBranchingStack(int loadIlOffset, bool clearStack)
+		{
+			var rawMachine = (IRawUdonMachine)machine;
+			foreach(var variable in stack)
+			{
+				variable.Allocate();
+				rawMachine.AddPush(variable.OwnType().Mode(VariableMeta.UsageMode.In));
+			}
+			storedStacks.Add(loadIlOffset, new StoredStack(stack, volatileStack));
+			if(clearStack)
+			{
+				stack.Clear();
+				volatileStack.Clear();
+			}
+			return new PopHandle(rawMachine.mainMachine, stack.Count);
 		}
 
 		public ITmpVariable GetTmpVariable(Type type)
@@ -208,6 +243,39 @@ namespace Katsudon.Builder.Methods
 			}
 		}
 
+		private CopyStoredHandle ApplyStoredStack(StoredStack stored)
+		{
+			var rawMachine = (IRawUdonMachine)machine;
+			if(stack.Count > 0)
+			{
+				if(stack.Count != stored.stack.Count) throw new Exception("Stacks must match");
+				var storedStack = stored.stack;
+				int index = 0;
+				var iterator = PopMultiple(stack.Count);
+				while(iterator.MoveNext())
+				{
+					storedStack[index].Use();
+					rawMachine.AddPush(iterator.Current.UseType(storedStack[index].type).Mode(VariableMeta.UsageMode.In));
+				}
+				return new CopyStoredHandle(stored, this, rawMachine.mainMachine);
+			}
+			else
+			{
+				// FIX: It would be nice to do some preliminary analysis after all, or make some dynamic address instead of GetAddressCounter, and delete unnecessary code on the fly.
+				new PopHandle(rawMachine.mainMachine, stored.stack.Count).Dispose();
+				foreach(var variable in stored.stack)
+				{
+					PushStack(variable);
+				}
+				foreach(var index in stored.volatileStack)
+				{
+					volatileStack.Push(index);
+				}
+				stored.Dispose();
+				return default;
+			}
+		}
+
 		private void OnUnreliableAction()
 		{
 			if(volatileStack.Count == 0) return;
@@ -229,6 +297,76 @@ namespace Katsudon.Builder.Methods
 			}
 			volatileStack.Clear();
 			CollectionCache.Release(created);
+		}
+
+		private struct PopHandle : IDisposable
+		{
+			private UdonMachine machine;
+			private int popCount;
+
+			public PopHandle(UdonMachine machine, int popCount)
+			{
+				this.machine = machine;
+				this.popCount = popCount;
+			}
+
+			public void Dispose()
+			{
+				for(int i = 0; i < popCount; i++)
+				{
+					machine.AddOpcode(OpCode.POP);
+				}
+			}
+		}
+
+		private struct CopyStoredHandle : IDisposable
+		{
+			private StoredStack stored;
+			private IMethodDescriptor method;
+			private UdonMachine udonMachine;
+
+			public CopyStoredHandle(StoredStack stored, IMethodDescriptor method, UdonMachine udonMachine)
+			{
+				this.stored = stored;
+				this.method = method;
+				this.udonMachine = udonMachine;
+			}
+
+			public void Dispose()
+			{
+				if(method == null) return;
+				var stack = stored.stack;
+				for(int i = stack.Count - 1; i >= 0; i--)
+				{
+					var variable = method.GetTmpVariable(stack[i].type);
+					udonMachine.AddOpcode(OpCode.PUSH, variable);
+					udonMachine.AddOpcode(OpCode.COPY);
+					stack[i] = variable;
+				}
+				for(int i = 0; i < stack.Count; i++)
+				{
+					method.PushStack(stack[i]);
+				}
+				stored.Dispose();
+			}
+		}
+
+		private struct StoredStack : IDisposable
+		{
+			public List<IVariable> stack;
+			public List<int> volatileStack;
+
+			public StoredStack(IReadOnlyCollection<IVariable> stack, IReadOnlyCollection<int> volatileStack)
+			{
+				this.stack = CollectionCache.GetList(stack);
+				this.volatileStack = CollectionCache.GetList(volatileStack);
+			}
+
+			public void Dispose()
+			{
+				CollectionCache.Release(stack);
+				CollectionCache.Release(volatileStack);
+			}
 		}
 
 		private class MachineAddressLabel : IAddressLabel
@@ -360,6 +498,22 @@ namespace Katsudon.Builder.Methods
 		}
 	}
 
+	public interface IMethodProgram
+	{
+		Operation currentOp { get; }
+
+		bool Next();
+
+		StateHandle GetStateHandle();
+	}
+
+	internal interface IMethodProgramRW : IMethodProgram
+	{
+		int index { get; set; }
+
+		int operationsCount { get; }
+	}
+
 	public struct UdonAddressPointer
 	{
 		public uint udonAddress;
@@ -405,6 +559,44 @@ namespace Katsudon.Builder.Methods
 			{
 				return startAddress.CompareTo(other.startAddress);
 			}
+		}
+	}
+
+	public struct StateHandle
+	{
+		private IMethodProgramRW method;
+		private int index;
+
+		internal StateHandle(IMethodProgramRW method)
+		{
+			this.method = method;
+			this.index = method.index;
+		}
+
+		public bool Next()
+		{
+			do
+			{
+				method.index++;
+				if(method.index >= method.operationsCount) return false;
+			}
+			while(method.currentOp.opCode.Value == 0x00);
+			return true;
+		}
+
+		public void Apply()
+		{
+			int toIndex = method.index;
+			method.index = index;
+			while(method.index < toIndex)
+			{
+				method.Next();
+			}
+		}
+
+		public void Drop()
+		{
+			method.index = index;
 		}
 	}
 }

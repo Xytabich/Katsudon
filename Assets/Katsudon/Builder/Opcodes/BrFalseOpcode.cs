@@ -10,7 +10,10 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			int methodAddress = (int)method.currentOp.argument;
-			method.machine.AddBranch(method.PopStack(), method.GetMachineAddressLabel(methodAddress));
+			var condition = method.PopStack();
+			var handle = new StoreBranchingStackHandle(method, methodAddress);
+			method.machine.AddBranch(condition, method.GetMachineAddressLabel(methodAddress));
+			handle.Dispose();
 			return true;
 		}
 

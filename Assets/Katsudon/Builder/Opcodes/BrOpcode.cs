@@ -10,6 +10,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			int methodAddress = (int)method.currentOp.argument;
+			if(!method.stackIsEmpty) method.StoreBranchingStack(methodAddress, true);
 			method.machine.AddJump(method.GetMachineAddressLabel(methodAddress));
 			return true;
 		}

@@ -1,5 +1,3 @@
-using UnityEngine;
-
 public interface ICustomParameter<T>
 {
 	string title { get; }

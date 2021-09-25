@@ -218,7 +218,7 @@ namespace Katsudon.Editor
 		private static void OnConsoleLog(string condition, string stackTrace, LogType type)
 		{
 			if(type == LogType.Error)
-			{Debug.Log(condition);
+			{
 				int offset = 0;
 				if(MatchMessage(condition, ref offset, out var guid, out var address, out var msg))
 				{

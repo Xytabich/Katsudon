@@ -110,8 +110,8 @@ namespace Katsudon
 		public static bool TryGetNextSt(this IMethodDescriptor method, Type targetType, out IVariable variable)
 		{
 			variable = null;
-			method.PushState();
-			method.Next();
+			var handle = method.GetStateHandle();
+			handle.Next();
 			var op = method.currentOp;
 			int argIndex;
 			if(!method.isStatic)
@@ -120,24 +120,24 @@ namespace Katsudon
 				{
 					if(argIndex < 0)
 					{
-						method.PushState();
-						if(method.Next())
+						var argHandle = method.GetStateHandle();
+						if(argHandle.Next())
 						{
 							FieldInfo field;
 							if(ILUtils.TryGetStfld(method.currentOp, out field))
 							{
 								if(!field.FieldType.IsAssignableFrom(targetType))
 								{
-									method.PopState();
+									argHandle.Drop();
 									return false;
 								}
 
 								variable = (method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
-								method.DropState();
+								argHandle.Apply();
 								return true;
 							}
 						}
-						method.PopState();
+						argHandle.Drop();
 					}
 				}
 				else if(!method.stackIsEmpty && method.PeekStack(0) is ThisVariable)
@@ -147,12 +147,12 @@ namespace Katsudon
 					{
 						if(!field.FieldType.IsAssignableFrom(targetType))
 						{
-							method.PopState();
+							handle.Drop();
 							return false;
 						}
 
 						variable = (method.machine as IRawUdonMachine).mainMachine.GetFieldsCollection().GetField(field);
-						method.DropState();
+						handle.Apply();
 						method.PopStack().Use();
 						return true;
 					}
@@ -163,11 +163,11 @@ namespace Katsudon
 				variable = method.GetArgumentVariable(argIndex);
 				if(!variable.type.IsAssignableFrom(targetType))
 				{
-					method.PopState();
+					handle.Drop();
 					return false;
 				}
 
-				method.DropState();
+				handle.Apply();
 				return true;
 			}
 			int locIndex;
@@ -176,11 +176,11 @@ namespace Katsudon
 				variable = method.GetLocalVariable(locIndex);
 				if(!variable.type.IsAssignableFrom(targetType))
 				{
-					method.PopState();
+					handle.Drop();
 					return false;
 				}
 
-				method.DropState();
+				handle.Apply();
 				return true;
 			}
 			if(op.opCode == OpCodes.Ret)
@@ -188,14 +188,14 @@ namespace Katsudon
 				variable = method.GetReturnVariable();
 				if(!variable.type.IsAssignableFrom(targetType))
 				{
-					method.PopState();
+					handle.Drop();
 					return false;
 				}
 
-				method.PopState();
+				handle.Drop();
 				return true;
 			}
-			method.PopState();
+			handle.Drop();
 			return false;
 		}
 

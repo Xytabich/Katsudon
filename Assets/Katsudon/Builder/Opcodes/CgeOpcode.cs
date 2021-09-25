@@ -12,12 +12,12 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			bool unsigned = method.currentOp.opCode == OpCodes.Clt_Un;
-			method.PushState();
-			if(method.Next() && method.currentOp.opCode == OpCodes.Ldc_I4_0)
+			var handle = method.GetStateHandle();
+			if(handle.Next() && method.currentOp.opCode == OpCodes.Ldc_I4_0)
 			{
-				if(method.Next() && method.currentOp.opCode == OpCodes.Ceq)
+				if(handle.Next() && method.currentOp.opCode == OpCodes.Ceq)
 				{
-					method.DropState();
+					handle.Apply();
 
 					var b = method.PopStack();
 					var a = method.PopStack();
@@ -27,7 +27,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					return true;
 				}
 			}
-			method.PopState();
+			handle.Drop();
 			return false;
 		}
 

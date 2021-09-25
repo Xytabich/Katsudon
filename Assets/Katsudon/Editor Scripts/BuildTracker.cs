@@ -323,7 +323,11 @@ namespace Katsudon.Editor
 			}
 			catch(Exception e)
 			{
+#if KATSUDON_DEBUG
+				Debug.LogError(e.ToString());
+#else
 				Debug.LogException(e);
+#endif
 				SaveError(e);
 				buildError = true;
 			}

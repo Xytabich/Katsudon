@@ -114,7 +114,10 @@ namespace Katsudon.Builder
 			}
 			catch(Exception e)
 			{
-				if(!(e is IlOffsetInfoException ilOffset)) throw;
+				if(!(e is IlOffsetInfoException ilOffset))
+				{
+					throw new Exception(string.Format("Exception during building method {0}:{1}", method.DeclaringType, method), e);
+				}
 
 				KatsudonBuildException exception = null;
 				var assembly = method.DeclaringType.Assembly;
@@ -139,6 +142,7 @@ namespace Katsudon.Builder
 			}
 			finally
 			{
+				methodDescriptor.Dispose();
 				CollectionCache.Release(operations);
 				inBuild.Remove(id);
 			}
@@ -244,6 +248,11 @@ namespace Katsudon.Builder
 	{
 		bool stackIsEmpty { get; }
 
+		/// <summary>
+		/// Pushes the variables in the current stack to the udon stack, and then merges the results of the branches at the given IL position
+		/// </summary>
+		IDisposable StoreBranchingStack(int loadIlOffset, bool clearStack = false);
+
 		/// <param name="isVolatile">Set to true if the variable can be changed outside of the method context</param>
 		void PushStack(IVariable value, bool isVolatile = false);
 
@@ -252,18 +261,5 @@ namespace Katsudon.Builder
 		IVariable PeekStack(int offset);
 
 		IEnumerator<IVariable> PopMultiple(int count);
-	}
-
-	public interface IMethodProgram
-	{
-		Operation currentOp { get; }
-
-		bool Next(bool skipNop = true);
-
-		void PushState();
-
-		void PopState();
-
-		void DropState();
 	}
 }

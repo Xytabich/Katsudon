@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using Katsudon.Info;
 
 namespace Katsudon.Builder.AsmOpCodes
 {
@@ -14,21 +13,21 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			if(method.currentOp.argument is Type type)
 			{
-				method.PushState();
-				if(method.Next())// skip Type.GetTypeFromHandle
+				var handle = method.GetStateHandle();
+				if(handle.Next())// skip Type.GetTypeFromHandle
 				{
 					if(method.currentOp.opCode == OpCodes.Call)
 					{
 						var methodInfo = method.currentOp.argument as MethodInfo;
 						if(methodInfo.Name == "GetTypeFromHandle" && methodInfo.DeclaringType == typeof(Type))
 						{
-							method.DropState();
+							handle.Apply();
 						}
-						else method.PopState();
+						else handle.Drop();
 					}
-					else method.PopState();
+					else handle.Drop();
 				}
-				else method.PopState();
+				else handle.Drop();
 
 				method.PushStack(method.machine.GetConstVariable(type, typeof(Type)));
 				return true;
