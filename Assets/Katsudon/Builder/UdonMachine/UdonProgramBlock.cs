@@ -126,6 +126,7 @@ namespace Katsudon.Builder
 			private IUdonProgramBlock block;
 			private PrimitiveConvertersList convertersList;
 
+			private Stack<int> referencesStackStart = new Stack<int>();
 			private Stack<IReferenceVariable> referencesStack = new Stack<IReferenceVariable>();
 
 			public UdonBlockBuilder(UdonMachine udonMachine, IUdonProgramBlock block, PrimitiveConvertersList convertersList)
@@ -192,7 +193,9 @@ namespace Katsudon.Builder
 				{
 					if(variableInfo.variable is IReferenceVariable reference)
 					{
+						referencesStackStart.Push(referencesStack.Count);
 						reference.LoadValue(block);
+						referencesStackStart.Pop();
 						variable = reference.GetValueVariable();
 					}
 
@@ -210,9 +213,13 @@ namespace Katsudon.Builder
 
 			public void ApplyReferences()
 			{
-				while(referencesStack.Count > 0)
+				int stopCount = referencesStackStart.Count > 0 ? referencesStackStart.Peek() : 0;
+				while(referencesStack.Count != stopCount)
 				{
-					referencesStack.Pop().StoreValue(block);
+					var reference = referencesStack.Pop();
+					referencesStackStart.Push(referencesStack.Count);
+					reference.StoreValue(block);
+					referencesStackStart.Pop();
 				}
 			}
 

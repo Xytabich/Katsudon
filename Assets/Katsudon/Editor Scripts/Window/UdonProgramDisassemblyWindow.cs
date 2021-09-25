@@ -10,6 +10,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.Udon.Common.Interfaces;
+using VRC.Udon.Editor;
 using VRC.Udon.VM.Common;
 
 namespace Katsudon.Editor
@@ -49,7 +50,7 @@ namespace Katsudon.Editor
 		private ListView programRowsRoot;
 
 		private StringBuilder cachedSb = new StringBuilder();
-		private IUdonProgram program;
+		private IUdonProgram program = null;
 		private List<ProgramRowInfo> programRows = new List<ProgramRowInfo>();
 
 		private List<VisualElement> selectedHeapElements = new List<VisualElement>(4);
@@ -105,7 +106,7 @@ namespace Katsudon.Editor
 			programRoot.style.minHeight = 256f;
 			programRoot.style.flexBasis = 256f;
 
-			AddToolbarLabel(programRoot, "Program:");
+			AddToolbarLabel(programRoot, "Program:").RegisterCallback<ContextClickEvent>(ShowProgramMenu);
 
 			programRowsRoot = new ListView();
 			programRowsRoot.AddToClassList(Box.ussClassName);
@@ -137,7 +138,7 @@ namespace Katsudon.Editor
 		private void UpdateRow(VisualElement element, int index)
 		{
 			var row = (ProgramRowElement)element;
-			row.Init(programRows[index], program);
+			row.Init(cachedSb, programRows[index], program);
 		}
 
 		private void InitProgram(IUdonProgram program)
@@ -216,6 +217,38 @@ namespace Katsudon.Editor
 				}
 				AddTableCell(heapFieldsValueRoot, cachedSb.ToString());
 			}
+		}
+
+		private void ShowProgramMenu(ContextClickEvent evt)
+		{
+			if(program == null) return;
+			var menu = new GenericMenu();
+			menu.AddItem(new GUIContent("Copy disassembly"), false, () => {
+				cachedSb.Clear();
+				foreach(var row in programRows)
+				{
+					if(row.opCode == OpCode.ANNOTATION)
+					{
+						cachedSb.AppendLine();
+						cachedSb.AppendLine();
+						var symbol = program.EntryPoints.GetSymbolFromAddress(row.argument);
+						if(program.EntryPoints.HasExportedSymbol(symbol))
+						{
+							cachedSb.Append(".export ");
+						}
+						cachedSb.Append(symbol);
+						cachedSb.Append(':');
+					}
+					else
+					{
+						cachedSb.AppendFormat("0x{0:X8}: ", row.address);
+						row.AppendInfo(cachedSb, program);
+					}
+					cachedSb.AppendLine();
+				}
+				GUIUtility.systemCopyBuffer = cachedSb.ToString();
+			});
+			menu.ShowAsContext();
 		}
 
 		private void SelectHeapField(PointerDownEvent evt)
@@ -330,7 +363,7 @@ namespace Katsudon.Editor
 			root.Add(label);
 		}
 
-		private static void AddToolbarLabel(VisualElement root, string text)
+		private static VisualElement AddToolbarLabel(VisualElement root, string text)
 		{
 			var label = new Label(text);
 			label.AddToClassList(ProgressBar.ussClassName);
@@ -340,6 +373,7 @@ namespace Katsudon.Editor
 			label.style.unityTextAlign = TextAnchor.MiddleLeft;
 			label.style.unityFontStyleAndWeight = FontStyle.Bold;
 			root.Add(label);
+			return label;
 		}
 
 		public static void AppendObjectValue(StringBuilder sb, object value)
@@ -414,6 +448,32 @@ namespace Katsudon.Editor
 			public uint address;
 			public OpCode opCode;
 			public uint argument;
+
+			public void AppendInfo(StringBuilder sb, IUdonProgram program)
+			{
+				switch(opCode)
+				{
+					case OpCode.JUMP:
+					case OpCode.JUMP_IF_FALSE:
+						sb.AppendFormat("{0}, 0x{1:X8}", opCode, argument);
+						break;
+					case OpCode.PUSH:
+					case OpCode.JUMP_INDIRECT:
+						sb.AppendFormat("{0}, {1}", opCode, GetSymbol(program.SymbolTable, argument));
+						break;
+					case OpCode.EXTERN:
+						sb.AppendFormat("{0}, \"{1}\"", opCode, program.Heap.GetHeapVariable(argument));
+						break;
+					default:
+						sb.Append(opCode);
+						break;
+				}
+			}
+
+			private static string GetSymbol(IUdonSymbolTable symbols, uint address)
+			{
+				return symbols.TryGetSymbolFromAddress(address, out var symbol) ? symbol : string.Format("<0x{0:X8}>", address);
+			}
 		}
 
 		private class ProgramRowElement : VisualElement
@@ -431,41 +491,26 @@ namespace Katsudon.Editor
 				infoLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
 			}
 
-			public void Init(ProgramRowInfo info, IUdonProgram program)
+			public void Init(StringBuilder sb, ProgramRowInfo info, IUdonProgram program)
 			{
 				addressLabel.style.display = info.opCode != OpCode.ANNOTATION ? DisplayStyle.Flex : DisplayStyle.None;
 				addressLabel.text = info.address.ToString("X8");
 				infoLabel.style.unityFontStyleAndWeight = info.opCode != OpCode.ANNOTATION ? FontStyle.Normal : FontStyle.Bold;
-				switch(info.opCode)
+				if(info.opCode == OpCode.ANNOTATION)
 				{
-					case OpCode.JUMP:
-					case OpCode.JUMP_IF_FALSE:
-						infoLabel.text = string.Format("{0}, 0x{1:X8}", info.opCode, info.argument);
-						break;
-					case OpCode.PUSH:
-					case OpCode.JUMP_INDIRECT:
-						infoLabel.text = string.Format("{0}, {1}", info.opCode, GetSymbol(program.SymbolTable, info.argument));
-						break;
-					case OpCode.ANNOTATION:
-						var symbol = program.EntryPoints.GetSymbolFromAddress(info.argument);
-						if(program.EntryPoints.HasExportedSymbol(symbol))
-						{
-							infoLabel.text = ".export " + symbol + ":";
-						}
-						else infoLabel.text = symbol + ":";
-						break;
-					case OpCode.EXTERN:
-						infoLabel.text = string.Format("{0}, \"{1}\"", info.opCode, program.Heap.GetHeapVariable(info.argument));
-						break;
-					default:
-						infoLabel.text = info.opCode.ToString();
-						break;
+					var symbol = program.EntryPoints.GetSymbolFromAddress(info.argument);
+					if(program.EntryPoints.HasExportedSymbol(symbol))
+					{
+						infoLabel.text = ".export " + symbol + ":";
+					}
+					else infoLabel.text = symbol + ":";
 				}
-			}
-
-			private static string GetSymbol(IUdonSymbolTable symbols, uint address)
-			{
-				return symbols.TryGetSymbolFromAddress(address, out var symbol) ? symbol : string.Format("<0x{0:X8}>", address);
+				else
+				{
+					sb.Clear();
+					info.AppendInfo(sb, program);
+					infoLabel.text = sb.ToString();
+				}
 			}
 		}
 	}

@@ -1,5 +1,3 @@
-
-using Katsudon.Builder;
 using VRC.Udon.VM.Common;
 
 namespace Katsudon.Builder
