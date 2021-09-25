@@ -189,7 +189,7 @@ namespace Katsudon.Builder
 						variable = reference.GetValueVariable();
 					}
 				}
-				if((variableInfo.usageMode & VariableMeta.UsageMode.In) != 0)
+				if((variableInfo.usageMode & (VariableMeta.UsageMode.In | VariableMeta.UsageMode.OutOnly)) == VariableMeta.UsageMode.In)
 				{
 					if(variableInfo.variable is IReferenceVariable reference)
 					{

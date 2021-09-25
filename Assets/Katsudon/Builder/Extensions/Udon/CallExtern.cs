@@ -30,7 +30,19 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 						if(index >= 0)
 						{
 							var parameter = parameters[index].ParameterType;
-							arguments.Add(iterator.Current.UseType(parameter).Mode(parameter.IsByRef ? (VariableMeta.UsageMode.In | VariableMeta.UsageMode.Out) : VariableMeta.UsageMode.None));
+							var mode = VariableMeta.UsageMode.In;
+							if(parameter.IsByRef)
+							{
+								if(parameters[index].IsOut)
+								{
+									mode = VariableMeta.UsageMode.OutOnly;
+								}
+								else if(!parameters[index].IsIn)
+								{
+									mode |= VariableMeta.UsageMode.Out;
+								}
+							}
+							arguments.Add(iterator.Current.UseType(parameter).Mode(mode));
 						}
 						else
 						{

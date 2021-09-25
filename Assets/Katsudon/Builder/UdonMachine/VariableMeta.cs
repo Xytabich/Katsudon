@@ -27,7 +27,8 @@ namespace Katsudon.Builder
 		{
 			None = 0,
 			In = 1,
-			Out = 2
+			Out = 2,
+			OutOnly = 4 | Out
 		}
 	}
 
