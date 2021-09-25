@@ -9,6 +9,7 @@ namespace Katsudon.Builder.Methods
 	public class MethodDescriptor : IMethodDescriptor, IMethodProgramRW, IDisposable
 	{
 		public Operation currentOp => operations[_index];
+		public bool isLastOp => _index >= (operations.Count - 1);
 
 		public bool isStatic { get; private set; }
 		public bool stackIsEmpty => stack.Count < 1;
@@ -501,6 +502,8 @@ namespace Katsudon.Builder.Methods
 	public interface IMethodProgram
 	{
 		Operation currentOp { get; }
+
+		bool isLastOp { get; }
 
 		bool Next();
 

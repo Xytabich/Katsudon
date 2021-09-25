@@ -9,12 +9,13 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
+			// TODO: custom return builder
 			var retVariable = method.GetReturnVariable();
 			if(retVariable != null && !method.stackIsEmpty)
 			{
 				method.machine.AddCopy(method.PopStack(), retVariable, retVariable.type);
 			}
-			method.machine.AddJump(method.GetReturnAddress());
+			if(!method.isLastOp) method.machine.AddJump(method.GetReturnAddress());
 			return true;
 		}
 

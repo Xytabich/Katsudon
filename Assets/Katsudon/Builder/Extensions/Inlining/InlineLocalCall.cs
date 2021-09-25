@@ -81,7 +81,6 @@ namespace Katsudon.Builder.AsmOpCodes
 			var returnAddress = new EmbedAddressLabel();
 
 			bodyBuilder.Build(methodInfo, arguments, localVariables, outVariable, returnAddress, method);
-
 			method.machine.ApplyLabel(returnAddress);
 
 			if(outVariable != null)

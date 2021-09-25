@@ -63,7 +63,6 @@ namespace Katsudon.Builder.Extensions.Inlining
 			var returnAddress = new EmbedAddressLabel();
 
 			bodyBuilder.Build(methodInfo, arguments, localsCache, outVariable, returnAddress, method);
-
 			method.machine.ApplyLabel(returnAddress);
 
 			if(outVariable != null)
