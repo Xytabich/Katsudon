@@ -16,7 +16,7 @@ All the highlights are on the [wiki](https://github.com/Xytabich/Katsudon/wiki).
 
 ### Remarks
 - Katsudon was designed to automatically support Udon's functionality, so there are such things as a dynamically updated list of udon functionality (also known as Udon cache).
-Therefore, you can often use Katsudon for the latest versions of the VRChat SDK. But in the event of a new functionality, updates will be carried out.
+Therefore, you can often use Katsudon for the latest versions of the VRChat SDK. But if new functionality appears, updates will be carried out.
 - At the moment this utility is in the alpha stage, so many things may not be implemented and some parts may not be optimized.
 
 [![Discord](https://img.shields.io/badge/Discord-Xytabich%20Server-blueviolet?style=social&logo=discord)](https://discord.gg/vp5k7ttbdf) - For questions, suggestions and bug reports
