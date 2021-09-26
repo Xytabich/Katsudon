@@ -45,104 +45,102 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 					}
 					includeInactive = method.PopStack();
 				}
-				IVariable typeVariable;
-
-				bool isGameObject = methodInfo.DeclaringType == typeof(GameObject);
-
-				if(methodInfo.IsGenericMethod)
-				{
-					var searchType = methodInfo.GetGenericArguments()[0];
-					if(Utils.IsUdonAsm(searchType))
-					{
-						var targetVariable = method.PopStack();
-						BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
-							method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
-							includeInactive, method.GetOrPushOutVariable(searchType)
-						);
-						return true;
-					}
-					else if(searchType != typeof(UdonBehaviour))
-					{
-						var targetVariable = method.PopStack();
-						ExternCall(method,
-							GetGenericExternName(isGameObject, includeInactive == null, getterName),
-							targetVariable, method.machine.GetConstVariable(searchType, typeof(Type)),
-							true, includeInactive,
-							method.GetOrPushOutVariable(searchType)
-						);
-						return true;
-					}
-					else
-					{
-						typeVariable = method.machine.GetConstVariable(searchType, typeof(Type));
-					}
-				}
-				else
+				IVariable typeVariable = null;
+				if(!methodInfo.IsGenericMethod)
 				{
 					typeVariable = method.PopStack();
 				}
-
-				{
-					var targetVariable = method.PopStack();
-
-					if(typeVariable is IConstVariable constVariable)//TODO: move to GetComponentT part
-					{
-						if(Utils.IsUdonAsm((Type)constVariable.value))
-						{
-							BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
-								typeVariable, includeInactive, method.GetOrPushOutVariable(typeof(Component)));
-							return true;
-						}
-						else
-						{
-							ExternCall(method,
-								GetExternName(isGameObject, includeInactive == null, getterName),
-								targetVariable, typeVariable,
-								false, includeInactive,
-								method.GetOrPushOutVariable(typeof(Component))
-							);
-							return true;
-						}
-					}
-					else
-					{
-						var outVariable = method.GetOrPushOutVariable(typeof(Component));
-						/*
-						Component GetComponent(Type|Guid searchType)
-						{
-							if(searchType.GetType() != typeof(Guid)) return GetComponent(searchType);
-
-							// ... search by guid
-						}
-						*/
-						var typeOfType = method.GetTmpVariable(typeof(Type));
-						typeVariable.Allocate();
-						method.machine.AddExtern("SystemObject.__GetType__SystemType", typeOfType, typeVariable.OwnType());
-						var guidCondition = method.GetTmpVariable(typeof(bool));
-						method.machine.BinaryOperatorExtern(BinaryOperator.Inequality, typeOfType,
-							method.machine.GetConstVariable(typeof(Guid), typeof(Type)), guidCondition);
-						var guidSearchLabel = new EmbedAddressLabel();
-						method.machine.AddBranch(guidCondition, guidSearchLabel);
-
-						typeVariable.Allocate();
-						ExternCall(method,
-							GetExternName(isGameObject, includeInactive == null, getterName),
-							targetVariable, typeVariable,
-							false, includeInactive,
-							outVariable
-						);
-						var endLabel = new EmbedAddressLabel();
-						method.machine.AddJump(endLabel);
-
-						method.machine.ApplyLabel(guidSearchLabel);
-						BuildGetUdonComponent(method, targetVariable, isGameObject, getterName, typeVariable, includeInactive, outVariable);
-
-						method.machine.ApplyLabel(endLabel);
-						return true;
-					}
-				}
+				var targetVariable = method.PopStack();
+				BuildGetComponent(method, assemblies, methodInfo, getterName, targetVariable,
+				   typeVariable, includeInactive, (type) => method.GetOrPushOutVariable(type));
+				return true;
 			}
 			return false;
+		}
+
+		public static void BuildGetComponent(IMethodDescriptor method, AssembliesInfo assemblies, MethodInfo methodInfo,
+			string getterName, IVariable targetVariable, IVariable typeVariable, IVariable includeInactive, Func<Type, IVariable> outCtor)
+		{
+			bool isGameObject = methodInfo.DeclaringType == typeof(GameObject);
+			if(methodInfo.IsGenericMethod)
+			{
+				var searchType = methodInfo.GetGenericArguments()[0];
+				if(Utils.IsUdonAsm(searchType))
+				{
+					BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
+						method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
+						includeInactive, outCtor(searchType)
+					);
+					return;
+				}
+				else if(searchType != typeof(UdonBehaviour))
+				{
+					ExternCall(method,
+						GetGenericExternName(isGameObject, includeInactive == null, getterName),
+						targetVariable, method.machine.GetConstVariable(searchType, typeof(Type)),
+						true, includeInactive,
+						outCtor(searchType)
+					);
+					return;
+				}
+				else
+				{
+					typeVariable = method.machine.GetConstVariable(searchType, typeof(Type));
+				}
+			}
+
+			if(typeVariable is IConstVariable constVariable)//TODO: move to GetComponentT part
+			{
+				if(Utils.IsUdonAsm((Type)constVariable.value))
+				{
+					BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
+						typeVariable, includeInactive, outCtor(typeof(Component)));
+				}
+				else
+				{
+					ExternCall(method,
+						GetExternName(isGameObject, includeInactive == null, getterName),
+						targetVariable, typeVariable,
+						false, includeInactive,
+						outCtor(typeof(Component))
+					);
+				}
+			}
+			else
+			{
+				var outVariable = outCtor(typeof(Component));
+				/*
+				Component GetComponent(Type|Guid searchType)
+				{
+					if(searchType.GetType() != typeof(Guid)) return GetComponent(searchType);
+
+					// ... search by guid
+				}
+				*/
+				var typeOfType = method.GetTmpVariable(typeof(Type));
+				typeVariable.Allocate();
+				method.machine.AddExtern("SystemObject.__GetType__SystemType", typeOfType, typeVariable.OwnType());
+				var guidCondition = method.GetTmpVariable(typeof(bool));
+				method.machine.BinaryOperatorExtern(BinaryOperator.Inequality, typeOfType,
+					method.machine.GetConstVariable(typeof(Guid), typeof(Type)), guidCondition);
+				var guidSearchLabel = new EmbedAddressLabel();
+				method.machine.AddBranch(guidCondition, guidSearchLabel);
+
+				typeVariable.Allocate();
+				ExternCall(method,
+					GetExternName(isGameObject, includeInactive == null, getterName),
+					targetVariable, typeVariable,
+					false, includeInactive,
+					outVariable
+				);
+				var endLabel = new EmbedAddressLabel();
+				method.machine.AddJump(endLabel);
+
+				method.machine.ApplyLabel(guidSearchLabel);
+				BuildGetUdonComponent(method, targetVariable, isGameObject, getterName, typeVariable, includeInactive, outVariable);
+
+				method.machine.ApplyLabel(endLabel);
+			}
 		}
 
 		private static string GetExternName(bool gameObject, bool defaultCall, string getterName)
