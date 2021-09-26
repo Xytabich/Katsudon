@@ -93,6 +93,41 @@ namespace Katsudon.Editor.Udon
 			UpdateReferencesContainer();
 		}
 
+		[MenuItem("Katsudon/Convert Scene")]
+		private static void ConvertAllToUdon()
+		{
+			if(EditorApplication.isPlaying) return;
+			var behaviours = GameObject.FindObjectsOfType<MonoBehaviour>();
+			var group = Undo.GetCurrentGroup();
+			var initBehaviours = CollectionCache.GetList<UdonBehaviour>();
+			var initProxies = CollectionCache.GetList<MonoBehaviour>();
+			foreach(var proxy in behaviours)
+			{
+				if((proxy.hideFlags & HideFlags.DontSave) != 0) continue;
+				if(Utils.IsUdonAsm(proxy.GetType()))
+				{
+					var behaviour = GetBehaviourByProxy(proxy);
+					if(behaviour == null)
+					{
+						proxy.enabled = false;
+						proxy.hideFlags = SERVICE_OBJECT_FLAGS;
+
+						behaviour = proxy.gameObject.AddComponent<UdonBehaviour>();
+						RegisterPair(behaviour, proxy);
+						initBehaviours.Add(behaviour);
+						initProxies.Add(behaviour);
+					}
+				}
+			}
+			for(int i = 0; i < initBehaviours.Count; i++)
+			{
+				ProxyUtils.InitBehaviour(initBehaviours[i], initProxies[i]);
+			}
+			CollectionCache.Release(initBehaviours);
+			CollectionCache.Release(initProxies);
+			Undo.CollapseUndoOperations(group);
+		}
+
 		private static void OnPlayModeChanged(PlayModeStateChange state)
 		{
 			if(state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.EnteredEditMode)
