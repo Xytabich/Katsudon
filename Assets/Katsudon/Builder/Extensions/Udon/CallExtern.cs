@@ -35,7 +35,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 							{
 								if(parameters[index].IsOut)
 								{
-									mode = VariableMeta.UsageMode.OutOnly;
+									mode = VariableMeta.UsageMode.OutOnly | VariableMeta.UsageMode.Out;
 								}
 								else if(!parameters[index].IsIn)
 								{

@@ -124,7 +124,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			void IVariable.Allocate(int count)
 			{
-				variable.Allocate();
+				variable.Allocate(count);
 			}
 
 			void IVariable.Use()

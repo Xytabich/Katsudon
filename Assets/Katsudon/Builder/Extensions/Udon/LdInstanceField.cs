@@ -91,6 +91,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 			public void StoreValue(IUdonProgramBlock block)
 			{
+				tmpVariable.Allocate();
 				block.machine.SetVariableExtern(targetVariable, variableName, tmpVariable);
 			}
 

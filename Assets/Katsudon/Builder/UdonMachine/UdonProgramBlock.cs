@@ -219,6 +219,7 @@ namespace Katsudon.Builder
 					var reference = referencesStack.Pop();
 					referencesStackStart.Push(referencesStack.Count);
 					reference.StoreValue(block);
+					reference.Use();
 					referencesStackStart.Pop();
 				}
 			}

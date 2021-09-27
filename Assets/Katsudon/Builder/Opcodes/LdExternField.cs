@@ -28,7 +28,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					if(method.currentOp.opCode == OpCodes.Ldflda && !string.IsNullOrEmpty(nameInfo.setterName))
 					{
 						method.PushStack(new ReferenceExternVariable(nameInfo.getterName, nameInfo.setterName,
-							method.GetTmpVariable(target.OwnType()).Reserve(), method.GetTmpVariable(field.FieldType)));
+							target, method.GetTmpVariable(field.FieldType)));
 					}
 					else
 					{
@@ -57,16 +57,18 @@ namespace Katsudon.Builder.AsmOpCodes
 			private string loadName;
 			private string storeName;
 			private ITmpVariable tmpVariable;
-			private ITmpVariable targetVariable;
+			private IVariable targetVariable;
+			private bool ignoreOnUse = false;
 
-			public ReferenceExternVariable(string loadName, string storeName, ITmpVariable targetVariable, ITmpVariable tmpVariable)
+			public ReferenceExternVariable(string loadName, string storeName, IVariable targetVariable, ITmpVariable tmpVariable)
 			{
 				this.loadName = loadName;
 				this.storeName = storeName;
 				this.tmpVariable = tmpVariable;
 				this.targetVariable = targetVariable;
 
-				tmpVariable.onRelease += ReleaseValue;
+				tmpVariable.onUse += OnUse;
+				tmpVariable.onRelease += OnRelease;
 			}
 
 			public void Use()
@@ -74,32 +76,46 @@ namespace Katsudon.Builder.AsmOpCodes
 				tmpVariable.Use();
 			}
 
-			private void ReleaseValue()
-			{
-				tmpVariable.onRelease -= ReleaseValue;
-				targetVariable.Release();
-			}
-
 			public void Allocate(int count = 1)
 			{
 				tmpVariable.Allocate(count);
+				targetVariable.Allocate(count);
 			}
 
 			public IVariable GetValueVariable() { return tmpVariable; }
 
 			public void LoadValue(IUdonProgramBlock block)
 			{
+				targetVariable.Allocate();
+				ignoreOnUse = true;
 				block.machine.AddExtern(loadName, tmpVariable, targetVariable.OwnType());
+				ignoreOnUse = false;
 			}
 
 			public void StoreValue(IUdonProgramBlock block)
 			{
-				block.machine.AddExtern(storeName, targetVariable.Mode(VariableMeta.UsageMode.Out), tmpVariable.OwnType());
+				tmpVariable.Allocate();
+				targetVariable.Allocate();
+				ignoreOnUse = true;
+				block.machine.AddExtern(storeName, targetVariable.Mode(VariableMeta.UsageMode.OutOnly | VariableMeta.UsageMode.Out), tmpVariable.OwnType());
+				ignoreOnUse = false;
 			}
 
 			void IVariable.SetAddress(uint address)
 			{
 				throw new NotImplementedException();
+			}
+
+			private void OnUse()
+			{
+				if(ignoreOnUse) return;
+				targetVariable.Use();
+			}
+
+			private void OnRelease()
+			{
+				tmpVariable.onUse -= OnUse;
+				tmpVariable.onRelease -= OnRelease;
 			}
 		}
 	}

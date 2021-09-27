@@ -19,11 +19,12 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		{
 			if(method.PeekStack(0) is ThisVariable)
 			{
+				bool isReference = method.currentOp.opCode == OpCodes.Ldflda;
 				FieldInfo field;
 				if(ILUtils.TryGetLdfld(method.currentOp, out field))
 				{
 					method.PopStack().Use();
-					method.PushStack(fieldsCollection.GetField(field), true);
+					method.PushStack(fieldsCollection.GetField(field), !isReference);
 					return true;
 				}
 			}

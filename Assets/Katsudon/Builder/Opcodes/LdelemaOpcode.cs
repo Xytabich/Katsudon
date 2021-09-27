@@ -83,6 +83,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			public void StoreValue(IUdonProgramBlock block)
 			{
+				tmpVariable.Allocate();
 				block.machine.AddExtern(storeName, arrayVariable.OwnType(), indexVariable.UseType(typeof(int)), tmpVariable.OwnType());
 			}
 
