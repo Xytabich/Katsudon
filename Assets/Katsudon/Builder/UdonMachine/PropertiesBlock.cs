@@ -4,7 +4,6 @@ using System.Text;
 using Katsudon.Builder.Helpers;
 using Katsudon.Builder.Variables;
 using Katsudon.Info;
-using VRC.Udon.Common;
 using VRC.Udon.Common.Interfaces;
 
 namespace Katsudon.Builder
@@ -118,79 +117,6 @@ namespace Katsudon.Builder
 				}
 			}
 		}
-
-#if KATSUDON_ENABLE_DPC
-		void IUAssemblyBlock.DirectProgramBuild(UdonProgramBuilder.UdonProgramContainer container)
-		{
-			var variablesTable = CreateVariablesTable();
-
-			int variablesCount;
-			var variables = variablesTable.GetVariables(out variablesCount);
-
-			var variableSymbols = CollectionCache.GetList<IUdonSymbol>();
-			var exportVariables = CollectionCache.GetList<string>();
-			var syncVariables = CollectionCache.GetList<IUdonSyncMetadata>();
-
-			for(var i = 0; i < variablesCount; i++)
-			{
-				if((variables[i] is IExportableVariable exportable) && exportable.export)
-				{
-					exportVariables.Add(exportable.name);
-				}
-			}
-
-			for(var i = 0; i < variablesCount; i++)
-			{
-				if((variables[i] is ISyncableVariable syncable) && syncable.syncMode != SyncMode.NotSynced)
-				{
-					syncVariables.Add(new UdonSyncMetadata(syncable.name, new List<IUdonSyncProperty> { new UdonSyncProperty("this", ConvertSync(syncable.syncMode)) }));
-				}
-			}
-
-			for(var i = 0; i < variablesCount; i++)
-			{
-				var variable = variables[i];
-				variableSymbols.Add(new UdonSymbol(variable.name, variable.type, variable.address));
-			}
-
-			container.syncMetadataTable = new UdonSyncMetadataTable(syncVariables);
-			CollectionCache.Release(syncVariables);
-
-			container.symbolTable = new UdonSymbolTable(variableSymbols, exportVariables);
-			CollectionCache.Release(variableSymbols);
-			CollectionCache.Release(exportVariables);
-
-			var heap = new UdonHeap((uint)variablesCount);
-			for(var i = 0; i < variablesCount; i++)
-			{
-				var variable = variables[i];
-				if((variable is ISignificantVariable significant) && significant.value != null)
-				{
-					heap.SetHeapVariable(variable.address, significant.value, variable.type);
-				}
-				else if((variable is ISelfPointingVariable selfPointer) && selfPointer.isSelf)
-				{
-					heap.SetHeapVariable(variable.address, new UdonGameObjectComponentHeapReference(selfPointer.type));
-				}
-				else
-				{
-					heap.SetHeapVariable(variable.address, null, variable.type);
-				}
-			}
-			container.heap = heap;
-			variablesTable.Dispose();
-		}
-
-		private static UdonSyncInterpolationMethod ConvertSync(SyncMode mode)
-		{
-			switch(mode)
-			{
-				case SyncMode.Linear: return UdonSyncInterpolationMethod.Linear;
-				case SyncMode.Smooth: return UdonSyncInterpolationMethod.Smooth;
-				default: return UdonSyncInterpolationMethod.None;
-			}
-		}
-#endif
 
 		private VariablesTable CreateVariablesTable()
 		{

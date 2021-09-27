@@ -71,14 +71,6 @@ namespace Katsudon.Builder
 
 		void IUAssemblyBlock.InitProgram(VRC.Udon.Common.Interfaces.IUdonProgram program) { }
 
-#if KATSUDON_ENABLE_DPC
-		void IUAssemblyBlock.DirectProgramBuild(UdonProgramBuilder.UdonProgramContainer container)
-		{
-			container.updateOrder = executionOrder;
-			machine.CompileDirect(methods, out container.byteCode, out container.entryPoints);
-		}
-#endif
-
 		int IComparer<IMethodBuilder>.Compare(IMethodBuilder x, IMethodBuilder y)
 		{
 			if(x.order == y.order) return x == y ? 0 : -1;
