@@ -296,7 +296,7 @@ namespace Katsudon.Editor
 				{
 					heapFieldInfoRoot.Add(new Label("Exported"));
 				}
-				var syncInfo = program.SyncMetadataTable.GetSyncMetadataFromSymbol(name);
+				var syncInfo = program.SyncMetadataTable.GetSyncMetadataFromSymbol(name);//TODO: .sync variable->proprty
 				if(syncInfo != null) heapFieldInfoRoot.Add(new Label("Sync: " + syncInfo.Properties[0].InterpolationAlgorithm));
 			}
 			heapFieldInfoRoot.Add(new Label("Type: " + program.Heap.GetHeapVariableType(address)));

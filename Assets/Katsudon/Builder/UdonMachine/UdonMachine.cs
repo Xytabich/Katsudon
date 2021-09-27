@@ -165,9 +165,9 @@ namespace Katsudon.Builder
 			}
 		}
 
-		public void Append(StringBuilder sb, IEnumerable<UBehMethodInfo> methods)
+		public void Append(StringBuilder sb, IReadOnlyCollection<UBehMethodInfo> methods)
 		{
-			var sortedMethods = new List<UBehMethodInfo>(methods);
+			var sortedMethods = CollectionCache.GetList<UBehMethodInfo>(methods);
 			sortedMethods.Sort((a, b) => a.address.CompareTo(b.address));
 
 			uint address = 0;
@@ -224,6 +224,7 @@ namespace Katsudon.Builder
 				sb.AppendLine();
 				address += GetOpSize(op.opCode);
 			}
+			CollectionCache.Release(sortedMethods);
 		}
 
 		private static uint GetOpSize(OpCode op)

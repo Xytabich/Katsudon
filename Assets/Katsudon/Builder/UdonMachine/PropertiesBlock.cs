@@ -8,12 +8,12 @@ using VRC.Udon.Common.Interfaces;
 
 namespace Katsudon.Builder
 {
-	public class PropertiesBlock : IUAssemblyBlock, INamePicker
+	public class PropertiesBlock : IUAssemblyBlock, INamePicker, IDisposable
 	{
 		int IUAssemblyBlock.order => 0;
 
-		private List<IVariable> variables = new List<IVariable>();
-		private VariablesTable variablesTable;
+		private List<IVariable> variables;
+		private VariablesTable variablesTable = null;
 		private Dictionary<string, int> namesCounter;
 
 		private IReadOnlyDictionary<Type, string> typeNames;
@@ -23,6 +23,14 @@ namespace Katsudon.Builder
 		{
 			this.collection = buidersCollection;
 			this.namesCounter = namesCounter;
+
+			variables = CollectionCache.GetList<IVariable>();
+		}
+
+		public void Dispose()
+		{
+			CollectionCache.Release(variables);
+			variablesTable?.Dispose();
 		}
 
 		public void AddVariable(IVariable variable)
@@ -52,26 +60,7 @@ namespace Katsudon.Builder
 
 		void IUAssemblyBlock.AppendCode(StringBuilder builder)
 		{
-			variablesTable = new VariablesTable(this, variables.Count);
-
-			var deferredVariables = new List<IVariable>(variables.Count);
-			foreach(var variable in variables)
-			{
-				if(variable is IFixedVariableAddress)
-				{
-					variablesTable.SetFixed(variable.address);
-					AddVariable(variable, variablesTable);
-				}
-				else
-				{
-					deferredVariables.Add(variable);
-				}
-			}
-
-			for(var i = 0; i < deferredVariables.Count; i++)
-			{
-				AddVariable(deferredVariables[i], variablesTable);
-			}
+			variablesTable = CreateVariablesTable();
 
 			int variablesCount;
 			var addVariables = variablesTable.GetVariables(out variablesCount);
@@ -129,6 +118,31 @@ namespace Katsudon.Builder
 			}
 		}
 
+		private VariablesTable CreateVariablesTable()
+		{
+			var variablesTable = new VariablesTable(this, variables.Count);
+			var deferredVariables = CollectionCache.GetList<IVariable>();
+			foreach(var variable in variables)
+			{
+				if(variable is IFixedVariableAddress)
+				{
+					variablesTable.SetFixed(variable.address);
+					AddVariable(variable, variablesTable);
+				}
+				else
+				{
+					deferredVariables.Add(variable);
+				}
+			}
+
+			for(var i = 0; i < deferredVariables.Count; i++)
+			{
+				AddVariable(deferredVariables[i], variablesTable);
+			}
+			CollectionCache.Release(deferredVariables);
+			return variablesTable;
+		}
+
 		private void AddVariable(IVariable variable, VariablesTable table)
 		{
 			if(variable is IDeferredValue<IVariable>)
@@ -153,7 +167,7 @@ namespace Katsudon.Builder
 		string PickName(string baseName);
 	}
 
-	public class VariablesTable
+	public class VariablesTable : IDisposable
 	{
 		private PropertiesBlock properties;
 		private uint addressCounter = 0;
@@ -167,6 +181,7 @@ namespace Katsudon.Builder
 		{
 			this.properties = properties;
 			variables = new IVariable[capacity];
+			names = CollectionCache.GetSet<string>();
 		}
 
 		public void SetFixed(uint address)
@@ -198,6 +213,17 @@ namespace Katsudon.Builder
 				AddNewAddress(variable);
 			}
 			isFixed = false;
+		}
+
+		public IVariable[] GetVariables(out int count)
+		{
+			count = (int)addressCounter;
+			return variables;
+		}
+
+		public void Dispose()
+		{
+			CollectionCache.Release(names);
 		}
 
 		private void SetToAddress(IVariable variable, uint address)
@@ -237,12 +263,6 @@ namespace Katsudon.Builder
 				variables.CopyTo(tmp, 0);
 				variables = tmp;
 			}
-		}
-
-		public IVariable[] GetVariables(out int count)
-		{
-			count = (int)addressCounter;
-			return variables;
 		}
 	}
 }

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Katsudon.Builder
 {
-	public class ProgramBlock : IUAssemblyBlock, IComparer<ProgramBlock.IMethodBuilder>
+	public class ProgramBlock : IUAssemblyBlock, IComparer<ProgramBlock.IMethodBuilder>, IDisposable
 	{
 		public delegate void BuildMethodDelegate(UBehMethodInfo info, UdonMachine udonMachine, PropertiesBlock properties);
 
@@ -16,7 +16,7 @@ namespace Katsudon.Builder
 		private int executionOrder;
 
 		private SortedSet<IMethodBuilder> builders;
-		private List<UBehMethodInfo> methods = new List<UBehMethodInfo>();
+		private List<UBehMethodInfo> methods;
 
 		public ProgramBlock(UdonMachine machine, PropertiesBlock properties, int executionOrder)
 		{
@@ -25,6 +25,7 @@ namespace Katsudon.Builder
 			this.executionOrder = executionOrder;
 
 			builders = new SortedSet<IMethodBuilder>(this);
+			methods = CollectionCache.GetList<UBehMethodInfo>();
 		}
 
 		public void AddMethodBuilder(IMethodBuilder builder)
@@ -49,6 +50,11 @@ namespace Katsudon.Builder
 		{
 			machine.Build();
 			machine.ApplyProperties(properties);
+		}
+
+		public void Dispose()
+		{
+			CollectionCache.Release(methods);
 		}
 
 		void IUAssemblyBlock.AppendCode(StringBuilder builder)

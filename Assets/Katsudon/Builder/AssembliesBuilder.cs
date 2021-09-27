@@ -182,7 +182,6 @@ namespace Katsudon.Builder
 				typeOperationBuilders[i].Register(methodBodyBuilder, this);
 			}
 
-
 			var typeMeta = CollectionCache.GetList<UdonMethodMeta>();
 			var machine = new UdonMachine(typeMeta, classInfo, constCollection, externsCollection, fieldsCollection);
 			var programBlock = new ProgramBlock(machine, propertiesBlock, executionOrder);
@@ -226,6 +225,9 @@ namespace Katsudon.Builder
 			RemoveModule<AsmTypeInfo>();
 			RemoveModule<FieldsCollection>();
 			RemoveModule<MethodsInstance>();
+
+			propertiesBlock.Dispose();
+			programBlock.Dispose();
 
 			var programAsset = AssetDatabase.LoadAssetAtPath<SerializedUdonProgramAsset>(programPath);
 			if(programAsset == null)
