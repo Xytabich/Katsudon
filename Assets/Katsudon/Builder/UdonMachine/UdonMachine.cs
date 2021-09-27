@@ -4,6 +4,8 @@ using System.Text;
 using Katsudon.Builder.Methods;
 using Katsudon.Info;
 using UnityEngine;
+using VRC.Udon.Common;
+using VRC.Udon.Common.Interfaces;
 using VRC.Udon.VM.Common;
 
 namespace Katsudon.Builder
@@ -226,6 +228,79 @@ namespace Katsudon.Builder
 			}
 			CollectionCache.Release(sortedMethods);
 		}
+
+#if KATSUDON_ENABLE_DPC
+		public void CompileDirect(IReadOnlyCollection<UBehMethodInfo> methods, out byte[] byteCode, out IUdonSymbolTable entryPoints)
+		{
+			var assembly = CollectionCache.GetList<uint>();
+			var sortedMethods = CollectionCache.GetList<UBehMethodInfo>(methods);
+			sortedMethods.Sort((a, b) => a.address.CompareTo(b.address));
+
+			uint address = 0;
+			int methodIndex = 0;
+			uint nextMethodAddress = sortedMethods[methodIndex].address;
+			var exportedMethods = CollectionCache.GetSet<string>();
+			var methodSymbols = CollectionCache.GetList<IUdonSymbol>();
+			foreach(var op in operations)
+			{
+				if(address == nextMethodAddress)
+				{
+					var method = sortedMethods[methodIndex];
+					if(method.export)
+					{
+						if(!exportedMethods.Add(method.name))
+						{
+							throw new Exception(string.Format("An exported method named '{0}' already exists", method.name));
+						}
+						methodSymbols.Add(new UdonSymbol(method.name, null, address));
+					}
+					methodIndex++;
+					if(methodIndex < sortedMethods.Count)
+					{
+						nextMethodAddress = sortedMethods[methodIndex].address;
+					}
+					else nextMethodAddress = UdonMachine.LAST_ALIGNED_ADDRESS;
+				}
+				assembly.Add((uint)op.opCode);
+				address += sizeof(uint);
+				switch(op.opCode)
+				{
+					case OpCode.PUSH:
+					case OpCode.JUMP_INDIRECT:
+					case OpCode.EXTERN:
+					case OpCode.JUMP:
+					case OpCode.JUMP_IF_FALSE:
+						assembly.Add(((IAddressLabel)op.argument).address);
+						address += sizeof(uint);
+						break;
+				}
+			}
+			CollectionCache.Release(sortedMethods);
+
+			uint len = (uint)assembly.Count * 4;
+			byteCode = new byte[len];
+			int index = 0;
+			for(uint i = 0; i < len; i += 4, index++)
+			{
+				WriteUInt(byteCode, i, assembly[index]);
+			}
+			CollectionCache.Release(assembly);
+
+			entryPoints = new UdonSymbolTable(methodSymbols, exportedMethods);
+			CollectionCache.Release(exportedMethods);
+		}
+
+		private static void WriteUInt(byte[] buffer, uint index, uint value)
+		{
+			unchecked
+			{
+				buffer[index] = (byte)((value >> 24) & 0xFF);
+				buffer[index + 1] = (byte)((value >> 16) & 0xFF);
+				buffer[index + 2] = (byte)((value >> 8) & 0xFF);
+				buffer[index + 3] = (byte)(value & 0xFF);
+			}
+		}
+#endif
 
 		private static uint GetOpSize(OpCode op)
 		{

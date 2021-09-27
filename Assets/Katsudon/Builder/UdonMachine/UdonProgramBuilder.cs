@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
+using VRC.Udon.Common;
 using VRC.Udon.Common.Interfaces;
 using VRC.Udon.Editor;
+using VRC.Udon.UAssembly.Assembler;
 
 namespace Katsudon.Builder
 {
@@ -35,11 +38,45 @@ namespace Katsudon.Builder
 			return program;
 		}
 
+#if KATSUDON_ENABLE_DPC
+		public IUdonProgram DirectProgramBuild()
+		{
+			var container = new UdonProgramContainer();
+			foreach(var block in blocks)
+			{
+				block.DirectProgramBuild(container);
+			}
+			return container.ToProgram();
+		}
+#endif
+
 		int IComparer<IUAssemblyBlock>.Compare(IUAssemblyBlock x, IUAssemblyBlock y)
 		{
 			if(x.order == y.order) return x == y ? 0 : -1;
 			return x.order.CompareTo(y.order);
 		}
+
+#if KATSUDON_ENABLE_DPC
+		public class UdonProgramContainer
+		{
+			private static string identifier = (string)typeof(UAssemblyAssembler).GetField("INSTRUCTION_SET_IDENTIFIER",
+				BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.FlattenHierarchy).GetValue(null);
+			private static int version = (int)typeof(UAssemblyAssembler).GetField("INSTRUCTION_SET_VERSION",
+				BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.FlattenHierarchy).GetValue(null);
+
+			public byte[] byteCode;
+			public IUdonHeap heap;
+			public IUdonSymbolTable entryPoints;
+			public IUdonSymbolTable symbolTable;
+			public IUdonSyncMetadataTable syncMetadataTable;
+			public int updateOrder;
+
+			public IUdonProgram ToProgram()
+			{
+				return new UdonProgram(identifier, version, byteCode, heap, entryPoints, symbolTable, syncMetadataTable, updateOrder);
+			}
+		}
+#endif
 	}
 
 	public interface IUAssemblyBlock
@@ -49,5 +86,9 @@ namespace Katsudon.Builder
 		void AppendCode(StringBuilder builder);
 
 		void InitProgram(IUdonProgram program);
+
+#if KATSUDON_ENABLE_DPC
+		void DirectProgramBuild(UdonProgramBuilder.UdonProgramContainer container);
+#endif
 	}
 }

@@ -215,8 +215,12 @@ namespace Katsudon.Builder
 			constCollection.Apply(propertiesBlock);
 			externsCollection.Apply(propertiesBlock);
 
+#if KATSUDON_ENABLE_DPC
+			var program = builder.DirectProgramBuild();
+#else
 			cachedSb.Clear();
 			var program = builder.Build(cachedSb);
+#endif
 
 			for(int i = typeOperationBuilders.Count - 1; i >= 0; i--)
 			{
