@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Katsudon.Builder.Helpers;
 using Katsudon.Info;
+using VRC.Udon;
 
 namespace Katsudon.Builder
 {
@@ -20,7 +21,32 @@ namespace Katsudon.Builder
 				DeferredValueVariable variable;
 				if(info.syncMode != SyncMode.NotSynced)
 				{
-					variable = new SyncableVariable(info.name, info.field.FieldType, (info.flags & AsmFieldInfo.Flags.Export) != 0, info.syncMode);
+					SyncMode mode;
+					switch(info.syncMode)
+					{
+						case SyncMode.Linear:
+							if(!UdonNetworkTypes.CanSyncLinear(info.field.FieldType))
+							{
+								throw new Exception(string.Format("Field `{0}:{1}` doesn't support {2} synchronization", info.field.DeclaringType, info.field, info.syncMode));
+							}
+							mode = SyncMode.Linear;
+							break;
+						case SyncMode.Smooth:
+							if(!UdonNetworkTypes.CanSyncSmooth(info.field.FieldType))
+							{
+								throw new Exception(string.Format("Field `{0}:{1}` doesn't support {2} synchronization", info.field.DeclaringType, info.field, info.syncMode));
+							}
+							mode = SyncMode.Smooth;
+							break;
+						default:
+							if(!UdonNetworkTypes.CanSync(info.field.FieldType))
+							{
+								throw new Exception(string.Format("Field `{0}:{1}` cannot be synchronized by Udon", info.field.DeclaringType, info.field));
+							}
+							mode = SyncMode.None;
+							break;
+					}
+					variable = new SyncableVariable(info.name, info.field.FieldType, (info.flags & AsmFieldInfo.Flags.Export) != 0, mode);
 				}
 				else
 				{
