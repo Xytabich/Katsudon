@@ -223,6 +223,11 @@ namespace Katsudon.Info
 			return info;
 		}
 
+		public override string ToString()
+		{
+			return type.ToString();
+		}
+
 		private string PickFieldName(string name, bool unique = true)
 		{
 			int counter = GetCounter(true, name).PickNumber();

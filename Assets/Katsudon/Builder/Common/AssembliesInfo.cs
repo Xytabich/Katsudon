@@ -175,7 +175,10 @@ namespace Katsudon.Info
 			var inherits = new HashSet<AsmTypeInfo>();
 			foreach(var interfaceType in type.GetInterfaces())
 			{
-				inherits.UnionWith(GetTypeInfo(interfaceType).GetInheritance());
+				if(typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaceType)) continue;
+				var interfaceInfo = GetTypeInfo(interfaceType);
+				inherits.Add(interfaceInfo);
+				inherits.UnionWith(interfaceInfo.GetInheritance());
 			}
 
 			var types = inherits.ToArray();
@@ -195,12 +198,16 @@ namespace Katsudon.Info
 			var inherits = new HashSet<AsmTypeInfo>();
 			foreach(var interfaceType in type.GetInterfaces())
 			{
-				inherits.UnionWith(GetTypeInfo(interfaceType).GetInheritance());
+				if(typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaceType)) continue;
+				var interfaceInfo = GetTypeInfo(interfaceType);
+				inherits.Add(interfaceInfo);
+				inherits.UnionWith(interfaceInfo.GetInheritance());
 			}
 
 			if(type.BaseType != typeof(MonoBehaviour))
 			{
 				var baseInfo = GetTypeInfo(type.BaseType);
+				inherits.Add(baseInfo);
 				inherits.UnionWith(baseInfo.GetInheritance());
 
 				hierarhy.AddRange(baseInfo.GetClassHierarhy());

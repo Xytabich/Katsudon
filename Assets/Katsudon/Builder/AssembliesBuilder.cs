@@ -121,14 +121,9 @@ namespace Katsudon.Builder
 			}
 
 			List<Guid> inheritedFromGuids = new List<Guid>();
-			for(Type t = classType; t != typeof(MonoBehaviour); t = t.BaseType)
+			foreach(var typeInfo in classInfo.GetInheritance())
 			{
-				if(t != classType) inheritedFromGuids.Add(assembliesInfo.GetTypeInfo(t).guid);
-				var interfaces = t.GetInterfaces();
-				for(var i = 0; i < interfaces.Length; i++)
-				{
-					inheritedFromGuids.Add(assembliesInfo.GetTypeInfo(interfaces[i]).guid);
-				}
+				inheritedFromGuids.Add(typeInfo.guid);
 			}
 
 			var buildOrder = new List<MethodInfo>();
@@ -245,6 +240,7 @@ namespace Katsudon.Builder
 		{
 			for(var i = 0; i < interfaces.Length; i++)
 			{
+				if(typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaces[i])) continue;
 				var map = type.GetInterfaceMap(interfaces[i]);
 				var imethods = map.InterfaceMethods;
 				var dmethods = map.TargetMethods;
