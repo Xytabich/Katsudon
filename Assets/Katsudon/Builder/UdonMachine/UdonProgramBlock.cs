@@ -200,12 +200,9 @@ namespace Katsudon.Builder
 					}
 
 					var type = variableInfo.preferredType;
-					if(type != variable.type && NumberCodeUtils.IsConvertible(type))
+					if(type != variable.type && convertersList.TryConvert(block, variable, type, out var converted))
 					{
-						if(convertersList.TryConvert(block, variable, type, out var converted))
-						{
-							variable = converted;
-						}
+						variable = converted;
 					}
 				}
 				udonMachine.AddOpcode(OpCode.PUSH, variable.Used());

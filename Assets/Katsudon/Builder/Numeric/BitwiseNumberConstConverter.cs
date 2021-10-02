@@ -5,33 +5,25 @@ namespace Katsudon.Builder.Variables
 	/// <summary>
 	/// Converts one constant number to another bit by bit.
 	/// </summary>
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class BitwiseNumberConstConverter : IPrimitiveConverter
 	{
 		public int order => 90;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
-			if(!(variable is IConstVariable constVariable))
-			{
-				converted = null;
-				return false;
-			}
-			var toCode = NumberCodeUtils.GetCode(toType);
-			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
-			{
-				converted = null;
-				return false;
-			}
+			if(fromPrimitive == TypeCode.Object) return null;
+			if(!toType.IsPrimitive) return null;
+			if(!NumberCodeUtils.IsInteger(toPrimitive)) return null;
+			if(!(variable is IConstVariable constVariable)) return null;
 
-			if(NumberCodeUtils.IsInteger(toCode))
+			if(NumberCodeUtils.IsInteger(toPrimitive))
 			{
-				var fromCode = NumberCodeUtils.GetCode(constVariable.value.GetType());
 				object outValue = constVariable.value;
-				if(NumberCodeUtils.IsUnsigned(fromCode))
+				if(NumberCodeUtils.IsUnsigned(fromPrimitive))
 				{
 					ulong value = Convert.ToUInt64(constVariable.value);
-					switch(toCode)
+					switch(toPrimitive)
 					{
 						case TypeCode.Byte: outValue = (byte)value; break;
 						case TypeCode.SByte: outValue = (sbyte)value; break;
@@ -46,7 +38,7 @@ namespace Katsudon.Builder.Variables
 				else
 				{
 					long value = Convert.ToInt64(constVariable.value);
-					switch(toCode)
+					switch(toPrimitive)
 					{
 						case TypeCode.Byte: outValue = (byte)value; break;
 						case TypeCode.SByte: outValue = (sbyte)value; break;
@@ -58,13 +50,12 @@ namespace Katsudon.Builder.Variables
 						case TypeCode.UInt64: outValue = (ulong)value; break;
 					}
 				}
-				converted = block.machine.GetConstVariable(outValue);
+				return block.machine.GetConstVariable(outValue);
 			}
 			else
 			{
-				converted = block.machine.GetConstVariable(Convert.ChangeType(constVariable.value, toType));
+				return block.machine.GetConstVariable(Convert.ChangeType(constVariable.value, toType));
 			}
-			return true;
 		}
 
 		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)

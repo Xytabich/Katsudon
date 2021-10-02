@@ -2,31 +2,30 @@ using System;
 
 namespace Katsudon.Builder.Extensions.EnumExtension
 {
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class CustomEnumConverter : IPrimitiveConverter
 	{
 		public int order => 50;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
-			if(typeof(Enum).IsAssignableFrom(toType))
+			if(fromPrimitive == TypeCode.Object) return null;
+			if(toType.IsEnum)
 			{
+				if(!variable.type.IsPrimitive) return null;
 				if(!Utils.IsUdonType(toType) && Enum.GetUnderlyingType(toType) == variable.type)
 				{
-					converted = variable;
-					return true;
+					return variable;
 				}
 			}
-			if(typeof(Enum).IsAssignableFrom(variable.type))
+			if(variable.type.IsEnum)
 			{
 				if(!Utils.IsUdonType(variable.type) && Enum.GetUnderlyingType(variable.type) == toType)
 				{
-					converted = variable;
-					return true;
+					return variable;
 				}
 			}
-			converted = null;
-			return false;
+			return null;
 		}
 
 		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)

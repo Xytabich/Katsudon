@@ -6,50 +6,46 @@ namespace Katsudon.Builder.Variables
 	/// <summary>
 	/// Builds a converter that converts one number to another bit by bit
 	/// </summary>
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class BitwiseNumberConverter : IPrimitiveConverter
 	{
 		public int order => 100;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable inValue, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
-			var toCode = NumberCodeUtils.GetCode(toType);
-			if(!NumberCodeUtils.IsPrimitive(toCode) || !NumberCodeUtils.IsInteger(toCode))
-			{
-				converted = null;
-				return false;
-			}
+			if(fromPrimitive == TypeCode.Object) return null;
+			if(!toType.IsPrimitive) return null;
+			if(!NumberCodeUtils.IsInteger(toPrimitive)) return null;
 
-			var value = inValue;
-			var fromCode = Type.GetTypeCode(value.type);
+			var value = variable;
 			if(!value.type.IsPrimitive)
 			{
-				var primitiveType = NumberCodeUtils.ToType(fromCode);
+				var primitiveType = NumberCodeUtils.ToType(fromPrimitive);
 				value = block.GetTmpVariable(primitiveType);
-				block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), primitiveType), value, inValue.OwnType());
+				block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), primitiveType), value, variable.OwnType());
 			}
 
-			var fromUnsigned = NumberCodeUtils.IsUnsigned(fromCode);
-			var toUnsigned = NumberCodeUtils.IsUnsigned(toCode);
+			var fromUnsigned = NumberCodeUtils.IsUnsigned(fromPrimitive);
+			var toUnsigned = NumberCodeUtils.IsUnsigned(toPrimitive);
 
-			var fromSize = NumberCodeUtils.GetSize(fromCode);
-			var toSize = NumberCodeUtils.GetSize(toCode);
+			var fromSize = NumberCodeUtils.GetSize(fromPrimitive);
+			var toSize = NumberCodeUtils.GetSize(toPrimitive);
 
 			var fromVariable = value;
 			if(toSize > fromSize)
 			{
 				if(fromUnsigned || !toUnsigned)// unsigned>signed, signed>signed, unsigned>unsigned
 				{
-					converted = block.GetTmpVariable(toType);
+					var converted = block.GetTmpVariable(toType);
 					block.machine.ConvertExtern(fromVariable, converted);
-					return true;
+					return converted;
 				}
 				else
 				{
-					fromCode = NumberCodeUtils.ToSigned(toCode);
-					fromVariable = block.GetTmpVariable(NumberCodeUtils.ToType(fromCode));
+					fromPrimitive = NumberCodeUtils.ToSigned(toPrimitive);
+					fromVariable = block.GetTmpVariable(NumberCodeUtils.ToType(fromPrimitive));
 					block.machine.ConvertExtern(value, fromVariable);
-					fromSize = NumberCodeUtils.GetSize(fromCode);
+					fromSize = NumberCodeUtils.GetSize(fromPrimitive);
 				}
 			}
 			else if(fromSize > toSize)
@@ -60,32 +56,30 @@ namespace Katsudon.Builder.Variables
 					var fromType = fromVariable.type;
 					block.machine.BinaryOperatorExtern(
 						BinaryOperator.LogicalAnd, fromVariable,
-						block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toCode), fromType)),
+						block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toPrimitive), fromType)),
 						fromType, () => (outVariable = block.GetTmpVariable(fromType))
 					);
-					converted = block.GetTmpVariable(toType);
+					var converted = block.GetTmpVariable(toType);
 					block.machine.ConvertExtern(outVariable, converted);
-					return true;
+					return converted;
 				}
 			}
 
 			if(fromUnsigned) // unsigned -> signed
 			{
-				converted = BuildConverter(block, fromVariable, toType,
-					block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toCode), fromVariable.type)),
+				return BuildConverter(block, fromVariable, toType,
+					block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toPrimitive), fromVariable.type)),
 					block.machine.GetConstVariable(Convert.ChangeType(1u << (toSize * 8 - 1), fromVariable.type)),
-					block.machine.GetConstVariable(NumberCodeUtils.GetMinValue(toCode))
+					block.machine.GetConstVariable(NumberCodeUtils.GetMinValue(toPrimitive))
 				);
-				return true;
 			}
 			else // signed -> unsigned
 			{
-				converted = BuildConverter(block, fromVariable, toType,
-					block.machine.GetConstVariable(NumberCodeUtils.GetMaxValue(fromCode)),
-					block.machine.GetConstVariable(NumberCodeUtils.GetMinValue(fromCode)),
+				return BuildConverter(block, fromVariable, toType,
+					block.machine.GetConstVariable(NumberCodeUtils.GetMaxValue(fromPrimitive)),
+					block.machine.GetConstVariable(NumberCodeUtils.GetMinValue(fromPrimitive)),
 					block.machine.GetConstVariable(Convert.ChangeType(1u << (fromSize * 8 - 1), toType))
 				);
-				return true;
 			}
 		}
 

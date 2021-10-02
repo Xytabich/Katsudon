@@ -18,13 +18,10 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var variable = method.PopStack();
-			if(NumberCodeUtils.IsConvertible(variable.type) && NumberCodeUtils.IsPrimitive(NumberCodeUtils.GetCode((Type)method.currentOp.argument)))
+			if(convertersList.TryConvert(method, variable, (Type)method.currentOp.argument, out var converted))
 			{
-				if(convertersList.TryConvert(method, variable, (Type)method.currentOp.argument, out var converted))
-				{
-					method.PushStack(converted);
-					return true;
-				}
+				method.PushStack(converted);
+				return true;
 			}
 			method.PushStack(variable);
 			return false;

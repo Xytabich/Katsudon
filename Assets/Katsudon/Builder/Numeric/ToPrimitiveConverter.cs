@@ -3,23 +3,21 @@ using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.Extensions.EnumExtension
 {
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class ToPrimitiveConverter : IPrimitiveConverter
 	{
-		public int order => 80;
+		public int order => 110;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
-			var toCode = NumberCodeUtils.GetCode(toType);
-			if(!NumberCodeUtils.IsPrimitive(toCode) || Type.GetTypeCode(variable.type) != toCode)
+			if(fromPrimitive == TypeCode.Object || !toType.IsPrimitive || fromPrimitive != toPrimitive)
 			{
-				converted = null;
-				return false;
+				return null;
 			}
 
-			converted = block.GetTmpVariable(toType);
+			var converted = block.GetTmpVariable(toType);
 			block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), toType), converted, variable.OwnType());
-			return true;
+			return converted;
 		}
 
 		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)

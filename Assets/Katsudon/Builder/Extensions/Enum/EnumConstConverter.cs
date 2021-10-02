@@ -2,26 +2,18 @@
 
 namespace Katsudon.Builder.Extensions.EnumExtension
 {
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class EnumConstConverter : IPrimitiveConverter
 	{
 		public int order => 50;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
-			if(!(variable is IConstVariable constVariable))
-			{
-				converted = null;
-				return false;
-			}
-			if(!typeof(Enum).IsAssignableFrom(toType))
-			{
-				converted = null;
-				return false;
-			}
+			if(fromPrimitive == TypeCode.Object) return null;
+			if(!toType.IsEnum) return null;
+			if(!(variable is IConstVariable constVariable)) return null;
 
-			converted = block.machine.GetConstVariable(Enum.ToObject(toType, constVariable.value));
-			return true;
+			return block.machine.GetConstVariable(Enum.ToObject(toType, constVariable.value));
 		}
 
 		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)

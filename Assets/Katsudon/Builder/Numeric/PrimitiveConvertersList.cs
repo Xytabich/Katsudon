@@ -14,11 +14,11 @@ namespace Katsudon.Builder
 			converters = new SortedSet<IPrimitiveConverter>(this);
 			modules.AddModule(this);
 
-			var sortedTypes = OrderedTypeUtils.GetOrderedSet<NumberConverterAttribute>();
+			var sortedTypes = OrderedTypeUtils.GetOrderedSet<PrimitiveConverterAttribute>();
 			var args = new object[] { this, modules };
 			foreach(var pair in sortedTypes)
 			{
-				var method = MethodSearch<NumberConverterDelegate>.FindStaticMethod(pair.Value, "Register");
+				var method = MethodSearch<PrimitiveConverterDelegate>.FindStaticMethod(pair.Value, "Register");
 				Assert.IsNotNull(method, string.Format("Number converter with type {0} does not have a Register method", pair.Value));
 				method.Invoke(null, args);
 			}
@@ -33,21 +33,33 @@ namespace Katsudon.Builder
 		/// Tries to convert the original numeric value to any other type.
 		/// Constants are converted immediately, but udon code is built for variables. 
 		/// </summary>
-		public bool TryConvert(IUdonProgramBlock block, IVariable value, Type toType, out IVariable converted)
+		public bool TryConvert(IUdonProgramBlock block, IVariable variable, Type toType, out IVariable converted)
 		{
-			if(value.type == toType)
+			converted = variable;
+			if(variable.type == toType) return true;
+
+			var toCode = Type.GetTypeCode(toType);
+			if(!NumberCodeUtils.IsPrimitiveInteger(toCode))
 			{
-				converted = value;
-				return true;
+				return false;
 			}
+
+			var fromCode = Type.GetTypeCode(variable.type);
+			if(!NumberCodeUtils.IsPrimitiveInteger(fromCode))
+			{
+				if(variable.type.IsValueType) return false;
+
+				fromCode = TypeCode.Object;// nullable object
+			}
+
 			foreach(var converter in converters)
 			{
-				if(converter.TryConvert(block, value, toType, out converted))
+				converted = converter.TryConvert(block, variable, fromCode, toCode, toType);
+				if(converted != null)
 				{
 					return true;
 				}
 			}
-			converted = null;
 			return false;
 		}
 
@@ -62,13 +74,13 @@ namespace Katsudon.Builder
 	{
 		int order { get; }
 
-		bool TryConvert(IUdonProgramBlock block, in IVariable value, Type toType, out IVariable converted);
+		IVariable TryConvert(IUdonProgramBlock block, in IVariable fromVariable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType);
 	}
 
-	public delegate void NumberConverterDelegate(PrimitiveConvertersList container, IModulesContainer modules);
+	public delegate void PrimitiveConverterDelegate(PrimitiveConvertersList container, IModulesContainer modules);
 
-	public sealed class NumberConverterAttribute : OrderedTypeAttributeBase
+	public sealed class PrimitiveConverterAttribute : OrderedTypeAttributeBase
 	{
-		public NumberConverterAttribute(int registerOrder = 0) : base(registerOrder) { }
+		public PrimitiveConverterAttribute(int registerOrder = 0) : base(registerOrder) { }
 	}
 }

@@ -10,15 +10,6 @@ namespace Katsudon
 			return TypeCode.Object;
 		}
 
-		public static bool IsConvertible(Type type)
-		{
-			if(typeof(IConvertible).IsAssignableFrom(type))
-			{
-				return IsPrimitive(Type.GetTypeCode(type));
-			}
-			return false;
-		}
-
 		public static bool IsPrimitive(TypeCode typeCode)
 		{
 			switch(typeCode)
@@ -35,6 +26,25 @@ namespace Katsudon
 				case TypeCode.Int64:
 				case TypeCode.UInt64:
 				case TypeCode.Double:
+					return true;
+			}
+			return false;
+		}
+
+		public static bool IsPrimitiveInteger(TypeCode typeCode)
+		{
+			switch(typeCode)
+			{
+				case TypeCode.Byte:
+				case TypeCode.SByte:
+				case TypeCode.Boolean:
+				case TypeCode.Int16:
+				case TypeCode.UInt16:
+				case TypeCode.Char:
+				case TypeCode.Int32:
+				case TypeCode.UInt32:
+				case TypeCode.Int64:
+				case TypeCode.UInt64:
 					return true;
 			}
 			return false;

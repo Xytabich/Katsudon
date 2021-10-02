@@ -3,35 +3,45 @@ using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.Variables
 {
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class BoolVariableConverter : IPrimitiveConverter
 	{
 		public int order => 81;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
-			if(toType != typeof(bool))
+			if(toType != typeof(bool)) return null;
+
+			var converted = block.GetTmpVariable(typeof(bool));
+			if(fromPrimitive == TypeCode.Char)
 			{
-				converted = null;
-				return false;
+				var tmp = block.GetTmpVariable(typeof(ushort));
+				if(variable.type.IsPrimitive)
+				{
+					block.machine.ConvertExtern(variable, tmp);
+				}
+				else
+				{
+					block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), typeof(bool)), tmp, variable.OwnType());
+				}
+				block.machine.ConvertExtern(tmp, converted);
 			}
-			converted = block.GetTmpVariable(typeof(bool));
-			if(variable.type.IsPrimitive)
-			{
-				block.machine.ConvertExtern(variable, converted);
-			}
-			else if(variable.type.IsValueType)
-			{
-				block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), typeof(bool)), converted, variable.OwnType());
-			}
-			else//TODO: definitely need a rework of primitive converters system, since clr processes raw data, which is actually links, numbers, etc.
+			else if(fromPrimitive == TypeCode.Object)
 			{
 				block.machine.AddExtern("SystemObject.__ReferenceEquals__SystemObject_SystemObject__SystemBoolean",
 					converted, variable.OwnType(), block.machine.GetConstVariable(null).OwnType());
 				converted.Allocate();
 				block.machine.UnaryOperatorExtern(UnaryOperator.UnaryNegation, converted, converted);
 			}
-			return true;
+			else if(variable.type.IsPrimitive)
+			{
+				block.machine.ConvertExtern(variable, converted);
+			}
+			else
+			{
+				block.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), typeof(bool)), converted, variable.OwnType());
+			}
+			return converted;
 		}
 
 		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)

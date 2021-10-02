@@ -2,20 +2,26 @@
 
 namespace Katsudon.Builder.Variables
 {
-	[NumberConverter]
+	[PrimitiveConverter]
 	public class BoolConstConverter : IPrimitiveConverter
 	{
 		public int order => 80;
 
-		public bool TryConvert(IUdonProgramBlock block, in IVariable variable, Type toType, out IVariable converted)
+		public IVariable TryConvert(IUdonProgramBlock block, in IVariable variable, TypeCode fromPrimitive, TypeCode toPrimitive, Type toType)
 		{
 			if(toType != typeof(bool) || !(variable is IConstVariable constVariable))
 			{
-				converted = null;
-				return false;
+				return null;
 			}
-			converted = block.machine.GetConstVariable(Convert.ToBoolean(constVariable.value));
-			return true;
+			if(fromPrimitive == TypeCode.Object)
+			{
+				return block.machine.GetConstVariable(constVariable.value != null);
+			}
+			if(fromPrimitive == TypeCode.Char)
+			{
+				return block.machine.GetConstVariable(Convert.ToChar(constVariable.value) != '\0');
+			}
+			return block.machine.GetConstVariable(Convert.ToBoolean(constVariable.value));
 		}
 
 		public static void Register(PrimitiveConvertersList container, IModulesContainer modules)
