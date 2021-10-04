@@ -22,7 +22,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var targetType = (Type)method.currentOp.argument;
-			if((targetType.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(targetType)) && Utils.IsUdonAsm(targetType))
+			if(Utils.IsUdonAsmBehaviourOrInterface(targetType))
 			{
 				var variable = method.PopStack();
 				var outVariable = method.GetOrPushOutVariable(targetType);

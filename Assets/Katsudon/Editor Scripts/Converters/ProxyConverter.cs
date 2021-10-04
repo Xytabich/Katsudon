@@ -27,7 +27,7 @@ namespace Katsudon.Editor.Converters
 
 		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed)
 		{
-			if(value is UdonBehaviour ubeh && (toType.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(toType)) && Utils.IsUdonAsm(toType))
+			if(value is UdonBehaviour ubeh && Utils.IsUdonAsmBehaviourOrInterface(toType))
 			{
 				var proxy = ProxyUtils.GetProxyByBehaviour(ubeh);
 				if(proxy == null || toType.IsAssignableFrom(proxy.GetType()))

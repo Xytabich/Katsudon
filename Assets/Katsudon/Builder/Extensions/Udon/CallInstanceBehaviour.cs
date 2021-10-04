@@ -22,9 +22,9 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
-			var declaringType = methodInfo.DeclaringType;
-			if(!Utils.IsUdonAsm(declaringType) || !(declaringType.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(declaringType))) return false;
-			var info = assembliesInfo.GetMethod(declaringType, methodInfo);
+			if(!Utils.IsUdonAsmBehaviourOrInterface(methodInfo.DeclaringType)) return false;
+
+			var info = assembliesInfo.GetMethod(methodInfo.DeclaringType, methodInfo);
 			if(info != null)
 			{
 				var target = method.PeekStack(info.parametersName.Length);

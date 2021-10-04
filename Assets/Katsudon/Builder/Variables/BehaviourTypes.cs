@@ -12,7 +12,7 @@ namespace Katsudon.Builder.Variables
 		bool IVariableBuilder.TryBuildVariable(IVariable variable, VariablesTable table)
 		{
 			var type = variable.type;
-			if((type.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(type)) && Utils.IsUdonAsm(type))
+			if(Utils.IsUdonAsmBehaviourOrInterface(type))
 			{
 				if(variable is ThisVariable)
 				{
@@ -29,7 +29,7 @@ namespace Katsudon.Builder.Variables
 
 		bool IVariableBuilder.TryConvert(Type type, ref object value)
 		{
-			if((type.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(type)) && Utils.IsUdonAsm(type))
+			if(Utils.IsUdonAsmBehaviourOrInterface(type))
 			{
 				throw new InvalidCastException(string.Format("{0} cannot be converted to UdonBehaviour", value));
 			}

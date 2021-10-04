@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using Katsudon.Builder.AsmOpCodes;
 using Katsudon.Builder.Helpers;
 using Katsudon.Info;
+using UnityEngine;
 
 namespace Katsudon.Builder.Extensions.DelegateExtension
 {
@@ -25,7 +26,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			if(!typeof(Delegate).IsAssignableFrom(ctorInfo.DeclaringType)) return false;
 
 			var methodPtr = (MethodInfoPtr)method.PeekStack(0);
-			if(Utils.IsUdonAsm(methodPtr.method.DeclaringType))
+			if(Utils.IsUdonAsmBehaviourOrInterface(methodPtr.method.DeclaringType))
 			{
 				if(methodPtr.method.IsStatic) return false;
 
