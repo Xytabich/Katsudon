@@ -26,7 +26,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.IsAbstract || methodInfo.IsVirtual || methodInfo.IsStatic) return false;
 			if(methodInfo.ReturnType == typeof(void)) return false;
-			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
+			if(!Utils.IsUdonAsmBehaviour(methodInfo.DeclaringType)) return false;
 
 			FieldInfo field = shortcuts.GetGetter(methodInfo);
 			if(field != null)
@@ -51,6 +51,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 		{
 			var builder = new CallGetter(modules.GetModule<AssembliesInfo>(), modules.GetModule<FieldShortcuts>(), modules.GetModule<FieldsCollection>());
 			container.RegisterOpBuilder(OpCodes.Call, builder);
+			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 			modules.AddModule(builder);
 		}
 
@@ -59,6 +60,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 			var builder = modules.GetModule<CallGetter>();
 			modules.RemoveModule<CallGetter>();
 			container.UnRegisterOpBuilder(OpCodes.Call, builder);
+			container.UnRegisterOpBuilder(OpCodes.Callvirt, builder);
 		}
 	}
 }
