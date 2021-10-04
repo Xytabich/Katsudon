@@ -18,7 +18,7 @@ namespace Katsudon.Editor
 
 		private static Dictionary<Type, SetterInfo[]> fieldsMap = null;
 
-		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
 		private static void OnBeforeSceneLoad()
 		{
 			UdonManager.OnUdonProgramLoaded -= ReplaceHeap;
