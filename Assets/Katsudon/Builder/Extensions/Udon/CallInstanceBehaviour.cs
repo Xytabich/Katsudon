@@ -2,6 +2,7 @@
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
+using UnityEngine;
 
 namespace Katsudon.Builder.Extensions.UdonExtensions
 {
@@ -21,8 +22,9 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
-			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
-			var info = assembliesInfo.GetMethod(methodInfo.DeclaringType, methodInfo);
+			var declaringType = methodInfo.DeclaringType;
+			if(!Utils.IsUdonAsm(declaringType) || !(declaringType.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(declaringType))) return false;
+			var info = assembliesInfo.GetMethod(declaringType, methodInfo);
 			if(info != null)
 			{
 				var target = method.PeekStack(info.parametersName.Length);

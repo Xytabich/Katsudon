@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Katsudon.Builder;
 using Katsudon.Builder.Helpers;
+using UnityEngine;
 
 namespace Katsudon
 {
@@ -114,7 +115,7 @@ namespace Katsudon
 			handle.Next();
 			var op = method.currentOp;
 			int argIndex;
-			if(!method.isStatic)
+			if(method.isBehaviour)
 			{
 				if(ILUtils.TryGetLdarg(op, out argIndex, !method.isStatic))
 				{
@@ -215,6 +216,11 @@ namespace Katsudon
 		public static bool IsUdonAsm(Type type)
 		{
 			return type.Assembly.IsDefined(typeof(UdonAsmAttribute));
+		}
+
+		public static bool IsUdonAsmBehaviour(Type type)
+		{
+			return type.Assembly.IsDefined(typeof(UdonAsmAttribute)) && typeof(MonoBehaviour).IsAssignableFrom(type);
 		}
 
 		public static bool IsUdonAsm(Assembly assembly)

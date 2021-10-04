@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Katsudon.Builder;
+using Katsudon.Builder.Extensions.Struct;
 using Katsudon.Info;
 using Katsudon.Utility;
 using UnityEngine.Assertions;
@@ -46,7 +47,7 @@ namespace Katsudon.Members
 			}
 		}
 
-		public void ProcessMembers(Type type, AsmTypeInfo info)
+		public void ProcessBehaviourMembers(Type type, AsmTypeInfo info)
 		{
 			const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
 			ProcessMembers(type.GetFields(flags), MemberTypes.Field, info);
@@ -54,6 +55,15 @@ namespace Katsudon.Members
 			ProcessMembers(type.GetEvents(flags), MemberTypes.Event, info);
 			ProcessMembers(type.GetMethods(flags), MemberTypes.Method, info);
 			ProcessMembers(type.GetNestedTypes(flags), MemberTypes.NestedType, info);
+		}
+
+		public void ProcessStructMembers(Type type, AsmStructInfo info)
+		{
+			const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+			foreach(var field in type.GetFields(flags))
+			{
+				info.AddField(field);
+			}
 		}
 
 		private void ProcessMembers(MemberInfo[] members, MemberTypes type, AsmTypeInfo info)

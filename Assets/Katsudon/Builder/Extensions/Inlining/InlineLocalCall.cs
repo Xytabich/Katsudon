@@ -20,7 +20,7 @@ namespace Katsudon.Builder.AsmOpCodes
 		{
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
-			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
+			if(!Utils.IsUdonAsmBehaviour(methodInfo.DeclaringType)) return false;
 			if((methodInfo.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) == 0) return false;
 
 			var parameters = methodInfo.GetParameters();
@@ -80,7 +80,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetTmpVariable(methodInfo.ReturnType).Reserve();
 			var returnAddress = new EmbedAddressLabel();
 
-			bodyBuilder.Build(methodInfo, arguments, localVariables, outVariable, returnAddress, method);
+			bodyBuilder.Build(methodInfo, true, arguments, localVariables, outVariable, returnAddress, method);
 			method.machine.ApplyLabel(returnAddress);
 
 			if(outVariable != null)

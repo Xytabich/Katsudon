@@ -68,7 +68,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 				if(Utils.IsUdonAsm(searchType))
 				{
 					BuildGetUdonComponent(method, targetVariable, isGameObject, getterName,
-						method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
+						method.machine.GetConstVariable(assemblies.GetBehaviourInfo(searchType).guid),
 						includeInactive, outCtor(searchType)
 					);
 					return;

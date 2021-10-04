@@ -38,7 +38,7 @@ namespace Katsudon.Builder
 			}
 		}
 
-		public void Build(MethodInfo method, IList<IVariable> arguments, IVariable returnVariable,
+		public void BuildBehaviour(MethodInfo method, IList<IVariable> arguments, IVariable returnVariable,
 			IAddressLabel returnAddress, IUdonProgramBlock machineBlock, PropertiesBlock properties)
 		{
 			var locals = method.GetMethodBody().LocalVariables;
@@ -48,7 +48,7 @@ namespace Katsudon.Builder
 				localVars.Add(new UnnamedVariable("loc", locals[i].LocalType));
 			}
 
-			Build(method, arguments, localVars, returnVariable, returnAddress, machineBlock);
+			Build(method, true, arguments, localVars, returnVariable, returnAddress, machineBlock);
 
 			foreach(var variable in localVars)
 			{
@@ -57,7 +57,7 @@ namespace Katsudon.Builder
 			CollectionCache.Release(localVars);
 		}
 
-		public void Build(MethodInfo method, IList<IVariable> arguments, IList<IVariable> locals,
+		public void Build(MethodInfo method, bool isBehaviour, IList<IVariable> arguments, IList<IVariable> locals,
 			IVariable returnVariable, IAddressLabel returnAddress, IUdonProgramBlock machineBlock)
 		{
 			var id = new MethodIdentifier(UdonCacheHelper.cache, method);
@@ -71,7 +71,7 @@ namespace Katsudon.Builder
 
 			var addressPointers = new List<UdonAddressPointer>();
 			addressPointers.Add(new UdonAddressPointer(machineBlock.machine.GetAddressCounter(), 0));
-			var methodDescriptor = new MethodDescriptor(method.IsStatic, arguments, returnVariable, returnAddress, operations, locals, machineBlock, addressPointers);
+			var methodDescriptor = new MethodDescriptor(method.IsStatic, isBehaviour, arguments, returnVariable, returnAddress, operations, locals, machineBlock, addressPointers);
 			try
 			{
 				SortedSet<IOperationBuider> list;
@@ -224,6 +224,8 @@ namespace Katsudon.Builder
 	public interface IMethodDescriptor : IMethodProgram, IMethodStack, IMethodVariables, IUdonProgramBlock
 	{
 		bool isStatic { get; }
+
+		bool isBehaviour { get; }
 
 		IAddressLabel GetMachineAddressLabel(int methodAddress);
 

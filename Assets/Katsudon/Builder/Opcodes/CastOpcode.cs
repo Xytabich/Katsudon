@@ -2,6 +2,7 @@
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
+using UnityEngine;
 using VRC.Udon;
 
 namespace Katsudon.Builder.AsmOpCodes
@@ -21,11 +22,11 @@ namespace Katsudon.Builder.AsmOpCodes
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
 			var targetType = (Type)method.currentOp.argument;
-			if(Utils.IsUdonAsm(targetType))
+			if((targetType.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(targetType)) && Utils.IsUdonAsm(targetType))
 			{
 				var variable = method.PopStack();
 				var outVariable = method.GetOrPushOutVariable(targetType);
-				var guidVariable = method.machine.GetConstVariable(assemblies.GetTypeInfo(targetType).guid);
+				var guidVariable = method.machine.GetConstVariable(assemblies.GetBehaviourInfo(targetType).guid);
 
 				var notMatchLabel = new EmbedAddressLabel();
 				var endLabel = new EmbedAddressLabel();

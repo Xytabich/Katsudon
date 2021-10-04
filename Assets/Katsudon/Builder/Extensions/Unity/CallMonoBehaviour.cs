@@ -47,7 +47,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 			{
 				return false;
 			}
-			method.PopStack();
+			method.PopStack().Use();
 			method.PushStack(udonMachine.GetThisVariable(UdonThisType.Transform));
 			return true;
 		}
@@ -58,7 +58,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 			{
 				return false;
 			}
-			method.PopStack();
+			method.PopStack().Use();
 			method.PushStack(udonMachine.GetThisVariable(UdonThisType.GameObject));
 			return true;
 		}
@@ -68,7 +68,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 			var target = method.PeekStack(0);
 			if(target is ThisVariable || typeof(IUdonEventReceiver).IsAssignableFrom(target.type) || Utils.IsUdonAsm(target.type))
 			{
-				method.PopStack();
+				method.PopStack().Use();
 				udonMachine.AddExtern(
 					"VRCUdonCommonInterfacesIUdonEventReceiver.__get_enabled__SystemBoolean",
 					() => method.GetOrPushOutVariable(typeof(bool)),
@@ -85,7 +85,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 			if(target is ThisVariable || typeof(IUdonEventReceiver).IsAssignableFrom(target.type) || Utils.IsUdonAsm(target.type))
 			{
 				var value = method.PopStack();
-				method.PopStack();
+				method.PopStack().Use();
 				udonMachine.AddExtern(
 					"VRCUdonCommonInterfacesIUdonEventReceiver.__set_enabled__SystemBoolean__SystemVoid",
 					target.OwnType(), value.OwnType()

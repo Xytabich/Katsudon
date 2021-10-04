@@ -20,9 +20,12 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var variable = method.PeekStack(0);
-			if(variable.type == type) return true;
-			method.PopStack();
+			var variable = method.PopStack();
+			if(variable.type == type)
+			{
+				method.PushStack(variable);
+				return true;
+			}
 			if(convertersList.TryConvert(method, variable, type, out var converted))
 			{
 				method.PushStack(converted);

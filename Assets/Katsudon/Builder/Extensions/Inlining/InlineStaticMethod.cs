@@ -62,7 +62,7 @@ namespace Katsudon.Builder.Extensions.Inlining
 			var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetTmpVariable(methodInfo.ReturnType).Reserve();
 			var returnAddress = new EmbedAddressLabel();
 
-			bodyBuilder.Build(methodInfo, arguments, localsCache, outVariable, returnAddress, method);
+			bodyBuilder.Build(methodInfo, false, arguments, localsCache, outVariable, returnAddress, method);
 			method.machine.ApplyLabel(returnAddress);
 
 			if(outVariable != null)

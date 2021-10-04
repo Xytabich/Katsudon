@@ -62,7 +62,7 @@ namespace Katsudon.Builder.Methods
 				else
 				{
 					var machineBlock = new UdonProgramBlock(udonMachine, convertersList);
-					bodyBuilder.Build(classMethod, uBehMethod.arguments, uBehMethod.ret, UdonMachine.endProgramAddress, machineBlock, properties);
+					bodyBuilder.BuildBehaviour(classMethod, uBehMethod.arguments, uBehMethod.ret, UdonMachine.endProgramAddress, machineBlock, properties);
 #if KATSUDON_DEBUG
 					machineBlock.CheckVariables();
 #endif

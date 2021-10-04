@@ -33,7 +33,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 				{
 					if(parameters.Length == 3 || parameters[1].ParameterType != typeof(object))
 					{
-						method.PopStack();
+						method.PopStack().Use();
 					}
 					if(parameters[1].ParameterType == typeof(object))
 					{

@@ -57,7 +57,7 @@ namespace Katsudon.Editor
 			if(fieldsMap == null) fieldsMap = new Dictionary<Type, SetterInfo[]>();
 			else if(fieldsMap.TryGetValue(type, out map)) return true;
 
-			var typeInfo = AssembliesInfo.instance.GetTypeInfo(type);
+			var typeInfo = AssembliesInfo.instance.GetBehaviourInfo(type);
 			if(typeInfo != null)
 			{
 				map = new SetterInfo[symbolsCount];

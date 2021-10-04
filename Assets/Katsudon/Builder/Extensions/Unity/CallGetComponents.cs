@@ -57,7 +57,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 					{
 						var targetVariable = method.PopStack();
 						BuildGetUdonComponents(method, targetVariable, isGameObject, getterName,
-							method.machine.GetConstVariable(assemblies.GetTypeInfo(searchType).guid),
+							method.machine.GetConstVariable(assemblies.GetBehaviourInfo(searchType).guid),
 							includeInactive,
 							method.GetOrPushOutVariable(searchType.MakeArrayType())
 						);

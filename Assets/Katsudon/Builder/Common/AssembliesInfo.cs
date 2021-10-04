@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Katsudon.Builder.Extensions.Struct;
 using Katsudon.Members;
 using Katsudon.Utility;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace Katsudon.Info
 
 		private Dictionary<Type, Guid> cachedGuids = new Dictionary<Type, Guid>();
 		private Dictionary<Type, AsmTypeInfo> types = new Dictionary<Type, AsmTypeInfo>();
+		private Dictionary<Type, AsmStructInfo> structs = new Dictionary<Type, AsmStructInfo>();
 
 		private AssembliesInfo()
 		{
@@ -94,6 +96,16 @@ namespace Katsudon.Info
 						}
 						list.Add(new KeyValuePair<string, Guid>(pair.Key.FullName, pair.Value.guid));
 					}
+					foreach(var pair in structs)
+					{
+						var name = pair.Key.Assembly.GetName().Name;
+						if(!grouped.TryGetValue(name, out var list))
+						{
+							list = new List<KeyValuePair<string, Guid>>();
+							grouped[name] = list;
+						}
+						list.Add(new KeyValuePair<string, Guid>(pair.Key.FullName, pair.Value.guid));
+					}
 					writer.Write(CACHE_VERSION);
 
 					var stream = writer.BaseStream;
@@ -122,13 +134,13 @@ namespace Katsudon.Info
 			}
 		}
 
-		public AsmTypeInfo GetTypeInfo(Type type)
+		public AsmTypeInfo GetBehaviourInfo(Type type)
 		{
 			AsmTypeInfo info;
 			if(types.TryGetValue(type, out info)) return info;
 			if(!Utils.IsUdonAsm(type))
 			{
-				throw new Exception(string.Format("Type {0} is not supported because it is not contained in an assembly marked with the UdonAsm attribute.", type));
+				throw new Exception(string.Format("Behaviour {0} is not supported by Katsudon. The type must be in an assembly marked with the UdonAsm attribute.", type));
 			}
 
 			if(!cachedGuids.TryGetValue(type, out var guid))
@@ -145,9 +157,38 @@ namespace Katsudon.Info
 			}
 			else
 			{
-				throw new Exception(string.Format("Type {0} is not supported.", type));
+				throw new Exception(string.Format("Behaviour {0} is not supported.", type));
 			}
 			types[type] = info;
+			return info;
+		}
+
+		public AsmStructInfo GetStructInfo(Type type)
+		{
+			AsmStructInfo info;
+			if(!type.IsClass)
+			{
+				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. The type is not a class.", type));
+			}
+			if(structs.TryGetValue(type, out info)) return info;
+			if(!Utils.IsUdonAsm(type))
+			{
+				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. The type must be in an assembly marked with the UdonAsm attribute.", type));
+			}
+			Type[] interfaces;
+			if(type.BaseType != typeof(object) || (interfaces = type.GetInterfaces()).Length > 1 ||
+				interfaces.Length == 1 && !typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaces[0]))
+			{
+				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. A type cannot be abstract or static, it cannot inherit from other classes or implement interfaces.", type));
+			}
+
+			if(!cachedGuids.TryGetValue(type, out var guid))
+			{
+				guid = Guid.NewGuid();
+			}
+			info = new AsmStructInfo(type, guid);
+			processor.ProcessStructMembers(type, info);
+			structs[type] = info;
 			return info;
 		}
 
@@ -157,7 +198,7 @@ namespace Katsudon.Info
 			{
 				return null;
 			}
-			return GetTypeInfo(targetType).GetField(field);
+			return GetBehaviourInfo(targetType).GetField(field);
 		}
 
 		public AsmMethodInfo GetMethod(Type targetType, MethodInfo method)
@@ -167,7 +208,7 @@ namespace Katsudon.Info
 			{
 				return null;
 			}
-			return GetTypeInfo(targetType).GetMethod(method);
+			return GetBehaviourInfo(targetType).GetMethod(method);
 		}
 
 		private AsmTypeInfo BuildInterfaceInfo(Type type, Guid guid)
@@ -176,7 +217,7 @@ namespace Katsudon.Info
 			foreach(var interfaceType in type.GetInterfaces())
 			{
 				if(typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaceType)) continue;
-				var interfaceInfo = GetTypeInfo(interfaceType);
+				var interfaceInfo = GetBehaviourInfo(interfaceType);
 				inherits.Add(interfaceInfo);
 				inherits.UnionWith(interfaceInfo.GetInheritance());
 			}
@@ -199,14 +240,14 @@ namespace Katsudon.Info
 			foreach(var interfaceType in type.GetInterfaces())
 			{
 				if(typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaceType)) continue;
-				var interfaceInfo = GetTypeInfo(interfaceType);
+				var interfaceInfo = GetBehaviourInfo(interfaceType);
 				inherits.Add(interfaceInfo);
 				inherits.UnionWith(interfaceInfo.GetInheritance());
 			}
 
 			if(type.BaseType != typeof(MonoBehaviour))
 			{
-				var baseInfo = GetTypeInfo(type.BaseType);
+				var baseInfo = GetBehaviourInfo(type.BaseType);
 				inherits.Add(baseInfo);
 				inherits.UnionWith(baseInfo.GetInheritance());
 
@@ -215,7 +256,7 @@ namespace Katsudon.Info
 			}
 
 			var info = new AsmTypeInfo(type, guid, inherits.ToArray(), hierarhy.ToArray());
-			processor.ProcessMembers(type, info);
+			processor.ProcessBehaviourMembers(type, info);
 			return info;
 		}
 	}

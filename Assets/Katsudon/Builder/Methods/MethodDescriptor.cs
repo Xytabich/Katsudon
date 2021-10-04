@@ -12,6 +12,7 @@ namespace Katsudon.Builder.Methods
 		public bool isLastOp => _index >= (operations.Count - 1);
 
 		public bool isStatic { get; private set; }
+		public bool isBehaviour { get; private set; }
 		public bool stackIsEmpty => stack.Count < 1;
 
 		public IUdonMachine machine { get; private set; }
@@ -41,10 +42,11 @@ namespace Katsudon.Builder.Methods
 		private uint lastUdonAddress;
 		private IList<UdonAddressPointer> addressPointers;
 
-		public MethodDescriptor(bool isStatic, IList<IVariable> arguments, IVariable returnVariable, IAddressLabel returnAddress,
+		public MethodDescriptor(bool isStatic, bool isBehaviour, IList<IVariable> arguments, IVariable returnVariable, IAddressLabel returnAddress,
 			IList<Operation> operations, IList<IVariable> locals, IUdonProgramBlock block, IList<UdonAddressPointer> addressPointers)
 		{
 			this.isStatic = isStatic;
+			this.isBehaviour = isBehaviour;
 			this.operations = operations;
 			this.arguments = arguments;
 			this.returnVariable = returnVariable;

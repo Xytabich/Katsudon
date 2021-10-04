@@ -24,7 +24,7 @@ namespace Katsudon.Builder.Variables
 				{
 					if(Utils.IsUdonAsm((Type)significant.value))
 					{
-						table.AddVariable(TypedSignificantVariable.From(variable, typeof(Guid), assemblies.GetTypeInfo((Type)significant.value).guid));
+						table.AddVariable(TypedSignificantVariable.From(variable, typeof(Guid), assemblies.GetBehaviourInfo((Type)significant.value).guid));
 					}
 					else
 					{

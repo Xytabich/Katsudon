@@ -31,7 +31,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 				AsmMethodInfo asmMethod = null;
 				var methodInfo = methodPtr.method;
-				var info = assemblies.GetTypeInfo(methodInfo.DeclaringType);
+				var info = assemblies.GetBehaviourInfo(methodInfo.DeclaringType);
 				if(methodPtr.isVirtual)
 				{
 					asmMethod = info.GetFamilyMethod(methodInfo);

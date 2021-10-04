@@ -18,17 +18,14 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
+			if(!method.isBehaviour) return false;
 			var methodInfo = method.currentOp.argument as MethodInfo;
 			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
-			if(!Utils.IsUdonAsm(methodInfo.DeclaringType)) return false;
-			if(!method.isStatic)
-			{
-				var target = method.PeekStack(methodInfo.GetParameters().Length);
-				if(!(target is ThisVariable))
-				{
-					return false;
-				}
-			}
+			if(!Utils.IsUdonAsmBehaviour(methodInfo.DeclaringType)) return false;
+
+			var target = method.PeekStack(methodInfo.GetParameters().Length);
+			if(!(target is ThisVariable)) return false;
+
 			return BuildMethod(methodInfo, method, method.machine);
 		}
 

@@ -31,7 +31,7 @@ namespace Katsudon.Builder.Methods
 			var returnLabel = new EmbedAddressLabel();
 
 			var machineBlock = new UdonProgramBlock(udonMachine, convertersList);
-			bodyBuilder.Build(method, uBehMethod.arguments, uBehMethod.ret, returnLabel, machineBlock, properties);
+			bodyBuilder.BuildBehaviour(method, uBehMethod.arguments, uBehMethod.ret, returnLabel, machineBlock, properties);
 #if KATSUDON_DEBUG
 			machineBlock.CheckVariables();
 #endif

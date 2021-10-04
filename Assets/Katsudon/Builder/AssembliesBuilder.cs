@@ -108,7 +108,7 @@ namespace Katsudon.Builder
 		public void BuildClass(Type classType, string programPath, int executionOrder)
 		{
 			//prepare
-			var classInfo = assembliesInfo.GetTypeInfo(classType);
+			var classInfo = assembliesInfo.GetBehaviourInfo(classType);
 			var methods = new Dictionary<MethodIdentifier, AsmMethodInfo>();
 			classInfo.CollectMethods(methods);
 			var typeHierarhy = new List<Type>();
