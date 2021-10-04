@@ -1,6 +1,6 @@
 ﻿using System;
-using UnityEngine;
 using VRC.Udon;
+using VRC.Udon.Common.Interfaces;
 
 namespace Katsudon.Builder.Variables
 {
@@ -27,9 +27,9 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		bool IVariableBuilder.TryConvert(Type type, ref object value)
+		bool IVariableBuilder.TryConvert(Type toType, ref object value)
 		{
-			if(Utils.IsUdonAsmBehaviourOrInterface(type))
+			if(typeof(IUdonEventReceiver).IsAssignableFrom(toType))
 			{
 				throw new InvalidCastException(string.Format("{0} cannot be converted to UdonBehaviour", value));
 			}

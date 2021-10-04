@@ -41,14 +41,14 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		public bool TryConvert(Type type, ref object value)
+		public bool TryConvert(Type toType, ref object value)
 		{
-			if(type.IsArray && !Utils.IsUdonType(type))
+			if(toType.IsArray)
 			{
-				if(type.GetArrayRank() <= 1)
+				if(toType.GetArrayRank() <= 1)
 				{
 					var array = (Array)value;
-					var elementType = type.GetElementType();
+					var elementType = toType.GetElementType();
 					var newArray = Array.CreateInstance(elementType, array.Length);
 					for(var i = 0; i < array.Length; i++)
 					{
@@ -61,7 +61,7 @@ namespace Katsudon.Builder.Variables
 					var array = (Array)value;
 					int[] lengths = new int[array.Rank];
 					int[] indices = new int[array.Rank];
-					var elementType = type.GetElementType();
+					var elementType = toType.GetElementType();
 					var newArray = Array.CreateInstance(elementType, lengths);
 
 					bool breakLoop = false;

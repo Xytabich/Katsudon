@@ -10,7 +10,7 @@ namespace Katsudon.Builder.Variables
 		bool IVariableBuilder.TryBuildVariable(IVariable variable, VariablesTable table)
 		{
 			var type = variable.type;
-			if(typeof(Enum).IsAssignableFrom(type) && !Utils.IsUdonType(type))
+			if(type.IsEnum && !Utils.IsUdonType(type))
 			{
 				if(variable is ISignificantVariable significant && significant.value != null)
 				{
@@ -25,14 +25,13 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		bool IVariableBuilder.TryConvert(Type type, ref object value)
+		bool IVariableBuilder.TryConvert(Type toType, ref object value)
 		{
-			if(typeof(Enum).IsAssignableFrom(type))
+			var type = value.GetType();
+			if(type.IsEnum && !Utils.IsUdonType(type))
 			{
-				if(!Utils.IsUdonType(type) && Enum.GetUnderlyingType(type) == value.GetType())
-				{
-					return true;
-				}
+				value = Convert.ChangeType(value, Enum.GetUnderlyingType(type));
+				return true;
 			}
 			return false;
 		}

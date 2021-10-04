@@ -228,6 +228,16 @@ namespace Katsudon
 			return type.Assembly.IsDefined(typeof(UdonAsmAttribute)) && (type.IsInterface || typeof(MonoBehaviour).IsAssignableFrom(type));
 		}
 
+		public static bool IsStruct(Type type)
+		{
+			return !type.IsAbstract && type.IsClass && type.BaseType == typeof(object);
+		}
+
+		public static bool IsUdonAsmStruct(Type type)
+		{//TODO: full check & cache result
+			return type.Assembly.IsDefined(typeof(UdonAsmAttribute)) && !type.IsAbstract && type.IsClass && type.BaseType == typeof(object);
+		}
+
 		public static bool IsUdonAsm(Assembly assembly)
 		{
 			return assembly.IsDefined(typeof(UdonAsmAttribute));

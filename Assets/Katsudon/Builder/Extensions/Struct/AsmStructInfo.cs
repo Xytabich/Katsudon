@@ -10,7 +10,9 @@ namespace Katsudon.Builder.Extensions.Struct
 		public readonly Type type;
 		public readonly Guid guid;
 
-		private List<Type> fields = new List<Type>();
+		public IReadOnlyList<FieldInfo> fields => _fields;
+
+		private List<FieldInfo> _fields = new List<FieldInfo>();
 		private Dictionary<FieldIdentifier, int> id2Index = new Dictionary<FieldIdentifier, int>();
 
 		public AsmStructInfo(Type type, Guid guid)
@@ -21,8 +23,8 @@ namespace Katsudon.Builder.Extensions.Struct
 
 		public void AddField(FieldInfo field)
 		{
-			id2Index[UdonCacheHelper.cache.GetFieldIdentifier(field)] = fields.Count;
-			fields.Add(field.FieldType);
+			id2Index[UdonCacheHelper.cache.GetFieldIdentifier(field)] = _fields.Count;
+			_fields.Add(field);
 		}
 
 		public int GetFieldIndex(FieldInfo field)

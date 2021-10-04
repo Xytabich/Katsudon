@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Katsudon.Builder;
-using Katsudon.Editor.Converters;
 using Katsudon.Utility;
 using UnityEngine.Assertions;
 
-namespace Katsudon.Editor
+namespace Katsudon.Editor.Converters
 {
 	public class UdonValueResolver : IComparer<IValueConverter>
 	{
@@ -16,7 +15,7 @@ namespace Katsudon.Editor
 			resolvers = new SortedSet<IValueConverter>(this);
 			
 			var sortedTypes = OrderedTypeUtils.GetOrderedSet<ValueConverterAttribute>();
-			var args = new object[] { resolvers };
+			var args = new object[] { this, resolvers };
 			foreach(var pair in sortedTypes)
 			{
 				var method = MethodSearch<ValueConverterDelegate>.FindStaticMethod(pair.Value, "Register");
@@ -25,7 +24,7 @@ namespace Katsudon.Editor
 			}
 		}
 
-		public bool TryConvertToUdon(object value, out object outValue)
+		public bool TryConvertToUdon(object value, out object outValue)//TODO: recursion check
 		{
 			outValue = value;
 			if(value == null) return true;
@@ -39,12 +38,12 @@ namespace Katsudon.Editor
 			if(Utils.IsUdonType(value.GetType()))
 			{
 				outValue = value;
-				if(value == null) return true;
+				return true;
 			}
-			return true;
+			return false;
 		}
 
-		public bool TryConvertFromUdon(object value, Type type, out object outValue)
+		public bool TryConvertFromUdon(object value, Type type, out object outValue)//TODO: recursion check
 		{
 			outValue = value;
 			if(value == null) return true;

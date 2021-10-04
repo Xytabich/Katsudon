@@ -33,7 +33,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			return false;
 		}
 
-		bool IVariableBuilder.TryConvert(Type type, ref object value)
+		bool IVariableBuilder.TryConvert(Type toType, ref object value)
 		{
 			return false;
 		}

@@ -13,7 +13,7 @@ namespace Katsudon.Editor.Converters
 		bool TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed);
 	}
 
-	public delegate void ValueConverterDelegate(ICollection<IValueConverter> container);
+	public delegate void ValueConverterDelegate(UdonValueResolver resolver, ICollection<IValueConverter> container);
 
 	public sealed class ValueConverterAttribute : OrderedTypeAttributeBase
 	{

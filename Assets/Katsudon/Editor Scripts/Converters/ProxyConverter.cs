@@ -42,7 +42,7 @@ namespace Katsudon.Editor.Converters
 			return false;
 		}
 
-		public static void Register(ICollection<IValueConverter> container)
+		public static void Register(UdonValueResolver resolver, ICollection<IValueConverter> container)
 		{
 			container.Add(new ProxyConverter());
 		}

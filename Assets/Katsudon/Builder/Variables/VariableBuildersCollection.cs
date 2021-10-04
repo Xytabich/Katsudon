@@ -44,7 +44,7 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		public object Convert(Type toType, object value)
+		public object Convert(Type toType, object value)//TODO: recursion check?
 		{
 			if(value == null) return null;
 
