@@ -33,8 +33,7 @@ namespace Katsudon.Builder.Extensions.Struct
 				var condition = method.GetTmpVariable(typeof(bool)).Reserve();
 
 				variable.Allocate();
-				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-					condition, variable.OwnType(), method.machine.GetConstVariable(null).OwnType());
+				method.machine.ObjectEquals(condition, variable, method.machine.GetConstVariable(null));
 				method.machine.AddBranch(condition, checkTypeLabel);
 				outVariable.Allocate();
 				method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
@@ -59,8 +58,7 @@ namespace Katsudon.Builder.Extensions.Struct
 				variable.Allocate();
 				method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", structTypeVariable,
 					variable.OwnType(), method.machine.GetConstVariable((int)StructVariable.TYPE_INDEX).OwnType());
-				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-					condition, structTypeVariable.OwnType(), typeVariable.OwnType());
+				method.machine.ObjectEquals(condition, structTypeVariable, typeVariable);
 				method.machine.AddBranch(condition, notMatchLabel);
 				outVariable.Allocate();
 				method.machine.AddCopy(variable, outVariable);

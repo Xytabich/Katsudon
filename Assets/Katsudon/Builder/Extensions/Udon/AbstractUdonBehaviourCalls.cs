@@ -53,10 +53,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		{
 			var name = descriptor.PopStack();
 			var target = descriptor.PopStack();
-			descriptor.machine.AddExtern("VRCUdonCommonInterfacesIUdonEventReceiver.__GetProgramVariableType__SystemString__SystemType",
-				() => descriptor.GetOrPushOutVariable(method.ReturnType),
-				target.OwnType(), name.OwnType()
-			);
+			descriptor.machine.GetVariableTypeExtern(target, name, () => descriptor.GetOrPushOutVariable(method.ReturnType));
 			return true;
 		}
 

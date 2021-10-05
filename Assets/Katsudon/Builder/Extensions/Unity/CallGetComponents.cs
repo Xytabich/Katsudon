@@ -198,12 +198,13 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 			method.machine.AddCopy(method.machine.GetConstVariable((int)0), counter);
 
-			using(ForLoop.Array(method, components, out var componentsIndex))
+			using(var loop = ForLoop.Array(method, components, out var componentsIndex))
 			{
 				method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
 					component, components.OwnType(), componentsIndex.OwnType());
 
 				var addToListLabel = new EmbedAddressLabel();
+				var checkInheritsLabel = new EmbedAddressLabel();
 
 				// if(element.typeId == searchTypeId)
 				var componentGuid = method.GetTmpVariable(typeof(Guid));
@@ -211,12 +212,17 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 				searchType.Allocate();
 				var condition = method.GetTmpVariable(typeof(bool));
-				method.machine.AddExtern(
-					BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
-					condition, componentGuid.OwnType(), searchType.OwnType()
-				);
-				method.machine.AddBranch(condition, addToListLabel);
+				method.machine.ObjectEquals(condition, componentGuid, searchType);
+				method.machine.AddBranch(condition, checkInheritsLabel);
+				method.machine.AddJump(addToListLabel);
 				// endif
+
+				method.machine.ApplyLabel(checkInheritsLabel);
+				var inheritsType = method.GetTmpVariable(typeof(Type));
+				method.machine.GetVariableTypeExtern(component, AsmTypeInfo.INHERIT_IDS_NAME, inheritsType);
+				condition = method.GetTmpVariable(typeof(bool));
+				method.machine.ObjectEquals(condition, inheritsType, method.machine.GetConstVariable(typeof(Guid[]), typeof(Type)));
+				method.machine.AddBranch(condition, loop.continueLabel);
 
 				// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0)
 				var inherits = method.GetTmpVariable(typeof(Guid[]));
@@ -227,11 +233,9 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 					inheritsIndex, inherits.OwnType(), searchType.OwnType());
 
 				condition = method.GetTmpVariable(typeof(bool));
-				method.machine.BinaryOperatorExtern(BinaryOperator.LessThan, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
-				method.machine.AddBranch(condition, addToListLabel);
+				method.machine.BinaryOperatorExtern(BinaryOperator.GreaterThanOrEqual, inheritsIndex, method.machine.GetConstVariable((int)0), condition);
+				method.machine.AddBranch(condition, loop.continueLabel);
 				// endif
-				var continueLoopLabel = new EmbedAddressLabel();
-				method.machine.AddJump(continueLoopLabel);
 
 				method.machine.ApplyLabel(addToListLabel);
 				// components[counter++] = element;
@@ -239,8 +243,6 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 					components.OwnType(), counter.OwnType(), component.OwnType());
 				method.machine.BinaryOperatorExtern(BinaryOperator.Addition, counter, method.machine.GetConstVariable((int)1), counter);
 				// end
-
-				method.machine.ApplyLabel(continueLoopLabel);
 			}
 
 			var udonType = ArrayTypes.GetUdonArrayType(outComponents.type);

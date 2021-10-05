@@ -68,6 +68,22 @@ namespace Katsudon.Builder.Externs
 			);
 		}
 
+		public static void GetVariableTypeExtern(this IUdonMachine machine, IVariable targetVariable, string name, IVariable outVariable)
+		{
+			machine.AddExtern(
+				"VRCUdonCommonInterfacesIUdonEventReceiver.__GetProgramVariableType__SystemString__SystemType",
+				outVariable, targetVariable.OwnType(), machine.GetConstVariable(name).OwnType()
+			);
+		}
+
+		public static void GetVariableTypeExtern(this IUdonMachine machine, IVariable targetVariable, IVariable name, Func<IVariable> outVariableCtor)
+		{
+			machine.AddExtern(
+				"VRCUdonCommonInterfacesIUdonEventReceiver.__GetProgramVariableType__SystemString__SystemType",
+				outVariableCtor, targetVariable.OwnType(), name.OwnType()
+			);
+		}
+
 		public static void SendEventExtern(this IUdonMachine machine, IVariable targetVariable, string name)
 		{
 			machine.AddExtern(

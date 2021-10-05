@@ -60,8 +60,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", element, delegates.OwnType(), index.OwnType());
 
 						condition = method.GetTmpVariable(typeof(bool));
-						method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-							condition, element.OwnType(), method.machine.GetConstVariable(null).OwnType());
+						method.machine.ObjectEquals(condition, element, method.machine.GetConstVariable(null));
 
 						var addCounterLabel = new EmbedAddressLabel();
 						method.machine.AddBranch(condition, addCounterLabel);
@@ -94,8 +93,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 						method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", element, delegates.OwnType(), index.OwnType());
 
 						condition = method.GetTmpVariable(typeof(bool));
-						method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-							condition, element.OwnType(), method.machine.GetConstVariable(null).OwnType());
+						method.machine.ObjectEquals(condition, element, method.machine.GetConstVariable(null));
 
 						var addDelegateLabel = new EmbedAddressLabel();
 						method.machine.AddBranch(condition, addDelegateLabel);
@@ -155,8 +153,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 			var condition = method.GetTmpVariable(typeof(bool));
 			b.Allocate();
-			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-				condition, b.OwnType(), method.machine.GetConstVariable(null).OwnType());
+			method.machine.ObjectEquals(condition, b, method.machine.GetConstVariable(null));
 			method.machine.AddBranch(condition, checkALabel);
 			a.Allocate();
 			outVariable.Allocate();
@@ -166,8 +163,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			method.machine.ApplyLabel(checkALabel);
 			condition = method.GetTmpVariable(typeof(bool));
 			a.Allocate();
-			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-				condition, a.OwnType(), method.machine.GetConstVariable(null).OwnType());
+			method.machine.ObjectEquals(condition, a, method.machine.GetConstVariable(null));
 			method.machine.AddBranch(condition, buildNewLabel);
 			b.Allocate();
 			outVariable.Allocate();

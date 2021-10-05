@@ -193,7 +193,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 			);
 
 			var endSuccessLabel = new EmbedAddressLabel();
-			using(ForLoop.Array(method, components, out var componentsIndex))
+			using(var loop = ForLoop.Array(method, components, out var componentsIndex))
 			{
 				method.machine.AddExtern("UnityEngineComponentArray.__Get__SystemInt32__UnityEngineComponent",
 					componentVariable, components.OwnType(), componentsIndex.OwnType());
@@ -205,12 +205,19 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 				searchType.Allocate();
 				var condition = method.GetTmpVariable(typeof(bool));
-				method.machine.AddExtern(
-					BinaryOperatorExtension.GetExternName(BinaryOperator.Inequality, typeof(Guid), typeof(Guid), typeof(bool)),
-					condition, componentGuid.OwnType(), searchType.OwnType()
-				);
-				method.machine.AddBranch(condition, endSuccessLabel);
+				method.machine.ObjectEquals(condition, componentGuid, searchType);
+				var checkInheritsLabel = new EmbedAddressLabel();
+				method.machine.AddBranch(condition, checkInheritsLabel);
+				method.machine.AddJump(endSuccessLabel);
 				// endif
+
+				method.machine.ApplyLabel(checkInheritsLabel);
+				var inheritsType = method.GetTmpVariable(typeof(Type));
+				componentVariable.Allocate();
+				method.machine.GetVariableTypeExtern(componentVariable, AsmTypeInfo.INHERIT_IDS_NAME, inheritsType);
+				condition = method.GetTmpVariable(typeof(bool));
+				method.machine.ObjectEquals(condition, inheritsType, method.machine.GetConstVariable(typeof(Guid[]), typeof(Type)));
+				method.machine.AddBranch(condition, loop.continueLabel);
 
 				// if(Array.BinarySearch(element.inherits, searchTypeId) >= 0) return element;
 				var inherits = method.GetTmpVariable(typeof(Guid[]));

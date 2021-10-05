@@ -47,6 +47,12 @@ namespace Katsudon.Builder.Extensions.Struct
 			{
 				var info = AssembliesInfo.instance.GetStructInfo(toType);
 				var fields = info.fields;
+				if(instance.Length != (fields.Count + StructVariable.FIELDS_OFFSET))
+				{
+					converted = null;
+					isAllowed = false;
+					return true;
+				}
 				converted = Activator.CreateInstance(toType, true);
 				for(int i = fields.Count - 1; i >= 0; i--)
 				{

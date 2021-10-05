@@ -35,8 +35,7 @@ namespace Katsudon.Builder.AsmOpCodes
 				var condition = method.GetTmpVariable(typeof(bool)).Reserve();
 
 				variable.Allocate();
-				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-					condition, variable.OwnType(), method.machine.GetConstVariable(null).OwnType());
+				method.machine.ObjectEquals(condition, variable, method.machine.GetConstVariable(null));
 				method.machine.AddBranch(condition, checkTypeLabel);
 				outVariable.Allocate();
 				method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
@@ -56,8 +55,7 @@ namespace Katsudon.Builder.AsmOpCodes
 				var behaviourGuidVariable = method.GetTmpVariable(typeof(Guid));
 				variable.Allocate();
 				method.machine.GetVariableExtern(variable, AsmTypeInfo.TYPE_ID_NAME, behaviourGuidVariable);
-				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-					condition, behaviourGuidVariable.OwnType(), guidVariable.OwnType());
+				method.machine.ObjectEquals(condition, behaviourGuidVariable, guidVariable);
 				method.machine.AddBranch(condition, checkInheritsLabel);
 				variable.Allocate();
 				outVariable.Allocate();
@@ -65,6 +63,12 @@ namespace Katsudon.Builder.AsmOpCodes
 				method.machine.AddJump(endLabel);
 
 				method.machine.ApplyLabel(checkInheritsLabel);
+				var inheritsType = method.GetTmpVariable(typeof(Type));
+				variable.Allocate();
+				method.machine.GetVariableTypeExtern(variable, AsmTypeInfo.INHERIT_IDS_NAME, inheritsType);
+				method.machine.ObjectEquals(condition, inheritsType, method.machine.GetConstVariable(typeof(Guid[]), typeof(Type)));
+				method.machine.AddBranch(condition, notMatchLabel);
+
 				var inheritsVariable = method.GetTmpVariable(typeof(Guid[]));
 				var indexVariable = method.GetTmpVariable(typeof(int));
 				variable.Allocate();

@@ -70,8 +70,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 			var condition = method.GetTmpVariable(typeof(bool));
 			removeFrom.Allocate();
-			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-				condition, removeFrom.OwnType(), method.machine.GetConstVariable(null).OwnType());
+			method.machine.ObjectEquals(condition, removeFrom, method.machine.GetConstVariable(null));
 			method.machine.AddBranch(condition, checkSelfLabel);
 			outVariable.Allocate();
 			method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
@@ -81,7 +80,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			condition = method.GetTmpVariable(typeof(bool));
 			removeFrom.Allocate();
 			actions.Allocate();
-			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, removeFrom.OwnType(), actions.OwnType());
+			method.machine.ObjectEquals(condition, removeFrom, actions);
 			method.machine.AddBranch(condition, checkActionsLabel);
 			outVariable.Allocate();
 			method.machine.AddCopy(method.machine.GetConstVariable(null), outVariable);
@@ -90,8 +89,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 			method.machine.ApplyLabel(checkActionsLabel);
 			condition = method.GetTmpVariable(typeof(bool));
 			actions.Allocate();
-			method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
-				condition, actions.OwnType(), method.machine.GetConstVariable(null).OwnType());
+			method.machine.ObjectEquals(condition, actions, method.machine.GetConstVariable(null));
 			method.machine.AddBranch(condition, countLabel);
 			removeFrom.Allocate();
 			outVariable.Allocate();
@@ -121,7 +119,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					condition = method.GetTmpVariable(typeof(bool));
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(DelegateUtility.TARGET_OFFSET).OwnType());
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(DelegateUtility.TARGET_OFFSET).OwnType());
-					method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, valueA.OwnType(), valueB.OwnType());
+					method.machine.ObjectEquals(condition, valueA, valueB);
 					method.machine.AddBranch(condition, continueLabel);
 
 					// if(evt[METHOD_NAME_OFFSET] != action[METHOD_NAME_OFFSET]) continue;
@@ -130,7 +128,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 					condition = method.GetTmpVariable(typeof(bool));
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueA, evt.OwnType(), method.machine.GetConstVariable(DelegateUtility.METHOD_NAME_OFFSET).OwnType());
 					method.machine.AddExtern("SystemObjectArray.__Get__SystemInt32__SystemObject", valueB, action.OwnType(), method.machine.GetConstVariable(DelegateUtility.METHOD_NAME_OFFSET).OwnType());
-					method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean", condition, valueA.OwnType(), valueB.OwnType());
+					method.machine.ObjectEquals(condition, valueA, valueB);
 					method.machine.AddBranch(condition, continueLabel);
 
 					//remainingLength--;
