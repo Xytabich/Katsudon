@@ -1,10 +1,9 @@
 using System;
 using System.Reflection.Emit;
-using Katsudon.Builder.Extensions.Struct;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.Struct
 {
 	[OperationBuilder]
 	public class StructCastOp : IOperationBuider
