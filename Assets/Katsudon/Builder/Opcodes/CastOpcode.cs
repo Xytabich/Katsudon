@@ -2,7 +2,6 @@
 using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 using Katsudon.Info;
-using UnityEngine;
 using VRC.Udon;
 
 namespace Katsudon.Builder.AsmOpCodes
@@ -10,7 +9,7 @@ namespace Katsudon.Builder.AsmOpCodes
 	[OperationBuilder]
 	public class CastOpcode : IOperationBuider
 	{
-		public int order => 0;
+		public int order => 100;
 
 		private AssembliesInfo assemblies;
 
@@ -57,7 +56,8 @@ namespace Katsudon.Builder.AsmOpCodes
 				var behaviourGuidVariable = method.GetTmpVariable(typeof(Guid));
 				variable.Allocate();
 				method.machine.GetVariableExtern(variable, AsmTypeInfo.TYPE_ID_NAME, behaviourGuidVariable);
-				method.machine.BinaryOperatorExtern(BinaryOperator.Equality, behaviourGuidVariable, guidVariable, condition);
+				method.machine.AddExtern("SystemObject.__Equals__SystemObject_SystemObject__SystemBoolean",
+					condition, behaviourGuidVariable.OwnType(), guidVariable.OwnType());
 				method.machine.AddBranch(condition, checkInheritsLabel);
 				variable.Allocate();
 				outVariable.Allocate();

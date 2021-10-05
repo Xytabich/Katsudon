@@ -47,7 +47,7 @@ namespace Katsudon.Builder.Extensions.Struct
 				var info = AssembliesInfo.instance.GetStructInfo(type);
 				var fields = info.fields;
 				var instance = new object[FIELDS_OFFSET + fields.Count];
-				instance[TYPE_INDEX] = info.guid;
+				instance[TYPE_INDEX] = GetStructTypeIdentifier(info.guid);
 				for(int i = fields.Count - 1; i >= 0; i--)
 				{
 					instance[FIELDS_OFFSET + i] = collection.Convert(typeof(object), fields[i].GetValue(value));
@@ -56,6 +56,11 @@ namespace Katsudon.Builder.Extensions.Struct
 				return true;
 			}
 			return false;
+		}
+
+		public static string GetStructTypeIdentifier(Guid guid)
+		{
+			return string.Format("{{KatsudonStructType:{0}}}", guid);
 		}
 
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)

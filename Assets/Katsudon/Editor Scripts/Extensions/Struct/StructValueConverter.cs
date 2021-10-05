@@ -24,7 +24,7 @@ namespace Katsudon.Builder.Extensions.Struct
 				var info = AssembliesInfo.instance.GetStructInfo(value.GetType());
 				var fields = info.fields;
 				var instance = new object[StructVariable.FIELDS_OFFSET + fields.Count];
-				instance[StructVariable.TYPE_INDEX] = info.guid;
+				instance[StructVariable.TYPE_INDEX] = StructVariable.GetStructTypeIdentifier(info.guid);
 				for(int i = fields.Count - 1; i >= 0; i--)
 				{
 					if(resolver.TryConvertToUdon(fields[i].GetValue(value), out var c))
