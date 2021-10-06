@@ -13,7 +13,7 @@ namespace Katsudon.Editor.Converters
 		public UdonValueResolver()
 		{
 			resolvers = new SortedSet<IValueConverter>(this);
-			
+
 			var sortedTypes = OrderedTypeUtils.GetOrderedSet<ValueConverterAttribute>();
 			var args = new object[] { this, resolvers };
 			foreach(var pair in sortedTypes)
@@ -43,9 +43,10 @@ namespace Katsudon.Editor.Converters
 			return false;
 		}
 
-		public bool TryConvertFromUdon(object value, Type type, out object outValue)//TODO: recursion check
+		public bool TryConvertFromUdon(object value, Type type, out object outValue, out bool reserialize)//TODO: recursion check
 		{
 			outValue = value;
+			reserialize = false;
 			if(value == null) return true;
 			if(value.GetType() == type)
 			{
@@ -53,7 +54,7 @@ namespace Katsudon.Editor.Converters
 			}
 			foreach(var resolver in resolvers)
 			{
-				if(resolver.TryConvertFromUdon(value, type, out outValue, out bool isAllowed))
+				if(resolver.TryConvertFromUdon(value, type, out outValue, out bool isAllowed, ref reserialize))
 				{
 					return isAllowed;
 				}
@@ -64,6 +65,7 @@ namespace Katsudon.Editor.Converters
 				{
 					return false;
 				}
+				reserialize = false;
 				outValue = value;
 				return true;
 			}

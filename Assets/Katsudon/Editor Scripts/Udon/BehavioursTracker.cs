@@ -212,7 +212,12 @@ namespace Katsudon.Editor.Udon
 			{
 				foreach(var proxy in trackProxies)
 				{
-					if(proxy != null) TrackProxy(proxy);
+					if(proxy != null)
+					{
+						var beh = GetBehaviourByProxy(proxy);
+						if(beh != null) ProxyUtils.CopyFieldsToProxy(beh, proxy);
+						TrackProxy(proxy);
+					}
 				}
 				trackProxies.Clear();
 			}

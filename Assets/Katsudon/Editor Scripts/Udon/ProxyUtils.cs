@@ -86,26 +86,47 @@ namespace Katsudon.Editor.Udon
 					if(behaviour.TryGetProgramVariable(symbol, out var value))
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null && valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted))
+						if(field != null && valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
 						{
 							field.SetValue(proxy, converted);
+							if(reserialize && valueResolver.TryConvertToUdon(converted, out value))
+							{
+								behaviour.SetProgramVariable(symbol, value);
+							}
 						}
 					}
 				}
 			}
 			else
 			{
-				foreach(var symbol in variables.VariableSymbols)
+				bool isBehaviourChanged = false;
+				var symbols = CollectionCache.GetList(variables.VariableSymbols);
+				foreach(var symbol in symbols)
 				{
-					if(behaviour.publicVariables.TryGetVariableValue(symbol, out var value))
+					if(variables.TryGetVariableValue(symbol, out var value))
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null && valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted))
+						if(field != null)
 						{
-							field.SetValue(proxy, converted);
+							if(valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
+							{
+								field.SetValue(proxy, converted);
+								if(reserialize && valueResolver.TryConvertToUdon(converted, out value))
+								{
+									variables.TrySetVariableValue(symbol, value);
+									isBehaviourChanged = true;
+								}
+							}
+							else
+							{
+								variables.RemoveVariable(symbol);
+								isBehaviourChanged = true;
+							}
 						}
 					}
 				}
+				CollectionCache.Release(symbols);
+				if(isBehaviourChanged) EditorUtility.SetDirty(behaviour);
 			}
 		}
 

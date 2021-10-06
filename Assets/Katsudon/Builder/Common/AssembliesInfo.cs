@@ -176,21 +176,18 @@ namespace Katsudon.Info
 				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. The type must be in an assembly marked with the UdonAsm attribute.", type));
 			}
 			Type[] interfaces;
-			if(type.BaseType != typeof(object) || (interfaces = type.GetInterfaces()).Length > 0/* ||
-				interfaces.Length == 1 && !typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaces[0])*/)
+			if(type.BaseType != typeof(object) || (interfaces = type.GetInterfaces()).Length > 1 ||
+				interfaces.Length == 1 && !typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaces[0]))
 			{
 				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. A type cannot be abstract or static, it cannot inherit from other classes or implement interfaces.", type));
-			}
-			if(type.IsDefined(typeof(SerializableAttribute)))
-			{
-				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. Type should not be serializable.", type));
 			}
 
 			if(!cachedGuids.TryGetValue(type, out var guid))
 			{
 				guid = Guid.NewGuid();
 			}
-			info = new AsmStructInfo(type, guid);
+			bool isSerializable = type.IsDefined(typeof(SerializableAttribute));
+			info = new AsmStructInfo(type, guid, isSerializable);
 			processor.ProcessStructMembers(type, info);
 			structs[type] = info;
 			return info;

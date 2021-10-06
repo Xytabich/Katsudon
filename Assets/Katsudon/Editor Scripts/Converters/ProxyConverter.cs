@@ -25,7 +25,7 @@ namespace Katsudon.Editor.Converters
 			return false;
 		}
 
-		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed)
+		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed, ref bool reserialize)
 		{
 			if(value is UdonBehaviour ubeh && Utils.IsUdonAsmBehaviourOrInterface(toType))
 			{

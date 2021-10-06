@@ -50,7 +50,11 @@ namespace Katsudon.Builder.Extensions.Struct
 				instance[TYPE_INDEX] = GetStructTypeIdentifier(info.guid);
 				for(int i = fields.Count - 1; i >= 0; i--)
 				{
-					instance[FIELDS_OFFSET + i] = collection.Convert(typeof(object), fields[i].GetValue(value));
+					var field = fields[i];
+					if(field != null)
+					{
+						instance[FIELDS_OFFSET + i] = collection.Convert(typeof(object), field.GetValue(value));
+					}
 				}
 				value = instance;
 				return true;

@@ -10,7 +10,7 @@ namespace Katsudon.Editor.Converters
 
 		bool TryConvertToUdon(object value, out object converted, out bool isAllowed);
 
-		bool TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed);
+		bool TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed, ref bool reserialize);
 	}
 
 	public delegate void ValueConverterDelegate(UdonValueResolver resolver, ICollection<IValueConverter> container);

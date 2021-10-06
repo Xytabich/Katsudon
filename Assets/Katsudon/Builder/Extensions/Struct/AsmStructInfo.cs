@@ -9,22 +9,30 @@ namespace Katsudon.Builder.Extensions.Struct
 	{
 		public readonly Type type;
 		public readonly Guid guid;
+		public readonly bool isSerializable;
 
 		public IReadOnlyList<FieldInfo> fields => _fields;
 
-		private List<FieldInfo> _fields = new List<FieldInfo>();
+		private FieldInfo[] _fields = null;
 		private Dictionary<FieldIdentifier, int> id2Index = new Dictionary<FieldIdentifier, int>();
 
-		public AsmStructInfo(Type type, Guid guid)
+		public AsmStructInfo(Type type, Guid guid, bool isSerializable)
 		{
 			this.type = type;
 			this.guid = guid;
+			this.isSerializable = isSerializable;
 		}
 
-		public void AddField(FieldInfo field)
+		public void SetFields(FieldInfo[] fields)
 		{
-			id2Index[UdonCacheHelper.cache.GetFieldIdentifier(field)] = _fields.Count;
-			_fields.Add(field);
+			_fields = fields;
+			for(int i = 0; i < fields.Length; i++)
+			{
+				if(fields[i] != null)
+				{
+					id2Index[UdonCacheHelper.cache.GetFieldIdentifier(fields[i])] = i;
+				}
+			}
 		}
 
 		public int GetFieldIndex(FieldInfo field)

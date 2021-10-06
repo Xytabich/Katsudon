@@ -27,7 +27,8 @@ namespace Katsudon.Builder.Extensions.Struct
 				instance[StructVariable.TYPE_INDEX] = StructVariable.GetStructTypeIdentifier(info.guid);
 				for(int i = fields.Count - 1; i >= 0; i--)
 				{
-					if(resolver.TryConvertToUdon(fields[i].GetValue(value), out var c))
+					var field = fields[i];
+					if(field != null && resolver.TryConvertToUdon(field.GetValue(value), out var c))
 					{
 						instance[StructVariable.FIELDS_OFFSET + i] = c;
 					}
@@ -41,29 +42,38 @@ namespace Katsudon.Builder.Extensions.Struct
 			return false;
 		}
 
-		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed)
+		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed, ref bool reserialize)
 		{
-			if(value is object[] instance && Utils.IsUdonAsmStruct(toType))
+			if(value is object[] instance && instance.Length >= StructVariable.FIELDS_OFFSET && Utils.IsUdonAsmStruct(toType))
 			{
-				var info = AssembliesInfo.instance.GetStructInfo(toType);
-				var fields = info.fields;
-				if(instance.Length != (fields.Count + StructVariable.FIELDS_OFFSET))
+				if(instance[0] is string id)
 				{
-					converted = null;
-					isAllowed = false;
+					var info = AssembliesInfo.instance.GetStructInfo(toType);
+					var fields = info.fields;
+					converted = Activator.CreateInstance(toType, true);
+					for(int i = Math.Min(fields.Count - 1, (instance.Length - StructVariable.FIELDS_OFFSET) - 1); i >= 0; i--)
+					{
+						var field = fields[i];
+						if(field != null)
+						{
+							if(resolver.TryConvertFromUdon(instance[StructVariable.FIELDS_OFFSET + i], field.FieldType, out var c, out bool r))
+							{
+								field.SetValue(converted, c);
+								if(r) reserialize = true;
+							}
+							else
+							{
+								reserialize = true;
+							}
+						}
+					}
+					if(id != StructVariable.GetStructTypeIdentifier(info.guid) || instance.Length != (fields.Count + StructVariable.FIELDS_OFFSET))
+					{
+						reserialize = true;
+					}
+					isAllowed = true;
 					return true;
 				}
-				converted = Activator.CreateInstance(toType, true);
-				for(int i = fields.Count - 1; i >= 0; i--)
-				{
-					var field = fields[i];
-					if(resolver.TryConvertFromUdon(instance[StructVariable.FIELDS_OFFSET + i], field.FieldType, out var c))
-					{
-						field.SetValue(converted, c);
-					}
-				}
-				isAllowed = true;
-				return true;
 			}
 			converted = null;
 			isAllowed = false;

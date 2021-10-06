@@ -60,9 +60,48 @@ namespace Katsudon.Members
 		public void ProcessStructMembers(Type type, AsmStructInfo info)
 		{
 			const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-			foreach(var field in type.GetFields(flags))
+			if(info.isSerializable)
 			{
-				info.AddField(field);
+				var fields = type.GetFields(flags);
+				var list = CollectionCache.GetList<KeyValuePair<FieldInfo, int>>();
+				int maxIndex = -1;
+				foreach(var field in fields)
+				{
+					if(field.IsStatic) continue;
+					var attrib = field.GetCustomAttribute<FieldPositionAttribute>(false);
+					if(attrib == null)
+					{
+						throw new Exception(string.Format("Struct {0} is not supported by Katsudon. Serializable type must explicitly determine the position of the fields using the FieldOffset attribute.", type));
+					}
+					if(attrib.position < 0)
+					{
+						throw new Exception(string.Format("Invalid position of field {0} in {1}. Position cannot be less than zero.", field, type));
+					}
+					maxIndex = Math.Max(maxIndex, attrib.position);
+					list.Add(new KeyValuePair<FieldInfo, int>(field, attrib.position));
+				}
+				var orderedFields = new FieldInfo[maxIndex + 1];
+				foreach(var pair in list)
+				{
+					if(orderedFields[pair.Value] != null)
+					{
+						throw new Exception(string.Format("Invalid position of field {0} in {1}. A field with this position already exists.", pair.Key, type));
+					}
+					orderedFields[pair.Value] = pair.Key;
+				}
+				info.SetFields(orderedFields);
+				CollectionCache.Release(list);
+			}
+			else
+			{
+				var list = CollectionCache.GetList<FieldInfo>();
+				foreach(var field in type.GetFields(flags))
+				{
+					if(field.IsStatic) continue;
+					list.Add(field);
+				}
+				info.SetFields(list.ToArray());
+				CollectionCache.Release(list);
 			}
 		}
 

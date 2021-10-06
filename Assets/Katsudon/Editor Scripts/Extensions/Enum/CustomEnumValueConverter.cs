@@ -22,7 +22,7 @@ namespace Katsudon.Editor.Extensions.EnumExtension
 			return false;
 		}
 
-		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed)
+		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed, ref bool reserialize)
 		{
 			if(toType.IsEnum && !Utils.IsUdonType(toType))
 			{
