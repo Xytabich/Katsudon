@@ -10,7 +10,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.Name == nameof(AbstractCallsHelper.RequestSerialization) && methodInfo.DeclaringType == typeof(AbstractCallsHelper))
 			{
 				var target = method.PopStack();

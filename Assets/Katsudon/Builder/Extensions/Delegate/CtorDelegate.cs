@@ -4,7 +4,6 @@ using System.Reflection.Emit;
 using Katsudon.Builder.AsmOpCodes;
 using Katsudon.Builder.Helpers;
 using Katsudon.Info;
-using UnityEngine;
 
 namespace Katsudon.Builder.Extensions.DelegateExtension
 {

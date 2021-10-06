@@ -18,7 +18,7 @@ namespace Katsudon.Builder.Extensions.Struct
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			if(ILUtils.TryGetLdfld(method.currentOp, out var field))
+			if(ILUtils.TryGetStfld(method.currentOp, out var field))
 			{
 				if(!Utils.IsUdonAsmStruct(field.DeclaringType)) return false;
 				var value = method.PopStack();

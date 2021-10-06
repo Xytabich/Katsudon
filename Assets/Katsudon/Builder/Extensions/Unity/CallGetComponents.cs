@@ -24,7 +24,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			var getterName = methodInfo.Name;
 			if((getterName == nameof(Component.GetComponents) ||
 				getterName == nameof(Component.GetComponentsInParent) ||

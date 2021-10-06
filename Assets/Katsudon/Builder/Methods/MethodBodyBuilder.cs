@@ -60,6 +60,12 @@ namespace Katsudon.Builder
 		public void Build(MethodInfo method, bool isBehaviour, IList<IVariable> arguments, IList<IVariable> locals,
 			IVariable returnVariable, IAddressLabel returnAddress, IUdonProgramBlock machineBlock)
 		{
+			var methodDescriptor = new MethodDescriptor(method.IsStatic, isBehaviour, arguments, locals, returnVariable, returnAddress);
+			Build(method, methodDescriptor, machineBlock);
+		}
+
+		public void Build(MethodBase method, MethodDescriptor methodDescriptor, IUdonProgramBlock machineBlock)
+		{
 			var id = new MethodIdentifier(UdonCacheHelper.cache, method);
 			if(!inBuild.Add(id)) throw new Exception(string.Format("Recursion detected: method {0}:{1} is already in the build process", method.DeclaringType, method));
 
@@ -71,7 +77,7 @@ namespace Katsudon.Builder
 
 			var addressPointers = new List<UdonAddressPointer>();
 			addressPointers.Add(new UdonAddressPointer(machineBlock.machine.GetAddressCounter(), 0));
-			var methodDescriptor = new MethodDescriptor(method.IsStatic, isBehaviour, arguments, returnVariable, returnAddress, operations, locals, machineBlock, addressPointers);
+			methodDescriptor.Init(operations, machineBlock, addressPointers);
 			try
 			{
 				SortedSet<IOperationBuider> list;
@@ -154,7 +160,7 @@ namespace Katsudon.Builder
 			return x.order.CompareTo(y.order);
 		}
 
-		private static bool BuildMeta(MethodInfo method, List<UdonAddressPointer> addressPointers, uint endAddress, out UdonMethodMeta meta)
+		private static bool BuildMeta(MethodBase method, List<UdonAddressPointer> addressPointers, uint endAddress, out UdonMethodMeta meta)
 		{
 			meta = default;
 			var assembly = method.DeclaringType.Assembly;
@@ -181,17 +187,17 @@ namespace Katsudon.Builder
 		[System.Serializable]
 		private class KatsudonBuildException : Exception
 		{
-			public KatsudonBuildException(MethodInfo method, int ilOffset, Exception innerException) :
+			public KatsudonBuildException(MethodBase method, int ilOffset, Exception innerException) :
 				base(BuildMessage(method, ilOffset, innerException))
 			{ }
 
-			public KatsudonBuildException(MethodInfo method, string source, int line, int ilOffset, Exception innerException) :
+			public KatsudonBuildException(MethodBase method, string source, int line, int ilOffset, Exception innerException) :
 				base(BuildMessage(method, source, line, ilOffset, innerException))
 			{ }
 
 			protected KatsudonBuildException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
-			private static string BuildMessage(MethodInfo method, int ilOffset, Exception innerException)
+			private static string BuildMessage(MethodBase method, int ilOffset, Exception innerException)
 			{
 				var sb = new StringBuilder();
 				sb.AppendLine(innerException.Message);
@@ -200,7 +206,7 @@ namespace Katsudon.Builder
 				return sb.ToString();
 			}
 
-			private static string BuildMessage(MethodInfo method, string source, int line, int ilOffset, Exception innerException)
+			private static string BuildMessage(MethodBase method, string source, int line, int ilOffset, Exception innerException)
 			{
 				var sb = new StringBuilder();
 				sb.AppendLine(innerException.Message);

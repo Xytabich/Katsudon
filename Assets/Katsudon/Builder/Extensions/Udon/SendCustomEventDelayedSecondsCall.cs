@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.Name == nameof(AbstractCallsHelper.SendCustomEventDelayedSeconds) && methodInfo.DeclaringType == typeof(AbstractCallsHelper))
 			{
 				var timing = method.PopStack();

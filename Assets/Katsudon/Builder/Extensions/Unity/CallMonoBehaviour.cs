@@ -33,7 +33,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methods.TryGetValue(methodInfo, out var callback))
 			{
 				return callback(method, method.machine);

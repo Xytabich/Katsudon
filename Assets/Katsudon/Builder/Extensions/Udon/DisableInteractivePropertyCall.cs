@@ -10,7 +10,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.Name == nameof(AbstractCallsHelper.DisableInteractive) && methodInfo.DeclaringType == typeof(AbstractCallsHelper))
 			{
 				if(methodInfo.ReturnType == typeof(void))

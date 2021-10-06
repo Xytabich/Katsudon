@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Exceptions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var ctorInfo = method.currentOp.argument as ConstructorInfo;
+			var ctorInfo = (ConstructorInfo)method.currentOp.argument;
 			throw new Exception(string.Format("Constructor {0} declared in {1} is not supported by udon", ctorInfo, ctorInfo.DeclaringType));
 		}
 

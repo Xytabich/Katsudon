@@ -18,7 +18,7 @@ namespace Katsudon.Builder.AsmOpCodes
 				{
 					if(method.currentOp.opCode == OpCodes.Call)
 					{
-						var methodInfo = method.currentOp.argument as MethodInfo;
+						var methodInfo = (MethodInfo)method.currentOp.argument;
 						if(methodInfo.Name == "GetTypeFromHandle" && methodInfo.DeclaringType == typeof(Type))
 						{
 							handle.Apply();

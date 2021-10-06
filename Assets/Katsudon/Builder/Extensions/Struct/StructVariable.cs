@@ -69,7 +69,9 @@ namespace Katsudon.Builder.Extensions.Struct
 
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)
 		{
-			container.AddBuilder(new StructVariable(container));
+			var builder = new StructVariable(container);
+			container.AddBuilder(builder);
+			modules.AddModule(builder);
 		}
 	}
 }

@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Exceptions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var fieldInfo = method.currentOp.argument as FieldInfo;
+			var fieldInfo = (FieldInfo)method.currentOp.argument;
 			throw new Exception(string.Format("Field {0} declared in {1} is not supported by udon", fieldInfo, fieldInfo.DeclaringType));
 		}
 

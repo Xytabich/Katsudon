@@ -17,7 +17,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		{
 			if(externs == null) externs = UdonCacheHelper.cache.GetCtorNames();
 
-			var ctorInfo = method.currentOp.argument as ConstructorInfo;
+			var ctorInfo = (ConstructorInfo)method.currentOp.argument;
 			if(externs.TryGetValue(UdonCacheHelper.cache.GetCtorIdentifier(ctorInfo), out string fullName))
 			{
 				var parameters = ctorInfo.GetParameters();

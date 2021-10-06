@@ -81,11 +81,11 @@ namespace Katsudon.Builder
 			return retaddrVariable;
 		}
 
-		public IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour)
+		public IVariable GetThisVariable(UdonThisType type = UdonThisType.Self)
 		{
 			switch(type)
 			{
-				case UdonThisType.Behaviour:
+				case UdonThisType.Self:
 					if(thisVariable == null)
 					{
 						thisVariable = new ThisVariable(typeInfo.type);
@@ -308,7 +308,7 @@ namespace Katsudon.Builder
 
 	public enum UdonThisType
 	{
-		Behaviour,
+		Self,
 		Transform,
 		GameObject
 	}

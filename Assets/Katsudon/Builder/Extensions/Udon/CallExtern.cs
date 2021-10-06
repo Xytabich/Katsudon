@@ -14,7 +14,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			var parameters = methodInfo.GetParameters();
 			if(UdonCacheHelper.cache.TryFindUdonMethod(methodInfo.IsStatic ? null : method.PeekStack(parameters.Length).type, methodInfo, out var methodId, out var fullName))
 			{

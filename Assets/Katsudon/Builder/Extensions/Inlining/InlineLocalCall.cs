@@ -7,7 +7,7 @@ namespace Katsudon.Builder.AsmOpCodes
 	[OperationBuilder]
 	public class InlineLocalCall : IOperationBuider
 	{
-		public int order => 80;
+		public int order => 15;
 
 		private MethodBodyBuilder bodyBuilder;
 
@@ -18,7 +18,7 @@ namespace Katsudon.Builder.AsmOpCodes
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.IsStatic || methodInfo.IsGenericMethod) return false;
 			if(!Utils.IsUdonAsmBehaviour(methodInfo.DeclaringType)) return false;
 			if((methodInfo.MethodImplementationFlags & MethodImplAttributes.AggressiveInlining) == 0) return false;
@@ -77,16 +77,22 @@ namespace Katsudon.Builder.AsmOpCodes
 				localVariables.Add(method.GetTmpVariable(locals[i].LocalType).Reserve());
 			}
 
-			var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetTmpVariable(methodInfo.ReturnType).Reserve();
-			var returnAddress = new EmbedAddressLabel();
+			ITmpVariable outVariable = null;
+			if(methodInfo.ReturnType != typeof(void))
+			{
+				outVariable = method.GetTmpVariable(methodInfo.ReturnType);
+				outVariable.Allocate();
+				outVariable.Reserve();
+			}
 
+			var returnAddress = new EmbedAddressLabel();
 			bodyBuilder.Build(methodInfo, true, arguments, localVariables, outVariable, returnAddress, method);
 			method.machine.ApplyLabel(returnAddress);
 
 			if(outVariable != null)
 			{
-				method.machine.AddCopy(outVariable, method.GetOrPushOutVariable(methodInfo.ReturnType, 1), methodInfo.ReturnType);
 				outVariable.Release();
+				method.PushStack(outVariable);
 			}
 
 			CollectionCache.Release(arguments);

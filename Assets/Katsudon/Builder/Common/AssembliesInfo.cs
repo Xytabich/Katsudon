@@ -176,7 +176,7 @@ namespace Katsudon.Info
 				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. The type must be in an assembly marked with the UdonAsm attribute.", type));
 			}
 			Type[] interfaces;
-			if(type.BaseType != typeof(object) || (interfaces = type.GetInterfaces()).Length > 1 ||
+			if(type.IsAbstract || type.BaseType != typeof(object) || (interfaces = type.GetInterfaces()).Length > 1 ||
 				interfaces.Length == 1 && !typeof(ISerializationCallbackReceiver).IsAssignableFrom(interfaces[0]))
 			{
 				throw new Exception(string.Format("Struct {0} is not supported by Katsudon. A type cannot be abstract or static, it cannot inherit from other classes or implement interfaces.", type));

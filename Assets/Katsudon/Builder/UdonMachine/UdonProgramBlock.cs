@@ -161,7 +161,7 @@ namespace Katsudon.Builder
 				udonMachine.ApplyLabel(label);
 			}
 
-			public IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour)
+			public IVariable GetThisVariable(UdonThisType type = UdonThisType.Self)
 			{
 				return udonMachine.GetThisVariable(type);
 			}
@@ -403,7 +403,7 @@ namespace Katsudon.Builder
 
 		IVariable GetReturnAddressGlobal();
 
-		IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour);
+		IVariable GetThisVariable(UdonThisType type = UdonThisType.Self);
 
 		IVariable GetConstVariable(object value);
 

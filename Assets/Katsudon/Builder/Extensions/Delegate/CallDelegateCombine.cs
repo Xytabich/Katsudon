@@ -13,7 +13,7 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.Name == nameof(Delegate.Combine) && typeof(Delegate).IsAssignableFrom(methodInfo.DeclaringType))
 			{
 				var parameters = methodInfo.GetParameters();

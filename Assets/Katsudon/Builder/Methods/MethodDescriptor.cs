@@ -42,29 +42,38 @@ namespace Katsudon.Builder.Methods
 		private uint lastUdonAddress;
 		private IList<UdonAddressPointer> addressPointers;
 
-		public MethodDescriptor(bool isStatic, bool isBehaviour, IList<IVariable> arguments, IVariable returnVariable, IAddressLabel returnAddress,
-			IList<Operation> operations, IList<IVariable> locals, IUdonProgramBlock block, IList<UdonAddressPointer> addressPointers)
+		public MethodDescriptor(bool isStatic, bool isBehaviour, IList<IVariable> arguments, IList<IVariable> locals,
+			IVariable returnVariable, IAddressLabel returnAddress)
 		{
 			this.isStatic = isStatic;
 			this.isBehaviour = isBehaviour;
-			this.operations = operations;
 			this.arguments = arguments;
 			this.returnVariable = returnVariable;
 			this.returnAddress = returnAddress;
 			this.locals = locals;
+		}
+
+		public void Init(IList<Operation> operations, IUdonProgramBlock block, IList<UdonAddressPointer> addressPointers)
+		{
+			this.operations = operations;
 			this._index = -1;
 
 			this.lastUdonAddress = block.machine.GetAddressCounter();
 			this.addressPointers = addressPointers;
 
 			this.machineBlock = block;
-			this.machine = new MethodOpTracker((IRawUdonMachine)machineBlock.machine, this);
+			this.machine = CreateMachine(block);
 
 			stack = CollectionCache.GetList<IVariable>();
 			volatileStack = CollectionCache.GetStack<int>();
 			storedStacks = CollectionCache.GetSortedList<int, StoredStack>();
 			methodToMachineAddress = CollectionCache.GetDictionary<int, uint>();
 			initAddresses = CollectionCache.GetList<MachineAddressLabel>();
+		}
+
+		protected virtual IUdonMachine CreateMachine(IUdonProgramBlock block)
+		{
+			return new MethodOpTracker((IRawUdonMachine)block.machine, this);
 		}
 
 #if KATSUDON_DEBUG
@@ -383,7 +392,7 @@ namespace Katsudon.Builder.Methods
 			}
 		}
 
-		private class MethodOpTracker : IRawUdonMachine
+		protected class MethodOpTracker : IRawUdonMachine
 		{
 			public AsmTypeInfo typeInfo => machine.typeInfo;
 
@@ -459,7 +468,7 @@ namespace Katsudon.Builder.Methods
 				return machine.GetConstVariable(value, type);
 			}
 
-			public IVariable GetThisVariable(UdonThisType type = UdonThisType.Behaviour)
+			public virtual IVariable GetThisVariable(UdonThisType type = UdonThisType.Self)
 			{
 				return machine.GetThisVariable(type);
 			}

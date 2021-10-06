@@ -59,16 +59,22 @@ namespace Katsudon.Builder.Extensions.Inlining
 				localsCache.Add(method.GetTmpVariable(locals[i].LocalType).Reserve());
 			}
 
-			var outVariable = methodInfo.ReturnType == typeof(void) ? null : method.GetTmpVariable(methodInfo.ReturnType).Reserve();
-			var returnAddress = new EmbedAddressLabel();
+			ITmpVariable outVariable = null;
+			if(methodInfo.ReturnType != typeof(void))
+			{
+				outVariable = method.GetTmpVariable(methodInfo.ReturnType);
+				outVariable.Allocate();
+				outVariable.Reserve();
+			}
 
+			var returnAddress = new EmbedAddressLabel();
 			bodyBuilder.Build(methodInfo, false, arguments, localsCache, outVariable, returnAddress, method);
 			method.machine.ApplyLabel(returnAddress);
 
 			if(outVariable != null)
 			{
-				method.machine.AddCopy(outVariable, method.GetOrPushOutVariable(methodInfo.ReturnType, 1), methodInfo.ReturnType);
 				outVariable.Release();
+				method.PushStack(outVariable);
 			}
 
 			CollectionCache.Release(arguments);

@@ -11,7 +11,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			var condition = methodInfo.GetCustomAttribute<ConditionalAttribute>();
 			if(condition != null && condition.ConditionString == "UNITY_EDITOR")
 			{

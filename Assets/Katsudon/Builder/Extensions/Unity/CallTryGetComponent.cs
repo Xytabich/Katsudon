@@ -19,7 +19,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.Name == nameof(Component.TryGetComponent) &&
 				(methodInfo.DeclaringType == typeof(Component) || methodInfo.DeclaringType == typeof(GameObject)))
 			{

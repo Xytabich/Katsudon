@@ -30,7 +30,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			if(methodInfo.DeclaringType == typeof(AbstractUdonBehaviour))
 			{
 				if(builders.TryGetValue(methodInfo.Name, out var builder))

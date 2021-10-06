@@ -22,6 +22,8 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 			FieldInfo field;
 			if(ILUtils.TryGetStfld(method.currentOp, out field))
 			{
+				if(!Utils.IsUdonAsmBehaviour(field.DeclaringType)) return false;
+
 				var info = assembliesInfo.GetField(field.DeclaringType, field);
 				var valueVariable = method.PopStack();
 				method.machine.SetVariableExtern(method.PopStack(), info.name, valueVariable.UseType(field.FieldType));

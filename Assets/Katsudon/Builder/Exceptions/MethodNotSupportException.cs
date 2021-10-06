@@ -13,7 +13,7 @@ namespace Katsudon.Builder.Exceptions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = method.currentOp.argument as MethodInfo;
+			var methodInfo = (MethodInfo)method.currentOp.argument;
 			var cache = UdonCacheHelper.cache;
 			if(cache.GetMethodBaseTypes().TryGetValue(cache.GetMethodIdentifier(methodInfo), out var types))
 			{
