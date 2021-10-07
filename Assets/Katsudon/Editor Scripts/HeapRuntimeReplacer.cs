@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Katsudon.Builder.Converters;
 using Katsudon.Editor.Udon;
 using Katsudon.Info;
 using UnityEditor;
@@ -206,7 +207,7 @@ namespace Katsudon.Editor
 
 			public void Set(MonoBehaviour proxy, object value)
 			{
-				if(ProxyUtils.valueResolver.TryConvertFromUdon(value, type, out var converted, out _))
+				if(UdonValueResolver.instance.TryConvertFromUdon(value, type, out var converted, out _))
 				{
 					setter.Invoke(proxy, converted);
 				}

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using Katsudon.Builder;
 
-namespace Katsudon.Editor.Converters
+namespace Katsudon.Builder.Converters
 {
 	public interface IValueConverter
 	{
 		int order { get; }
+
+		Type GetUdonType(Type type);
 
 		bool TryConvertToUdon(object value, out object converted, out bool isAllowed);
 

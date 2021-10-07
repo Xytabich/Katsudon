@@ -44,11 +44,6 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		bool IVariableBuilder.TryConvert(Type toType, ref object value)
-		{
-			return false;
-		}
-
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)
 		{
 			container.AddBuilder(new ReflectionTypes(modules.GetModule<AssembliesInfo>()));

@@ -1,16 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using Katsudon.Builder;
 using Katsudon.Utility;
 using UnityEngine.Assertions;
 
-namespace Katsudon.Editor.Converters
+namespace Katsudon.Builder.Converters
 {
 	public class UdonValueResolver : IComparer<IValueConverter>
 	{
+		private static UdonValueResolver _instance = null;
+		public static UdonValueResolver instance => _instance ?? (_instance = new UdonValueResolver());
+
 		private SortedSet<IValueConverter> resolvers;
 
-		public UdonValueResolver()
+		private UdonValueResolver()
 		{
 			resolvers = new SortedSet<IValueConverter>(this);
 
@@ -22,6 +24,52 @@ namespace Katsudon.Editor.Converters
 				Assert.IsNotNull(method, string.Format("Value converter with type {0} does not have a Register method", pair.Value));
 				method.Invoke(null, args);
 			}
+		}
+
+		public bool TryGetUdonType(Type type, out Type udonType)//FIX: cache
+		{
+			var types = CollectionCache.GetList<Type>();
+			foreach(var resolver in resolvers)
+			{
+				var outType = resolver.GetUdonType(type);
+				if(outType != null) types.Add(outType);
+			}
+			if(types.Count == 0)
+			{
+				if(Utils.IsUdonType(type))
+				{
+					udonType = type;
+				}
+				else
+				{
+					udonType = null;
+				}
+			}
+			else
+			{
+				if(Utils.IsUdonType(type)) types.Add(type);// The "default" resolver is also involved
+
+				udonType = types[0];
+				for(int i = 1; i < types.Count; i++)
+				{
+					var t = types[i];
+					if(t.IsAssignableFrom(udonType))
+					{
+						udonType = t;
+						continue;
+					}
+					while(!udonType.IsAssignableFrom(t))
+					{
+						udonType = udonType.BaseType;
+					}
+				}
+				while(!Utils.IsUdonType(udonType))
+				{
+					udonType = udonType.BaseType;
+				}
+			}
+			CollectionCache.Release(types);
+			return udonType != null;
 		}
 
 		public bool TryConvertToUdon(object value, out object outValue)//TODO: recursion check

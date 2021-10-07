@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Katsudon.Builder.Converters;
 using Katsudon.Editor.Udon;
 using UnityEngine;
 using VRC.Udon;
@@ -40,6 +41,15 @@ namespace Katsudon.Editor.Converters
 			converted = null;
 			isAllowed = false;
 			return false;
+		}
+
+		Type IValueConverter.GetUdonType(Type type)
+		{
+			if(Utils.IsUdonAsmBehaviourOrInterface(type))
+			{
+				return typeof(UdonBehaviour);
+			}
+			return null;
 		}
 
 		public static void Register(UdonValueResolver resolver, ICollection<IValueConverter> container)

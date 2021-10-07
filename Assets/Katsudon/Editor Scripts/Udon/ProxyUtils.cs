@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using Katsudon.Editor.Converters;
+using Katsudon.Builder.Converters;
 using UnityEditor;
 using UnityEngine;
 using VRC.Udon;
@@ -13,9 +13,6 @@ namespace Katsudon.Editor.Udon
 {
 	public static class ProxyUtils
 	{
-		private static UdonValueResolver _valueResolver = null;
-		public static UdonValueResolver valueResolver => _valueResolver ?? (_valueResolver = new UdonValueResolver());
-
 		private static Func<UdonBehaviour, bool> isInitializedGetter = null;
 
 		public static MonoBehaviour GetProxyByBehaviour(UdonBehaviour behaviour)
@@ -52,7 +49,7 @@ namespace Katsudon.Editor.Udon
 					foreach(var symbol in symbols.GetExportedSymbols())
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null && valueResolver.TryConvertToUdon(field.GetValue(proxy), out var converted))
+						if(field != null && UdonValueResolver.instance.TryConvertToUdon(field.GetValue(proxy), out var converted))
 						{
 							behaviour.SetProgramVariable(symbol, converted);
 						}
@@ -64,7 +61,7 @@ namespace Katsudon.Editor.Udon
 					foreach(var symbol in symbols.GetExportedSymbols())
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null && valueResolver.TryConvertToUdon(field.GetValue(proxy), out var converted))
+						if(field != null && UdonValueResolver.instance.TryConvertToUdon(field.GetValue(proxy), out var converted))
 						{
 							behaviour.publicVariables.TrySetVariableValue(symbol, converted);
 						}
@@ -87,10 +84,10 @@ namespace Katsudon.Editor.Udon
 					if(behaviour.TryGetProgramVariable(symbol, out var value))
 					{
 						var field = proxyType.GetField(symbol, flags);
-						if(field != null && valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
+						if(field != null && UdonValueResolver.instance.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
 						{
 							field.SetValue(proxy, converted);
-							if(reserialize && valueResolver.TryConvertToUdon(converted, out value))
+							if(reserialize && UdonValueResolver.instance.TryConvertToUdon(converted, out value))
 							{
 								behaviour.SetProgramVariable(symbol, value);
 							}
@@ -110,10 +107,10 @@ namespace Katsudon.Editor.Udon
 						var field = proxyType.GetField(symbol, flags);
 						if(field != null)
 						{
-							if(valueResolver.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
+							if(UdonValueResolver.instance.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
 							{
 								field.SetValue(proxy, converted);
-								if(reserialize && valueResolver.TryConvertToUdon(converted, out value))
+								if(reserialize && UdonValueResolver.instance.TryConvertToUdon(converted, out value))
 								{
 									variables.TrySetVariableValue(symbol, value);
 									isBehaviourChanged = true;

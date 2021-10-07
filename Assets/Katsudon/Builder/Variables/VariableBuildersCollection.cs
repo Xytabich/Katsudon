@@ -44,21 +44,6 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		public object Convert(Type toType, object value)//TODO: recursion check?
-		{
-			if(value == null) return null;
-
-			foreach(var builder in builders)
-			{
-				if(builder.TryConvert(toType, ref value)) break;
-			}
-			if(!udonTypes.ContainsKey(value.GetType()))
-			{
-				throw new InvalidOperationException(string.Format("Type {0} is not supported by Udon", value.GetType()));
-			}
-			return value;
-		}
-
 		int IComparer<IVariableBuilder>.Compare(IVariableBuilder x, IVariableBuilder y)
 		{
 			if(x.order == y.order) return x == y ? 0 : -1;

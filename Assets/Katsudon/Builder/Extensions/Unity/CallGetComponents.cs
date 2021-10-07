@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
+using Katsudon.Builder.Converters;
 using Katsudon.Builder.Externs;
 using Katsudon.Builder.Variables;
 using Katsudon.Info;
@@ -245,8 +246,15 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 				// end
 			}
 
-			var udonType = ArrayTypes.GetUdonArrayType(outComponents.type);
-			method.machine.AddExtern(Utils.GetExternName(udonType, "__ctor__SystemInt32__{0}", udonType), outComponents, counter.OwnType());
+			if(UdonValueResolver.instance.TryGetUdonType(outComponents.type, out var udonType))
+			{
+				method.machine.AddExtern(Utils.GetExternName(udonType, "__ctor__SystemInt32__{0}", udonType), outComponents, counter.OwnType());
+			}
+			else
+			{
+				throw new System.Exception(string.Format("Array type {0} is not supported by udon", outComponents.type));
+			}
+
 			outComponents.Allocate();
 			method.machine.AddExtern("SystemArray.__Copy__SystemArray_SystemArray_SystemInt32__SystemVoid",
 				components.OwnType(), outComponents.OwnType(), counter.OwnType());

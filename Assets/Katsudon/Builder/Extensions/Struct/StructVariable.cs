@@ -1,6 +1,6 @@
 using System;
+using Katsudon.Builder.Converters;
 using Katsudon.Builder.Variables;
-using Katsudon.Info;
 
 namespace Katsudon.Builder.Extensions.Struct
 {
@@ -26,37 +26,13 @@ namespace Katsudon.Builder.Extensions.Struct
 			{
 				if(variable is ISignificantVariable significant && significant.value != null)
 				{
-					var value = significant.value;
-					TryConvert(typeof(object[]), ref value);
+					UdonValueResolver.instance.TryConvertToUdon(significant.value, out var value);
 					table.AddVariable(TypedSignificantVariable.From(variable, typeof(object[]), value));
 				}
 				else
 				{
 					table.AddVariable(TypedVariable.From(variable, typeof(object[])));
 				}
-				return true;
-			}
-			return false;
-		}
-
-		public bool TryConvert(Type toType, ref object value)
-		{
-			var type = value.GetType();
-			if(Utils.IsUdonAsmStruct(type))
-			{
-				var info = AssembliesInfo.instance.GetStructInfo(type);
-				var fields = info.fields;
-				var instance = new object[FIELDS_OFFSET + fields.Count];
-				instance[TYPE_INDEX] = GetStructTypeIdentifier(info.guid);
-				for(int i = fields.Count - 1; i >= 0; i--)
-				{
-					var field = fields[i];
-					if(field != null)
-					{
-						instance[FIELDS_OFFSET + i] = collection.Convert(typeof(object), field.GetValue(value));
-					}
-				}
-				value = instance;
 				return true;
 			}
 			return false;

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Katsudon.Editor.Converters;
+using Katsudon.Builder.Converters;
 using Katsudon.Info;
 
 namespace Katsudon.Builder.Extensions.Struct
@@ -78,6 +78,15 @@ namespace Katsudon.Builder.Extensions.Struct
 			converted = null;
 			isAllowed = false;
 			return false;
+		}
+
+		Type IValueConverter.GetUdonType(Type type)
+		{
+			if(Utils.IsUdonAsmStruct(type))
+			{
+				return typeof(object[]);
+			}
+			return null;
 		}
 
 		public static void Register(UdonValueResolver resolver, ICollection<IValueConverter> container)

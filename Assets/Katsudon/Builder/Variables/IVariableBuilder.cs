@@ -7,7 +7,5 @@ namespace Katsudon.Builder.Variables
 		int order { get; }
 
 		bool TryBuildVariable(IVariable variable, VariablesTable table);
-
-		bool TryConvert(Type toType, ref object value);
 	}
 }

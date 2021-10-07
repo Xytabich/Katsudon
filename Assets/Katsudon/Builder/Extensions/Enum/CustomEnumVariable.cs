@@ -25,17 +25,6 @@ namespace Katsudon.Builder.Variables
 			return false;
 		}
 
-		bool IVariableBuilder.TryConvert(Type toType, ref object value)
-		{
-			var type = value.GetType();
-			if(type.IsEnum && !Utils.IsUdonType(type))
-			{
-				value = Convert.ChangeType(value, Enum.GetUnderlyingType(type));
-				return true;
-			}
-			return false;
-		}
-
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)
 		{
 			container.AddBuilder(new CustomEnumVariable());

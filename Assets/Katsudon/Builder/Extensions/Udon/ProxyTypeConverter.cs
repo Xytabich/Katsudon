@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
-using Katsudon.Editor.Converters;
+using Katsudon.Builder.Converters;
 
-namespace Katsudon.Editor.Extensions.EnumExtension
+namespace Katsudon.Builder.Extensions.UdonExtensions
 {
 	[ValueConverter]
-	public class CustomEnumValueConverter : IValueConverter
+	public class ProxyTypeConverter : IValueConverter
 	{
 		int IValueConverter.order => 50;
 
 		bool IValueConverter.TryConvertToUdon(object value, out object converted, out bool isAllowed)
 		{
-			if(value is Enum e && !Utils.IsUdonType(e.GetType()))
+			if(value is Type t && !Utils.IsUdonType(t))
 			{
-				converted = Convert.ChangeType(e, Enum.GetUnderlyingType(e.GetType()));
-				isAllowed = true;
+				converted = value;
+				isAllowed = false;
 				return true;
 			}
 			converted = null;
@@ -24,10 +24,10 @@ namespace Katsudon.Editor.Extensions.EnumExtension
 
 		bool IValueConverter.TryConvertFromUdon(object value, Type toType, out object converted, out bool isAllowed, ref bool reserialize)
 		{
-			if(toType.IsEnum && !Utils.IsUdonType(toType))
+			if(value is Guid && typeof(Type).IsAssignableFrom(toType))
 			{
-				converted = Enum.ToObject(toType, value);
-				isAllowed = true;
+				converted = value;
+				isAllowed = false;
 				return true;
 			}
 			converted = null;
@@ -35,9 +35,18 @@ namespace Katsudon.Editor.Extensions.EnumExtension
 			return false;
 		}
 
+		Type IValueConverter.GetUdonType(Type type)
+		{
+			if(typeof(Type).IsAssignableFrom(type))
+			{
+				return typeof(Guid);
+			}
+			return null;
+		}
+
 		public static void Register(UdonValueResolver resolver, ICollection<IValueConverter> container)
 		{
-			container.Add(new CustomEnumValueConverter());
+			container.Add(new ProxyTypeConverter());
 		}
 	}
 }

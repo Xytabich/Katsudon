@@ -1,20 +1,14 @@
 using System;
 using System.Runtime.Serialization;
+using Katsudon.Builder.Converters;
 using Katsudon.Builder.Variables;
 
 namespace Katsudon.Builder.Extensions.Struct
 {
-	[VariableBuilder(1)]
+	[VariableBuilder(0)]
 	public class StructPrototypeVariable : IVariableBuilder
 	{
 		int IVariableBuilder.order => 25;
-
-		private StructVariable structBuilder;
-
-		public StructPrototypeVariable(StructVariable structBuilder)
-		{
-			this.structBuilder = structBuilder;
-		}
 
 		bool IVariableBuilder.TryBuildVariable(IVariable variable, VariablesTable table)
 		{
@@ -24,8 +18,8 @@ namespace Katsudon.Builder.Extensions.Struct
 				if(variable is ISignificantVariable significant && significant.value != null)
 				{
 					object value = FormatterServices.GetUninitializedObject(((StructPrototype)significant.value).type);
-					structBuilder.TryConvert(typeof(object[]), ref value);
-					table.AddVariable(TypedSignificantVariable.From(variable, typeof(object[]), value));
+					UdonValueResolver.instance.TryConvertToUdon(value, out var v);
+					table.AddVariable(TypedSignificantVariable.From(variable, typeof(object[]), v));
 				}
 				else
 				{
@@ -36,14 +30,9 @@ namespace Katsudon.Builder.Extensions.Struct
 			return false;
 		}
 
-		public bool TryConvert(Type toType, ref object value)
-		{
-			return false;
-		}
-
 		public static void Register(VariableBuildersCollection container, IModulesContainer modules)
 		{
-			container.AddBuilder(new StructPrototypeVariable(modules.GetModule<StructVariable>()));
+			container.AddBuilder(new StructPrototypeVariable());
 		}
 	}
 

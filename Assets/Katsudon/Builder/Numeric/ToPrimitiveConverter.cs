@@ -1,7 +1,7 @@
 ﻿using System;
 using Katsudon.Builder.Externs;
 
-namespace Katsudon.Builder.Extensions.EnumExtension
+namespace Katsudon.Builder.Variables
 {
 	[PrimitiveConverter]
 	public class ToPrimitiveConverter : IPrimitiveConverter
