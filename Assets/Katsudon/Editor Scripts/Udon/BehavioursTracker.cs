@@ -103,7 +103,7 @@ namespace Katsudon.Editor.Udon
 			UpdateReferencesContainer();
 		}
 
-		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
 		private static void InitRuntime()
 		{
 			if(ignoreNextDirty == null) ignoreNextDirty = new HashSet<MonoBehaviour>();

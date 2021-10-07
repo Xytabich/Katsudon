@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Katsudon.Editor.Udon;
 using Katsudon.Info;
+using UnityEditor;
 using UnityEngine;
 using VRC.Udon;
 using VRC.Udon.Common;
@@ -183,7 +184,12 @@ namespace Katsudon.Editor
 
 			private void SetValue(uint address, object value)
 			{
-				if(setters[address] != null) setters[address].Set(proxy, value);
+				if(setters[address] != null)
+				{
+					BehavioursTracker.IgnoreNextProxyDirtiness(proxy);
+					setters[address].Set(proxy, value);
+					EditorUtility.SetDirty(proxy);
+				}
 			}
 		}
 

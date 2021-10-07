@@ -97,6 +97,7 @@ namespace Katsudon.Editor.Udon
 						}
 					}
 				}
+				EditorUtility.SetDirty(proxy);
 			}
 			else
 			{
