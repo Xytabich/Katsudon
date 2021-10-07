@@ -22,6 +22,8 @@ namespace Katsudon.Editor.Udon
 		private static Dictionary<MonoBehaviour, IDisposable> proxies = new Dictionary<MonoBehaviour, IDisposable>();
 		private static HashSet<Scene> loadedScenes = new HashSet<Scene>();
 
+		private static HashSet<MonoBehaviour> ignoreNextDirty = null;
+
 		public static MonoBehaviour GetProxyByBehaviour(UdonBehaviour behaviour)
 		{
 			if(behaviour == null) return null;
@@ -80,6 +82,14 @@ namespace Katsudon.Editor.Udon
 			OnBehaviourDestroyed(behaviour);
 		}
 
+		internal static void IgnoreNextProxyDirtiness(MonoBehaviour proxy)
+		{
+			if(ignoreNextDirty != null)
+			{
+				ignoreNextDirty.Add(proxy);
+			}
+		}
+
 		[InitializeOnLoadMethod]
 		private static void Init()
 		{
@@ -91,6 +101,12 @@ namespace Katsudon.Editor.Udon
 			EditorApplication.playModeStateChanged += OnPlayModeChanged;
 
 			UpdateReferencesContainer();
+		}
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		private static void InitRuntime()
+		{
+			if(ignoreNextDirty == null) ignoreNextDirty = new HashSet<MonoBehaviour>();
 		}
 
 		[MenuItem("Katsudon/Convert Scene")]
@@ -154,6 +170,10 @@ namespace Katsudon.Editor.Udon
 						pair.Value.RetryTrack();
 					}
 					UpdateReferencesContainer();
+				}
+				if(state == PlayModeStateChange.EnteredEditMode)
+				{
+					ignoreNextDirty = null;
 				}
 			}
 		}
@@ -299,8 +319,11 @@ namespace Katsudon.Editor.Udon
 				}
 				else
 				{
-					var behaviour = GetBehaviourByProxy((MonoBehaviour)obj);
-					ProxyUtils.CopyFieldsToBehaviour((MonoBehaviour)obj, behaviour);
+					if(ignoreNextDirty == null || !ignoreNextDirty.Remove((MonoBehaviour)obj))
+					{
+						var behaviour = GetBehaviourByProxy((MonoBehaviour)obj);
+						ProxyUtils.CopyFieldsToBehaviour((MonoBehaviour)obj, behaviour);
+					}
 				}
 			}
 		}

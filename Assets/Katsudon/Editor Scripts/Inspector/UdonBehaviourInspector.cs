@@ -423,9 +423,21 @@ namespace Katsudon.Editor
 		{
 			var menu = new GenericMenu();
 			menu.AddItem(EditorGUIUtility.TrTextContent("Reset"), false, OnResetProxy, editor);
+			menu.AddItem(EditorGUIUtility.TrTextContent("Pull Values From Behaviour",
+				"Pulls changes from behavior if they haven't been updated for some reason."), false, OnPullValues, editor);
 			menu.AddSeparator("");
 			menu.AddItem(EditorGUIUtility.TrTextContent("Edit Script"), false, OnEditProxyScript, editor);
 			menu.DropDown(rect);
+		}
+
+		private static void OnPullValues(object obj)
+		{
+			var editor = (ProgramEditor)obj;
+			for(int i = 0; i < editor.proxies.Length; i++)
+			{
+				Unsupported.SmartReset(editor.proxies[i]);
+				ProxyUtils.CopyFieldsToProxy(editor.behaviours[i], editor.proxies[i]);
+			}
 		}
 
 		private static void OnResetProxy(object obj)

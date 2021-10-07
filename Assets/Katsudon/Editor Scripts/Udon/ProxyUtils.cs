@@ -81,6 +81,7 @@ namespace Katsudon.Editor.Udon
 			var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 			if(IsInitialized(behaviour))
 			{
+				BehavioursTracker.IgnoreNextProxyDirtiness(proxy);
 				foreach(var symbol in variables.VariableSymbols)
 				{
 					if(behaviour.TryGetProgramVariable(symbol, out var value))
