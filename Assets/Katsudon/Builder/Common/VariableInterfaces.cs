@@ -42,10 +42,15 @@ namespace Katsudon.Builder
 		bool isSelf { get; }
 	}
 
-	public interface IConstVariable : IVariable
+	public interface IConstVariable : IVariable, IFixedVariableValue
 	{
 		object value { get; }
 	}
+
+	/// <summary>
+	/// A variable whose value will not change during program execution.
+	/// </summary>
+	public interface IFixedVariableValue : IVariable { }
 
 	public interface IFixedVariableAddress : IVariable { }
 

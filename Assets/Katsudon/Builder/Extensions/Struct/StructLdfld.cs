@@ -45,7 +45,7 @@ namespace Katsudon.Builder.Extensions.Struct
 		private static IVariable LoadReference(IUdonProgramBlock block, IVariable target, FieldInfo field, AssembliesInfo assemblies)
 		{
 			int index = assemblies.GetStructInfo(field.DeclaringType).GetFieldIndex(field);
-			return new ReferenceVariable(block.GetTmpVariable(target.OwnType()).Reserve(),
+			return new ReferenceVariable(block.GetReadonlyVariable(target.OwnType()),
 				block.machine.GetConstVariable((int)(index + StructVariable.FIELDS_OFFSET)), block.GetTmpVariable(field.FieldType));
 		}
 
@@ -65,13 +65,15 @@ namespace Katsudon.Builder.Extensions.Struct
 
 			private IVariable fieldIndexConst;
 			private ITmpVariable tmpVariable;
-			private ITmpVariable targetVariable;
+			private IVariable targetVariable;
 
-			public ReferenceVariable(ITmpVariable targetVariable, IVariable fieldIndexConst, ITmpVariable tmpVariable)
+			public ReferenceVariable(IVariable targetVariable, IVariable fieldIndexConst, ITmpVariable tmpVariable)
 			{
 				this.targetVariable = targetVariable;
 				this.fieldIndexConst = fieldIndexConst;
 				this.tmpVariable = tmpVariable;
+
+				if(targetVariable is ITmpVariable tmp) tmp.Reserve();
 
 				tmpVariable.onRelease += ReleaseValue;
 			}
@@ -84,7 +86,7 @@ namespace Katsudon.Builder.Extensions.Struct
 			private void ReleaseValue()
 			{
 				tmpVariable.onRelease -= ReleaseValue;
-				targetVariable.Release();
+				if(targetVariable is ITmpVariable tmp) tmp.Release();
 			}
 
 			public void Allocate(int count = 1)

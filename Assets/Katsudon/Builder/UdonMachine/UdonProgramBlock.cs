@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Katsudon.Builder.Methods;
 using Katsudon.Info;
 using VRC.Udon.VM.Common;
@@ -52,7 +53,8 @@ namespace Katsudon.Builder
 			{
 				variable = list.Pop();
 				variable.usesLeft = 1;
-				variable.isHandle = false;
+				variable.handleAllocations = 0;
+				variable.isReadOnly = false;
 			}
 			else
 			{
@@ -60,14 +62,19 @@ namespace Katsudon.Builder
 			}
 #if KATSUDON_DEBUG
 			if(!variablesInUse.Add(variable)) throw new Exception("This variable is already in use");
+			if(variable is ITmpVariableDebug debug)
+			{
+				debug.allocatedFrom = new StackTrace(true).ToString();
+			}
 #endif
 			return variable;
 		}
 
 		public ITmpVariable GetTmpVariable(VariableMeta variable)
 		{
-			if(variable.variable is ITmpVariable tmp && !tmp.isHandle)
+			if(variable.variable is TmpVariable tmp && tmp.handleAllocations == 0 && (tmp.usesLeft == 1 || !tmp.isReadOnly))
 			{
+				tmp.isReadOnly = false;
 				return tmp;
 			}
 			else
@@ -81,18 +88,20 @@ namespace Katsudon.Builder
 
 		public IVariable GetReadonlyVariable(VariableMeta variable)
 		{
-			if(variable.variable is ITmpVariable tmp && !tmp.isHandle)
+			if(variable.variable is TmpVariable tmp && (tmp.isReadOnly || tmp.usesLeft == 1 && tmp.handleAllocations == 0))
 			{
+				tmp.isReadOnly = true;
 				return tmp;
 			}
-			if(variable.variable is IConstVariable)
+			if(variable.variable is IFixedVariableValue)
 			{
 				return variable.variable;
 			}
 
-			var newTmp = GetTmpVariable(variable.preferredType);
+			var newTmp = (TmpVariable)GetTmpVariable(variable.preferredType);
 			newTmp.Allocate();
 			machine.AddCopy(variable.variable, newTmp, variable.preferredType);
+			newTmp.isReadOnly = true;
 			return newTmp;
 		}
 
@@ -322,13 +331,13 @@ namespace Katsudon.Builder
 		{
 			public bool isUsed = false;
 			public int usesLeft = 1;
-			public bool isHandle = false;
+			public bool isReadOnly = false;
+
+			public int handleAllocations = 0;
 
 #if KATSUDON_DEBUG
 			public string allocatedFrom { get; set; }
 #endif
-
-			bool ITmpVariable.isHandle => isHandle;
 
 			public event Action onUse;
 			public event Action onRelease;
@@ -342,7 +351,7 @@ namespace Katsudon.Builder
 
 			public override void Use()
 			{
-				if(isHandle) return;
+				if(handleAllocations != 0) return;
 
 				isUsed = true;
 				if(onUse != null) onUse.Invoke();
@@ -358,7 +367,7 @@ namespace Katsudon.Builder
 
 			public override void Allocate(int count = 1)
 			{
-				if(isHandle) return;
+				if(handleAllocations != 0) return;
 
 				if(count < 1) return;
 				if(usesLeft < 0) usesLeft = 0;
@@ -367,13 +376,13 @@ namespace Katsudon.Builder
 
 			ITmpVariable ITmpVariable.Reserve()
 			{
-				isHandle = true;
+				handleAllocations++;
 				return this;
 			}
 
 			void ITmpVariable.Release()
 			{
-				isHandle = false;
+				handleAllocations--;
 				Use();
 			}
 
@@ -469,8 +478,6 @@ namespace Katsudon.Builder
 
 	public interface ITmpVariable : IVariable
 	{
-		bool isHandle { get; }
-
 		event Action onUse;
 		event Action onRelease;
 

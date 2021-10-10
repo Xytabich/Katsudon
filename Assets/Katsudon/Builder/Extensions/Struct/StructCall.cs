@@ -78,7 +78,8 @@ namespace Katsudon.Builder.Extensions.Struct
 				localVariables.Add(method.GetTmpVariable(locals[i].LocalType).Reserve());
 			}
 
-			selfVariable = method.GetTmpVariable(selfVariable.OwnType()).Reserve();
+			selfVariable = method.GetReadonlyVariable(selfVariable.OwnType());
+			if(selfVariable is ITmpVariable tmp1) tmp1.Reserve();
 
 			ITmpVariable outVariable = null;
 			if(methodBase is MethodInfo methodInfo && methodInfo.ReturnType != typeof(void))
@@ -97,7 +98,7 @@ namespace Katsudon.Builder.Extensions.Struct
 				outVariable.Release();
 				method.PushStack(outVariable);
 			}
-			((ITmpVariable)selfVariable).Release();
+			if(selfVariable is ITmpVariable tmp2) tmp2.Release();
 
 			CollectionCache.Release(arguments);
 

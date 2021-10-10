@@ -28,7 +28,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 				if(method.currentOp.opCode == OpCodes.Ldflda)
 				{
-					method.PushStack(new ReferenceInstanceVariable(info.name, method.GetTmpVariable(target.OwnType()).Reserve(), method.GetTmpVariable(field.FieldType)));
+					method.PushStack(new ReferenceInstanceVariable(info.name, method.GetReadonlyVariable(target.OwnType()), method.GetTmpVariable(field.FieldType)));
 				}
 				else
 				{
@@ -55,13 +55,15 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 			private string variableName;
 			private ITmpVariable tmpVariable;
-			private ITmpVariable targetVariable;
+			private IVariable targetVariable;
 
-			public ReferenceInstanceVariable(string variableName, ITmpVariable targetVariable, ITmpVariable tmpVariable)
+			public ReferenceInstanceVariable(string variableName, IVariable targetVariable, ITmpVariable tmpVariable)
 			{
 				this.variableName = variableName;
 				this.targetVariable = targetVariable;
 				this.tmpVariable = tmpVariable;
+				
+				if(targetVariable is ITmpVariable tmp) tmp.Reserve();
 
 				tmpVariable.onRelease += ReleaseValue;
 			}
@@ -74,7 +76,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 			private void ReleaseValue()
 			{
 				tmpVariable.onRelease -= ReleaseValue;
-				targetVariable.Release();
+				if(targetVariable is ITmpVariable tmp) tmp.Release();
 			}
 
 			public void Allocate(int count = 1)

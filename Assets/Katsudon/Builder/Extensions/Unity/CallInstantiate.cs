@@ -89,7 +89,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 								GetTransform(method, obj, ref transform);
 								if(copyWorldTransform)
 								{
-									bool worldTransformCondition = !(worldPositionStays is IConstVariable);
+									bool worldTransformCondition = !(worldPositionStays is IFixedVariableValue);
 									EmbedAddressLabel skipLabel = null;
 									if(worldTransformCondition)
 									{

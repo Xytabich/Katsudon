@@ -194,7 +194,10 @@ namespace Katsudon.Builder.Methods
 		{
 			var tmp = machineBlock.GetTmpVariable(type);
 #if KATSUDON_DEBUG
-			(tmp as ITmpVariableDebug).allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+			if(tmp is ITmpVariableDebug debug)
+			{
+				debug.allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + debug.allocatedFrom;
+			}
 #endif
 			return tmp;
 		}
@@ -203,18 +206,21 @@ namespace Katsudon.Builder.Methods
 		{
 			var tmp = machineBlock.GetTmpVariable(variable);
 #if KATSUDON_DEBUG
-			(tmp as ITmpVariableDebug).allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+			if(tmp is ITmpVariableDebug debug)
+			{
+				debug.allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + debug.allocatedFrom;
+			}
 #endif
 			return tmp;
 		}
 
-		IVariable IUdonProgramBlock.GetReadonlyVariable(VariableMeta variable)
+		public IVariable GetReadonlyVariable(VariableMeta variable)
 		{
 			var tmp = machineBlock.GetReadonlyVariable(variable);
 #if KATSUDON_DEBUG
 			if(tmp is ITmpVariableDebug debug)
 			{
-				debug.allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + new StackTrace(true).ToString();
+				debug.allocatedFrom = "IL Offset: " + currentOp.offset.ToString("X8") + "\n" + debug.allocatedFrom;
 			}
 #endif
 			return tmp;
@@ -302,7 +308,7 @@ namespace Katsudon.Builder.Methods
 				}
 				else
 				{
-					tmp = GetTmpVariable(variable.OwnType());
+					tmp = GetReadonlyVariable(variable.OwnType());
 					created[variable] = tmp;
 				}
 				stack[index] = tmp;

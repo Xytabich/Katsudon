@@ -21,7 +21,7 @@ namespace Katsudon.Builder.AsmOpCodes
 					Utils.GetExternName(arrType, "__Get__SystemInt32__{0}", arrType.GetElementType()),
 					Utils.GetExternName(arrType, "__Set__SystemInt32_{0}__SystemVoid", arrType.GetElementType()),
 					method.GetTmpVariable(elementType),
-					method.GetTmpVariable(array.OwnType()).Reserve(),
+					method.GetReadonlyVariable(array.OwnType()),
 					method.GetReadonlyVariable(index.UseType(typeof(int)))
 				));
 			}
@@ -48,17 +48,19 @@ namespace Katsudon.Builder.AsmOpCodes
 
 			private string loadName;
 			private string storeName;
-			private ITmpVariable arrayVariable;
+			private IVariable arrayVariable;
 			private IVariable indexVariable;
 			private ITmpVariable tmpVariable;
 
-			public ReferenceElementVariable(string loadName, string storeName, ITmpVariable tmpVariable, ITmpVariable arrayVariable, IVariable indexVariable)
+			public ReferenceElementVariable(string loadName, string storeName, ITmpVariable tmpVariable, IVariable arrayVariable, IVariable indexVariable)
 			{
 				this.loadName = loadName;
 				this.storeName = storeName;
 				this.tmpVariable = tmpVariable;
 				this.arrayVariable = arrayVariable;
 				this.indexVariable = indexVariable;
+
+				if(arrayVariable is ITmpVariable tmpArray) tmpArray.Reserve();
 				if(indexVariable is ITmpVariable tmp) tmp.Reserve();
 				tmpVariable.onRelease += ReleaseValue;
 			}
@@ -71,7 +73,7 @@ namespace Katsudon.Builder.AsmOpCodes
 			private void ReleaseValue()
 			{
 				tmpVariable.onRelease -= ReleaseValue;
-				arrayVariable.Release();
+				if(arrayVariable is ITmpVariable tmpArray) tmpArray.Release();
 				if(indexVariable is ITmpVariable tmp) tmp.Release();
 			}
 
