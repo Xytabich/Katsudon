@@ -47,7 +47,6 @@ namespace Katsudon.Editor
 				{
 					if(InitFields(proxy.GetType(), program.SymbolTable, program.Heap.GetHeapCapacity(), out var map))
 					{
-						if(heapField == null) InitHeapField();
 						heapTracker.Init(map, proxy);
 					}
 				}
@@ -96,8 +95,10 @@ namespace Katsudon.Editor
 			heapField = typeof(UdonProgram).GetField("<Heap>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
 		}
 
-		private class HeapTracker : IUdonHeap
+		internal class HeapTracker : IUdonHeap
 		{
+			public bool isChanged = false;
+
 			private IUdonHeap heap;
 			private MonoBehaviour proxy;
 			private SetterInfo[] setters;
@@ -185,6 +186,7 @@ namespace Katsudon.Editor
 
 			private void SetValue(uint address, object value)
 			{
+				isChanged = true;
 				if(setters[address] != null)
 				{
 					BehavioursTracker.IgnoreNextProxyDirtiness(proxy);
@@ -194,7 +196,7 @@ namespace Katsudon.Editor
 			}
 		}
 
-		private class SetterInfo
+		internal class SetterInfo
 		{
 			public readonly Type type;
 			public readonly Action<object, object> setter;

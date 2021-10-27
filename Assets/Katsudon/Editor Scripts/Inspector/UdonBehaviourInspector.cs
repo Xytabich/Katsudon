@@ -5,6 +5,7 @@ using Katsudon.Editor.Udon;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using UnityEngine.UIElements;
 using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.ProgramSources;
@@ -30,13 +31,6 @@ namespace Katsudon.Editor
 			InitEditor();
 		}
 
-		protected override void OnEnable()
-		{
-			isPrefabEditor = PrefabUtility.IsPartOfPrefabAsset(targets[0]);
-			if(isPrefabEditor) prefabBehaviours = Array.ConvertAll(targets, t => (UdonBehaviour)t);
-			base.OnEnable();
-		}
-
 		protected override void OnDisable()
 		{
 			base.OnDisable();
@@ -49,9 +43,15 @@ namespace Katsudon.Editor
 			}
 		}
 
+		public override VisualElement CreateInspectorGUI()
+		{
+			if(state == EditorState.ProxyEditor || state == EditorState.ProxyEditorMulti) return new OverriddenGUIContainer(OnInspectorGUI);
+			return new IMGUIContainer(OnInspectorGUI);
+		}
+
 		public override void OnInspectorGUI()
 		{
-			if(state == EditorState.Proxy)
+			if(state == EditorState.DefaultEditor)
 			{
 				base.OnInspectorGUI();
 				return;
@@ -93,19 +93,19 @@ namespace Katsudon.Editor
 						allIsPrograms = false;
 					}
 				}
-				state = allIsPrograms ? EditorState.EditDifferent : (containsPrograms ? EditorState.CannotEditMulti : EditorState.Proxy);
+				state = allIsPrograms ? EditorState.ProxyEditorMulti : (containsPrograms ? EditorState.CannotEditMulti : EditorState.DefaultEditor);
 			}
 			else
 			{
 				if(serializedProgramAssetProp.objectReferenceValue != null)
 				{
 					var program = serializedProgramAssetProp.objectReferenceValue as SerializedUdonProgramAsset;
-					state = (program == null || !ProgramUtils.HasScriptRecord(program)) ? EditorState.Proxy : EditorState.Edit;
+					state = (program == null || !ProgramUtils.HasScriptRecord(program)) ? EditorState.DefaultEditor : EditorState.ProxyEditor;
 				}
-				else state = EditorState.Proxy;
+				else state = EditorState.DefaultEditor;
 			}
 
-			if(state == EditorState.Proxy)
+			if(state == EditorState.DefaultEditor)
 			{
 				var fallback = EditorReplacer.GetFallbackEditor(typeof(UdonBehaviour), targets.Length > 1);
 				if(fallback == null)
@@ -114,7 +114,7 @@ namespace Katsudon.Editor
 				}
 				else base.CreateEditor(fallback);
 			}
-			else if(state == EditorState.Edit)
+			else if(state == EditorState.ProxyEditor)
 			{
 				var program = serializedProgramAssetProp.objectReferenceValue as SerializedUdonProgramAsset;
 				var behaviours = Array.ConvertAll(targets, v => (UdonBehaviour)v);
@@ -126,7 +126,7 @@ namespace Katsudon.Editor
 					new ProgramEditor(editor, program, behaviours, ubehProxies)
 				}));
 			}
-			else if(state == EditorState.EditDifferent)
+			else if(state == EditorState.ProxyEditorMulti)
 			{
 				var groups = new Dictionary<SerializedUdonProgramAsset, List<UdonBehaviour>>();
 				for(var i = 0; i < targets.Length; i++)
@@ -135,7 +135,7 @@ namespace Katsudon.Editor
 					var program = ProgramUtils.ProgramFieldGetter(behaviour);
 					if(!groups.TryGetValue(program, out var list))
 					{
-						list = new List<UdonBehaviour>();
+						list = CollectionCache.GetList<UdonBehaviour>();
 						groups[program] = list;
 					}
 					list.Add(behaviour);
@@ -145,6 +145,7 @@ namespace Katsudon.Editor
 				foreach(var item in groups)
 				{
 					var behaviours = item.Value.ToArray();
+					CollectionCache.Release(item.Value);
 					var ubehProxies = Array.ConvertAll(behaviours, ProxyUtils.GetProxyByBehaviour);
 
 					bool hasNoProxy = Array.Exists(ubehProxies, p => p == null);
@@ -153,6 +154,12 @@ namespace Katsudon.Editor
 					index++;
 				}
 				SetProxy(CreateMultiProxy(editors));
+			}
+
+			if(state == EditorState.ProxyEditor || state == EditorState.ProxyEditorMulti)
+			{
+				isPrefabEditor = PrefabUtility.IsPartOfPrefabAsset(targets[0]);
+				if(isPrefabEditor) prefabBehaviours = Array.ConvertAll(targets, t => (UdonBehaviour)t);
 			}
 		}
 
@@ -173,25 +180,26 @@ namespace Katsudon.Editor
 			return ProgramUtils.HasScriptRecord(program);
 		}
 
-		private static void DrawProxyComponentBackground(Rect position)
+		private static void DrawProxyComponentBackground(Rect position, float width = 3f, float offset = 0f)
 		{
 			if(Event.current.type == EventType.Repaint)
 			{
-				position = new Rect(position.x, position.y + 3f, position.width, position.height - 2f);
+				position.x = offset;
+				position.y += 3f;
+				position.width = width;
+				position.height -= 2f;
 
 				Color backgroundColor = GUI.backgroundColor;
 				bool enabled = GUI.enabled;
 				GUI.enabled = true;
 				GUI.backgroundColor = new Color(235f / 255f, 153f / 255f, 1f / 255f, 0.75f);
-				position.x = 0f;
-				position.width = 3f;
 				utils.overrideMargin.Draw(position, false, false, false, false);
 				GUI.enabled = enabled;
 				GUI.backgroundColor = backgroundColor;
 			}
 		}
 
-		private static bool InspectorTitlebar(Rect position, bool foldout, ProgramEditor editor)
+		private static bool ProxyInspectorTitlebar(Rect position, bool foldout, ProgramEditor editor, bool drawPrefabOverride)
 		{
 			int controlID = GUIUtility.GetControlID(utils.titlebarHash, FocusType.Keyboard, position);
 			GUIStyle baseStyle = utils.inspectorTitlebar;
@@ -210,8 +218,13 @@ namespace Katsudon.Editor
 			{
 				baseStyle.Draw(position, GUIContent.none, isHover, isActive, foldout, hasKeyboardFocus);
 			}
-			int enabledState = -1;
 
+			if(drawPrefabOverride)
+			{
+				utils.DrawOverrideBackground(position, true);
+			}
+
+			int enabledState = -1;
 			foreach(var behaviour in editor.behaviours)
 			{
 				int objectEnabled = EditorUtility.GetObjectEnabled(behaviour);
@@ -262,21 +275,30 @@ namespace Katsudon.Editor
 					}
 				}
 				EditorGUI.showMixedValue = false;
-				if(togglePosition.Contains(Event.current.mousePosition) && ((current.type == EventType.MouseDown && current.button == 1) || current.type == EventType.ContextClick))
+				if(togglePosition.Contains(current.mousePosition) && ((current.type == EventType.MouseDown && current.button == 1) || current.type == EventType.ContextClick))
 				{
 					SerializedObject serializedObject = new SerializedObject(editor.behaviours[0]);
 					utils.DoPropertyContextMenu(serializedObject.FindProperty("m_Enabled"), null, null);
 					current.Use();
 				}
 			}
-			Rect rectangle = settingsPosition;
-			rectangle.x -= 20f;
-			textPosition.xMax = utils.DrawEditorHeaderItems(rectangle, editor.proxies, 4f).xMin - 4f;
+
 			if(current.type == EventType.Repaint)
 			{
 				Texture2D miniThumbnail = AssetPreview.GetMiniThumbnail(editor.proxies[0]);
 				GUIStyle.none.Draw(iconPosition, utils.TempContent(miniThumbnail), false, false, false, false);
+				if(drawPrefabOverride)
+				{
+					GUIStyle.none.Draw(iconPosition, utils.TempContent(utils.prefabOverlayAddedIcon), false, false, false, false);
+				}
 			}
+
+			Rect udonRectangle = settingsPosition;
+			udonRectangle.x -= 20f;
+			textPosition.xMax = utils.DrawEditorHeaderItems(udonRectangle, editor.proxies, 4f).xMin - 4f;
+
+			udonRectangle = new Rect(textPosition.xMax - 96f, position.y, 96f, position.height);
+			textPosition.xMax -= 100f;
 
 			bool guiEnabled = GUI.enabled;
 			GUI.enabled = true;
@@ -290,14 +312,14 @@ namespace Katsudon.Editor
 					}
 					break;
 				case EventType.Repaint:
-					bool flag = GUIUtility.hotControl == controlID;
-					utils.titlebarFoldout.Draw(new Rect(position.x + utils.titlebarFoldout.margin.left + 1f, position.y + (position.height - 13f) * 0.5f + baseStyle.padding.top, 13f, 13f), flag, flag, foldout, false);
+					utils.titlebarFoldout.Draw(new Rect(position.x + utils.titlebarFoldout.margin.left + 1f, position.y + (position.height - 13f) * 0.5f + baseStyle.padding.top, 13f, 13f), isActive, isActive, foldout, false);
 
 					textStyle.Draw(textPosition, utils.TempContent(ObjectNames.GetInspectorTitle(editor.proxies[0])), isHover, isActive, foldout, hasKeyboardFocus);
-					utils.iconButton.Draw(settingsPosition, utils.titleSettingsIcon, controlID, foldout, settingsPosition.Contains(Event.current.mousePosition));
+					utils.iconButton.Draw(settingsPosition, utils.titleSettingsIcon, controlID, foldout, settingsPosition.Contains(current.mousePosition));
 					break;
 			}
 			GUI.enabled = guiEnabled;
+			DoUdonBehaviourArea(udonRectangle, editor, foldout, GUIUtility.GetControlID(utils.titlebarHash, FocusType.Passive, position));
 			foldout = DoObjectFoldout(foldout, position, editor, controlID);
 			return foldout;
 		}
@@ -419,6 +441,106 @@ namespace Katsudon.Editor
 			return foldout;
 		}
 
+		private static void DoUdonBehaviourArea(Rect rect, ProgramEditor editor, bool foldout, int id)
+		{
+			GUIStyle baseStyle = utils.inspectorTitlebar;
+			GUIStyle textStyle = utils.inspectorTitlebarText;
+
+			var current = Event.current;
+			bool isHover = rect.Contains(current.mousePosition);
+			bool isActive = GUIUtility.hotControl == id;
+			switch(current.GetTypeForControl(id))
+			{
+				case EventType.MouseDown:
+					if(isHover)
+					{
+						if(current.button == 0 && (Application.platform != 0 || !current.control))
+						{
+							GUIUtility.hotControl = id;
+							GUIUtility.keyboardControl = id;//TODO: UnityEditor.DragAndDropDelay
+							// var dragAndDropDelay = (DragAndDropDelay)GUIUtility.GetStateObject(typeof(DragAndDropDelay), id);
+							// dragAndDropDelay.mouseDownPosition = current.mousePosition;
+							current.Use();
+						}
+					}
+					break;
+				case EventType.MouseUp:
+					if(GUIUtility.hotControl == id)
+					{
+						GUIUtility.hotControl = 0;
+						current.Use();
+						if(isHover)
+						{
+							GUI.changed = true;
+							foldout = !foldout;
+						}
+					}
+					break;
+				case EventType.MouseDrag:
+					if(GUIUtility.hotControl == id)
+					{//TODO: UnityEditor.DragAndDropDelay
+						// if(((DragAndDropDelay)GUIUtility.GetStateObject(typeof(DragAndDropDelay), id)).CanStartDrag())
+						// {
+						// 	GUIUtility.hotControl = 0;
+						// 	DragAndDrop.PrepareStartDrag();
+						// 	DragAndDrop.objectReferences = editor.behaviours;
+						// 	DragAndDrop.StartDrag((editor.behaviours.Length <= 1) ? ObjectNames.GetDragAndDropTitle(editor.behaviours[0]) : "<Multiple>");
+
+						// 	// Disable components reordering in inspector
+						// 	var dragModeType = typeof(EditorGUI).Assembly.GetType("UnityEditor.EditorDragging").GetNestedType("DraggingMode", BindingFlags.NonPublic);
+						// 	DragAndDrop.SetGenericData("InspectorEditorDraggingMode", Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(dragModeType), Enum.ToObject(dragModeType, 0)));
+						// 	DragAndDrop.SetGenericData("Katsudon.ComponentDrag", true);
+						// }
+						current.Use();
+					}
+					break;
+				case EventType.DragUpdated:
+					if(dragUpdatedOverID == id)
+					{
+						if(isHover)
+						{
+							if((double)Time.realtimeSinceStartup > foldoutDestTime)
+							{
+								foldout = true;
+								HandleUtility.Repaint();
+							}
+						}
+						else
+						{
+							dragUpdatedOverID = 0;
+						}
+					}
+					else if(isHover)
+					{
+						dragUpdatedOverID = id;
+						foldoutDestTime = (double)Time.realtimeSinceStartup + 0.7;
+					}
+					if(isHover)
+					{
+						DragAndDrop.visualMode = utils.InspectorWindowDrag(editor.behaviours, false);
+						Event.current.Use();
+					}
+					break;
+				case EventType.DragPerform:
+					if(isHover)
+					{
+						DragAndDrop.visualMode = utils.InspectorWindowDrag(editor.behaviours, true);
+						DragAndDrop.AcceptDrag();
+						Event.current.Use();
+					}
+					break;
+				case EventType.Repaint:
+					Color backgroundColor = GUI.backgroundColor;
+					GUI.backgroundColor = new Color(0.9f, 0.9f, 0.9f);
+					baseStyle.Draw(rect, GUIContent.none, isHover, isActive, foldout, false);
+					GUI.backgroundColor = backgroundColor;
+
+					rect.x += 4f;
+					textStyle.Draw(rect, EditorGUIUtility.TrTextContent("UdonBehaviour", "UdonBehaviour Drag&Drop"), isHover, isActive, foldout, false);
+					break;
+			}
+		}
+
 		private static void DisplayObjectContextMenu(Rect rect, ProgramEditor editor)
 		{
 			var menu = new GenericMenu();
@@ -464,9 +586,77 @@ namespace Katsudon.Editor
 		{
 			CannotEdit,
 			CannotEditMulti,
-			Proxy,
-			Edit,
-			EditDifferent
+			DefaultEditor,
+			ProxyEditor,
+			ProxyEditorMulti
+		}
+
+		private class OverriddenGUIContainer : IMGUIContainer
+		{
+			private ContainerInfo container = default;
+
+			public OverriddenGUIContainer(Action onGUIHandler) : base(onGUIHandler) { }
+
+			public override void HandleEvent(EventBase evt)
+			{
+				base.HandleEvent(evt);
+				if(evt is AttachToPanelEvent)
+				{
+					// Hiding UdonBehaviour inspector title
+					var hierarchy = parent.parent.hierarchy;
+					for(int i = 0; i < hierarchy.childCount; i++)
+					{
+						if(hierarchy[i] is IMGUIContainer container)
+						{
+							this.container.Release();
+							this.container = new ContainerInfo(container);
+							this.container.Use();
+							break;
+						}
+					}
+				}
+				if(evt is DetachFromPanelEvent)
+				{
+					this.container.Release();
+					this.container = default;
+				}
+			}
+
+			private struct ContainerInfo
+			{
+				private IMGUIContainer container;
+				private bool isEnabled;
+				private bool isFocusable;
+				private StyleEnum<DisplayStyle> display;
+				private StyleEnum<Visibility> visibility;
+
+				public ContainerInfo(IMGUIContainer container)
+				{
+					this.container = container;
+					isEnabled = container.enabledSelf;
+					isFocusable = container.focusable;
+					display = container.style.display;
+					visibility = container.style.visibility;
+				}
+
+				public void Use()
+				{
+					container.SetEnabled(false);
+					container.focusable = false;
+					container.style.display = DisplayStyle.None;
+					container.style.visibility = Visibility.Hidden;
+				}
+
+				public void Release()
+				{
+					if(container == null) return;
+					container.SetEnabled(isEnabled);
+					container.focusable = isFocusable;
+					container.style.display = display;
+					container.style.visibility = visibility;
+					container = null;
+				}
+			}
 		}
 
 		private class ProgramEditor
@@ -575,11 +765,21 @@ namespace Katsudon.Editor
 						EditorGUILayout.EndVertical();
 						continue;
 					}
-					var proxyRect = EditorGUILayout.BeginVertical();
-					DrawProxyComponentBackground(proxyRect);
+
+					bool isPrefabOverride = info.editor != null && info.behaviours.Length == 1 && utils.ShouldDrawOverrideBackground(info.behaviours, Event.current, info.behaviours[0]);
+					var overrideRect = EditorGUILayout.BeginVertical();
+					float overrideOffset = 0f;
+					float overrideWidth = 3f;
+					if(isPrefabOverride)
+					{
+						utils.DrawOverrideBackground(new Rect(overrideRect.x, overrideRect.y + 3f, overrideRect.width, overrideRect.height - 2f), true);
+						overrideOffset = 2f;
+						overrideWidth = 2f;
+					}
+					DrawProxyComponentBackground(overrideRect, overrideWidth, overrideOffset);
 
 					bool isExpanded = InternalEditorUtility.GetIsInspectorExpanded(info.proxies[0]);
-					bool newExpanded = InspectorTitlebar(GUILayoutUtility.GetRect(GUIContent.none, utils.inspectorTitlebar), isExpanded, info);
+					bool newExpanded = ProxyInspectorTitlebar(GUILayoutUtility.GetRect(GUIContent.none, utils.inspectorTitlebar), isExpanded, info, isPrefabOverride);
 					if(newExpanded != isExpanded)
 					{
 						isExpanded = newExpanded;
@@ -669,7 +869,7 @@ namespace Katsudon.Editor
 			{
 				for(int i = 0; i < proxies.Length; i++)
 				{
-					if(proxies[i] != null && proxies[i].UseDefaultMargins()) return true;
+					if(proxies[i] != null && proxies[i].RequiresConstantRepaint()) return true;
 				}
 				return false;
 			}
@@ -723,7 +923,7 @@ namespace Katsudon.Editor
 
 		private class UnityEditorUtils
 		{
-			private const BindingFlags INTERNAL_BIND = BindingFlags.NonPublic | BindingFlags.Static;
+			private const BindingFlags INTERNAL_BIND = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
 
 			public readonly int titlebarHash;
 
@@ -740,6 +940,10 @@ namespace Katsudon.Editor
 			public readonly Func<UnityEngine.Object[], bool, DragAndDropVisualMode> InspectorWindowDrag;
 			public readonly Action<SerializedProperty, SerializedProperty, GenericMenu> DoPropertyContextMenu;
 			public readonly Func<Rect, UnityEngine.Object[], float, Rect> DrawEditorHeaderItems;
+			public readonly Func<UnityEngine.Object[], Event, Component, bool> ShouldDrawOverrideBackground;
+			public readonly Action<Rect, bool> DrawOverrideBackground;
+
+			public readonly Texture2D prefabOverlayAddedIcon;
 
 			private Func<GUIStyle> _overrideMargin;
 			private Func<GUIStyle> _inspectorTitlebar;
@@ -763,6 +967,7 @@ namespace Katsudon.Editor
 				_iconButton = CreatePropertyGetter<GUIStyle>(typeof(EditorStyles), "iconButton");
 
 				_titleSettingsIcon = CreatePropertyGetter<GUIContent>(typeof(EditorGUI).GetNestedType("GUIContents", INTERNAL_BIND), "titleSettingsIcon");
+				prefabOverlayAddedIcon = GetFieldValue<Texture2D>(typeof(EditorGUI).GetNestedType("Styles", INTERNAL_BIND), "prefabOverlayAddedIcon");
 
 				_tempContentTexture = CreateFunc<Texture, GUIContent>(typeof(EditorGUIUtility), "TempContent");
 				_tempContentText = CreateFunc<string, GUIContent>(typeof(EditorGUIUtility), "TempContent");
@@ -772,6 +977,9 @@ namespace Katsudon.Editor
 				InspectorWindowDrag = CreateFunc<UnityEngine.Object[], bool, DragAndDropVisualMode>(typeof(InternalEditorUtility), "InspectorWindowDrag");
 				DoPropertyContextMenu = CreateAction<SerializedProperty, SerializedProperty, GenericMenu>(typeof(EditorGUI), "DoPropertyContextMenu");
 				DrawEditorHeaderItems = CreateFunc<Rect, UnityEngine.Object[], float, Rect>(typeof(EditorGUIUtility), "DrawEditorHeaderItems");
+
+				ShouldDrawOverrideBackground = CreateFunc<UnityEngine.Object[], Event, Component, bool>(typeof(EditorGUI), "ShouldDrawOverrideBackground");
+				DrawOverrideBackground = CreateAction<Rect, bool>(typeof(EditorGUI), "DrawOverrideBackground");
 			}
 
 			public GUIContent TempContent(Texture texture)
@@ -782,6 +990,11 @@ namespace Katsudon.Editor
 			public GUIContent TempContent(string text)
 			{
 				return _tempContentText(text);
+			}
+
+			private static TOut GetFieldValue<TOut>(Type type, string name)
+			{
+				return (TOut)type.GetField(name, INTERNAL_BIND).GetValue(null);
 			}
 
 			private static Func<TOut> CreatePropertyGetter<TOut>(Type type, string name)
@@ -812,6 +1025,11 @@ namespace Katsudon.Editor
 			private static Action<TIn0, TIn1, TIn2> CreateAction<TIn0, TIn1, TIn2>(Type type, string name)
 			{
 				return (Action<TIn0, TIn1, TIn2>)(object)Delegate.CreateDelegate(typeof(Action<TIn0, TIn1, TIn2>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1), typeof(TIn2) }, null));
+			}
+
+			private static Action<TIn0, TIn1> CreateAction<TIn0, TIn1>(Type type, string name)
+			{
+				return (Action<TIn0, TIn1>)(object)Delegate.CreateDelegate(typeof(Action<TIn0, TIn1>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1) }, null));
 			}
 		}
 	}
