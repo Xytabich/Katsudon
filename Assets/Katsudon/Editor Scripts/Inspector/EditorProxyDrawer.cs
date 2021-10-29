@@ -45,6 +45,7 @@ namespace Katsudon.Editor
 			CreateCachedEditor(targets, editorType, ref editor);
 			if(editor != null)
 			{
+				editor.hideFlags = HideFlags.HideAndDontSave;
 				proxy = CreateProxy(editor);
 			}
 			else proxy = null;

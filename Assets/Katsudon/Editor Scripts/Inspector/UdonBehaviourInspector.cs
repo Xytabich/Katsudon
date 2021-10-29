@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Katsudon.Editor.Udon;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -25,6 +26,8 @@ namespace Katsudon.Editor
 		private bool isPrefabEditor = false;
 		private UdonBehaviour[] prefabBehaviours;
 
+		private OverriddenGUIContainer guiContainer;
+
 		protected override void OnInit()
 		{
 			serializedProgramAssetProp = serializedObject.FindProperty("serializedProgramAsset");
@@ -45,7 +48,12 @@ namespace Katsudon.Editor
 
 		public override VisualElement CreateInspectorGUI()
 		{
-			if(state == EditorState.ProxyEditor || state == EditorState.ProxyEditorMulti) return new OverriddenGUIContainer(OnInspectorGUI);
+			if(state == EditorState.ProxyEditor || state == EditorState.ProxyEditorMulti)
+			{
+				guiContainer = new OverriddenGUIContainer(this, OnInspectorGUI);
+				return guiContainer;
+			}
+			guiContainer = null;
 			return new IMGUIContainer(OnInspectorGUI);
 		}
 
@@ -73,6 +81,8 @@ namespace Katsudon.Editor
 			base.OnInspectorGUI();
 			EditorGUI.indentLevel = indent;
 			GUI.enabled = enabled;
+
+			guiContainer.footer.style.marginTop = -3f;
 		}
 
 		private void InitEditor()
@@ -122,6 +132,7 @@ namespace Katsudon.Editor
 
 				bool hasNoProxy = Array.Exists(ubehProxies, p => p == null);
 				var editor = hasNoProxy ? null : CreateEditor(ubehProxies);
+				if(editor != null) editor.hideFlags = HideFlags.HideAndDontSave;
 				SetProxy(CreateMultiProxy(new ProgramEditor[] {
 					new ProgramEditor(editor, program, behaviours, ubehProxies)
 				}));
@@ -150,6 +161,7 @@ namespace Katsudon.Editor
 
 					bool hasNoProxy = Array.Exists(ubehProxies, p => p == null);
 					var editor = hasNoProxy ? null : CreateEditor(ubehProxies);
+					if(editor != null) editor.hideFlags = HideFlags.HideAndDontSave;
 					editors[index] = new ProgramEditor(editor, item.Key, behaviours, ubehProxies);
 					index++;
 				}
@@ -379,8 +391,7 @@ namespace Katsudon.Editor
 							DragAndDrop.StartDrag((editor.proxies.Length <= 1) ? ObjectNames.GetDragAndDropTitle(editor.proxies[0]) : "<Multiple>");
 
 							// Disable components reordering in inspector
-							var dragModeType = typeof(EditorGUI).Assembly.GetType("UnityEditor.EditorDragging").GetNestedType("DraggingMode", BindingFlags.NonPublic);
-							DragAndDrop.SetGenericData("InspectorEditorDraggingMode", Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(dragModeType), Enum.ToObject(dragModeType, 0)));
+							DragAndDrop.SetGenericData("InspectorEditorDraggingMode", utils.InspectorEditorDraggingMode);
 							DragAndDrop.SetGenericData("Katsudon.ComponentDrag", true);
 						}
 						current.Use();
@@ -457,9 +468,9 @@ namespace Katsudon.Editor
 						if(current.button == 0 && (Application.platform != 0 || !current.control))
 						{
 							GUIUtility.hotControl = id;
-							GUIUtility.keyboardControl = id;//TODO: UnityEditor.DragAndDropDelay
-							// var dragAndDropDelay = (DragAndDropDelay)GUIUtility.GetStateObject(typeof(DragAndDropDelay), id);
-							// dragAndDropDelay.mouseDownPosition = current.mousePosition;
+							GUIUtility.keyboardControl = id;
+							var dragAndDropDelay = GUIUtility.GetStateObject(utils.DragAndDropDelay, id);
+							utils.dragAndDropDelayField.SetValue(dragAndDropDelay, current.mousePosition);
 							current.Use();
 						}
 					}
@@ -469,43 +480,25 @@ namespace Katsudon.Editor
 					{
 						GUIUtility.hotControl = 0;
 						current.Use();
-						if(isHover)
-						{
-							GUI.changed = true;
-							foldout = !foldout;
-						}
 					}
 					break;
 				case EventType.MouseDrag:
 					if(GUIUtility.hotControl == id)
-					{//TODO: UnityEditor.DragAndDropDelay
-						// if(((DragAndDropDelay)GUIUtility.GetStateObject(typeof(DragAndDropDelay), id)).CanStartDrag())
-						// {
-						// 	GUIUtility.hotControl = 0;
-						// 	DragAndDrop.PrepareStartDrag();
-						// 	DragAndDrop.objectReferences = editor.behaviours;
-						// 	DragAndDrop.StartDrag((editor.behaviours.Length <= 1) ? ObjectNames.GetDragAndDropTitle(editor.behaviours[0]) : "<Multiple>");
-
-						// 	// Disable components reordering in inspector
-						// 	var dragModeType = typeof(EditorGUI).Assembly.GetType("UnityEditor.EditorDragging").GetNestedType("DraggingMode", BindingFlags.NonPublic);
-						// 	DragAndDrop.SetGenericData("InspectorEditorDraggingMode", Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(dragModeType), Enum.ToObject(dragModeType, 0)));
-						// 	DragAndDrop.SetGenericData("Katsudon.ComponentDrag", true);
-						// }
+					{
+						if((bool)utils.dragAndDropDelayMethod.Invoke(GUIUtility.GetStateObject(utils.DragAndDropDelay, id), new object[0]))
+						{
+							GUIUtility.hotControl = 0;
+							DragAndDrop.PrepareStartDrag();
+							DragAndDrop.objectReferences = editor.behaviours;
+							DragAndDrop.StartDrag((editor.behaviours.Length <= 1) ? ObjectNames.GetDragAndDropTitle(editor.behaviours[0]) : "<Multiple>");
+						}
 						current.Use();
 					}
 					break;
 				case EventType.DragUpdated:
 					if(dragUpdatedOverID == id)
 					{
-						if(isHover)
-						{
-							if((double)Time.realtimeSinceStartup > foldoutDestTime)
-							{
-								foldout = true;
-								HandleUtility.Repaint();
-							}
-						}
-						else
+						if(!isHover)
 						{
 							dragUpdatedOverID = 0;
 						}
@@ -593,9 +586,17 @@ namespace Katsudon.Editor
 
 		private class OverriddenGUIContainer : IMGUIContainer
 		{
+			public IMGUIContainer footer;
+
+			private UnityEditor.Editor target;
 			private ContainerInfo container = default;
 
-			public OverriddenGUIContainer(Action onGUIHandler) : base(onGUIHandler) { }
+			public OverriddenGUIContainer(UnityEditor.Editor target, Action onGUIHandler) : base(onGUIHandler)
+			{
+				this.target = target;
+				style.overflow = Overflow.Visible;
+				AddToClassList(InspectorElement.iMGUIContainerUssClassName);
+			}
 
 			public override void HandleEvent(EventBase evt)
 			{
@@ -608,10 +609,16 @@ namespace Katsudon.Editor
 					{
 						if(hierarchy[i] is IMGUIContainer container)
 						{
-							this.container.Release();
-							this.container = new ContainerInfo(container);
-							this.container.Use();
-							break;
+							if(container.name.EndsWith("Header"))
+							{
+								this.container.Release();
+								this.container = new ContainerInfo(container);
+								this.container.Use();
+							}
+							if(container.name.EndsWith("Footer"))
+							{
+								footer = container;
+							}
 						}
 					}
 				}
@@ -627,7 +634,7 @@ namespace Katsudon.Editor
 				private IMGUIContainer container;
 				private bool isEnabled;
 				private bool isFocusable;
-				private StyleEnum<DisplayStyle> display;
+				private StyleLength marginTop;
 				private StyleEnum<Visibility> visibility;
 
 				public ContainerInfo(IMGUIContainer container)
@@ -635,7 +642,7 @@ namespace Katsudon.Editor
 					this.container = container;
 					isEnabled = container.enabledSelf;
 					isFocusable = container.focusable;
-					display = container.style.display;
+					marginTop = container.style.marginTop;
 					visibility = container.style.visibility;
 				}
 
@@ -643,7 +650,7 @@ namespace Katsudon.Editor
 				{
 					container.SetEnabled(false);
 					container.focusable = false;
-					container.style.display = DisplayStyle.None;
+					container.style.marginTop = -22; // looks bad.. but only works like this
 					container.style.visibility = Visibility.Hidden;
 				}
 
@@ -652,7 +659,7 @@ namespace Katsudon.Editor
 					if(container == null) return;
 					container.SetEnabled(isEnabled);
 					container.focusable = isFocusable;
-					container.style.display = display;
+					container.style.marginTop = marginTop;
 					container.style.visibility = visibility;
 					container = null;
 				}
@@ -754,6 +761,7 @@ namespace Katsudon.Editor
 							if(ubehProxies[0] != null)
 							{
 								var editor = CreateEditor(ubehProxies);
+								if(editor != null) editor.hideFlags = HideFlags.HideAndDontSave;
 								info.proxies = ubehProxies;
 								info.editor = editor;
 								proxies[i] = container.CreateProxy(editor);
@@ -943,6 +951,12 @@ namespace Katsudon.Editor
 			public readonly Func<UnityEngine.Object[], Event, Component, bool> ShouldDrawOverrideBackground;
 			public readonly Action<Rect, bool> DrawOverrideBackground;
 
+			public readonly Type DragAndDropDelay;
+			public readonly FieldInfo dragAndDropDelayField;
+			public readonly MethodInfo dragAndDropDelayMethod;
+
+			public readonly object InspectorEditorDraggingMode;
+
 			public readonly Texture2D prefabOverlayAddedIcon;
 
 			private Func<GUIStyle> _overrideMargin;
@@ -980,6 +994,14 @@ namespace Katsudon.Editor
 
 				ShouldDrawOverrideBackground = CreateFunc<UnityEngine.Object[], Event, Component, bool>(typeof(EditorGUI), "ShouldDrawOverrideBackground");
 				DrawOverrideBackground = CreateAction<Rect, bool>(typeof(EditorGUI), "DrawOverrideBackground");
+
+				DragAndDropDelay = typeof(EditorGUI).Assembly.GetType("UnityEditor.DragAndDropDelay");
+				dragAndDropDelayField = DragAndDropDelay.GetField("mouseDownPosition");
+				dragAndDropDelayMethod = DragAndDropDelay.GetMethod("CanStartDrag");
+
+				var EditorDraggingMode = typeof(EditorGUI).Assembly.GetType("UnityEditor.EditorDragging").GetNestedType("DraggingMode", BindingFlags.NonPublic);
+				var EditorDraggingModeNullable = typeof(Nullable<>).MakeGenericType(EditorDraggingMode);
+				InspectorEditorDraggingMode = Activator.CreateInstance(EditorDraggingModeNullable, Enum.ToObject(EditorDraggingMode, 0));
 			}
 
 			public GUIContent TempContent(Texture texture)
