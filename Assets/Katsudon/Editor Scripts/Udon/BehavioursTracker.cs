@@ -42,19 +42,7 @@ namespace Katsudon.Editor.Udon
 
 		public static void RegisterPair(UdonBehaviour behaviour, MonoBehaviour proxy)
 		{
-			var group = Undo.GetCurrentGroup();
-			var obj = behaviour.gameObject;
-			var container = GetContainer(obj);
-			if(container == null)
-			{
-				container = obj.AddComponent<ReferencesContainer>();
-				container.hideFlags = SERVICE_OBJECT_FLAGS;
-				CacheContainer(container);
-			}
-			container.AddPair(behaviour, proxy);
-			Undo.CollapseUndoOperations(group);
-			TrackBehaviour(behaviour);
-			TrackProxy(proxy);
+			RegisterPair(behaviour, proxy, true);
 		}
 
 		public static MonoBehaviour GetOrCreateProxy(UdonBehaviour behaviour, MonoScript script)
@@ -70,9 +58,11 @@ namespace Katsudon.Editor.Udon
 				var group = Undo.GetCurrentGroup();
 				if(proxy != null) UnRegisterPair(behaviour);
 				proxy = CreateProxy(behaviour.gameObject, behaviour, script);
-				RegisterPair(behaviour, proxy);
+				RegisterPair(behaviour, proxy, false);
 				ProxyUtils.CopyFieldsToProxy(behaviour, proxy);
 				Undo.CollapseUndoOperations(group);
+				TrackBehaviour(behaviour);
+				TrackProxy(proxy);
 			}
 			return proxy;
 		}
@@ -87,6 +77,26 @@ namespace Katsudon.Editor.Udon
 			if(ignoreNextDirty != null)
 			{
 				ignoreNextDirty.Add(proxy);
+			}
+		}
+
+		private static void RegisterPair(UdonBehaviour behaviour, MonoBehaviour proxy, bool beginTrack)
+		{
+			var group = Undo.GetCurrentGroup();
+			var obj = behaviour.gameObject;
+			var container = GetContainer(obj);
+			if(container == null)
+			{
+				container = obj.AddComponent<ReferencesContainer>();
+				container.hideFlags = SERVICE_OBJECT_FLAGS;
+				CacheContainer(container);
+			}
+			container.AddPair(behaviour, proxy);
+			Undo.CollapseUndoOperations(group);
+			if(beginTrack)
+			{
+				TrackBehaviour(behaviour);
+				TrackProxy(proxy);
 			}
 		}
 
@@ -465,8 +475,8 @@ namespace Katsudon.Editor.Udon
 				else
 				{
 					var proxy = CreateProxy(instance.gameObject, behaviour, script);
-					instance.tmpProxies[behaviour] = new TmpProxy(proxy, behaviour, instance);
 					ProxyUtils.CopyFieldsToProxy(behaviour, proxy);
+					instance.tmpProxies[behaviour] = new TmpProxy(proxy, behaviour, instance);
 					return proxy;
 				}
 			}
