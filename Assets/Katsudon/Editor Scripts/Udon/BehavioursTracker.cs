@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using Katsudon.Utility;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VRC.Udon;
@@ -87,6 +88,10 @@ namespace Katsudon.Editor.Udon
 
 		private static void RegisterPair(UdonBehaviour behaviour, MonoBehaviour proxy, bool beginTrack)
 		{
+			if(!InternalEditorUtility.GetIsInspectorExpanded(behaviour))
+			{
+				InternalEditorUtility.SetIsInspectorExpanded(behaviour, true);
+			}
 			var group = Undo.GetCurrentGroup();
 			var obj = behaviour.gameObject;
 			var container = GetContainer(obj);
