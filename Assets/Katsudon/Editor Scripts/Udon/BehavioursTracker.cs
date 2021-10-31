@@ -72,6 +72,11 @@ namespace Katsudon.Editor.Udon
 			OnBehaviourDestroyed(behaviour);
 		}
 
+		internal static void UnRegisterPair(UdonBehaviour behaviour)
+		{
+			UnRegisterPair(behaviour.gameObject, behaviour);
+		}
+
 		internal static void IgnoreNextProxyDirtiness(MonoBehaviour proxy)
 		{
 			if(ignoreNextDirty != null)
@@ -387,11 +392,6 @@ namespace Katsudon.Editor.Udon
 			return behaviour;
 		}
 
-		private static void UnRegisterPair(UdonBehaviour behaviour)
-		{
-			UnRegisterPair(behaviour.gameObject, behaviour);
-		}
-
 		private static void UnRegisterPair(GameObject obj, UdonBehaviour behaviour)
 		{
 			behaviours.Remove(behaviour);
@@ -437,7 +437,7 @@ namespace Katsudon.Editor.Udon
 			return container;
 		}
 
-		public static IDisposable TrackObject(UnityEngine.Object obj, Action<UnityEngine.Object> onChanged)
+		private static IDisposable TrackObject(UnityEngine.Object obj, Action<UnityEngine.Object> onChanged)
 		{
 			if(_trackObject == null)
 			{

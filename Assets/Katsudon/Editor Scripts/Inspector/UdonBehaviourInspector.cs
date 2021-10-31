@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using Katsudon.Editor.Udon;
 using UnityEditor;
@@ -319,7 +320,7 @@ namespace Katsudon.Editor
 				case EventType.MouseDown:
 					if(settingsPosition.Contains(current.mousePosition))
 					{
-						DisplayObjectContextMenu(settingsPosition, editor);
+						ProxyContextMenu.Display(settingsPosition, editor);
 						current.Use();
 					}
 					break;
@@ -348,7 +349,7 @@ namespace Katsudon.Editor
 					{
 						if(current.button == 1)
 						{
-							DisplayObjectContextMenu(new Rect(current.mousePosition, Vector2.zero), editor);
+							ProxyContextMenu.Display(new Rect(current.mousePosition, Vector2.zero), editor);
 							current.Use();
 						}
 						else if(current.button == 0 && (Application.platform != 0 || !current.control))
@@ -364,7 +365,7 @@ namespace Katsudon.Editor
 				case EventType.ContextClick:
 					if(interactionRect.Contains(current.mousePosition))
 					{
-						DisplayObjectContextMenu(new Rect(current.mousePosition, Vector2.zero), editor);
+						ProxyContextMenu.Display(new Rect(current.mousePosition, Vector2.zero), editor);
 						current.Use();
 					}
 					break;
@@ -532,47 +533,6 @@ namespace Katsudon.Editor
 					textStyle.Draw(rect, EditorGUIUtility.TrTextContent("UdonBehaviour", "UdonBehaviour Drag&Drop"), isHover, isActive, foldout, false);
 					break;
 			}
-		}
-
-		private static void DisplayObjectContextMenu(Rect rect, ProgramEditor editor)
-		{
-			var menu = new GenericMenu();
-			menu.AddItem(EditorGUIUtility.TrTextContent("Reset"), false, OnResetProxy, editor);
-			menu.AddItem(EditorGUIUtility.TrTextContent("Pull Values From Behaviour",
-				"Pulls changes from behavior if they haven't been updated for some reason."), false, OnPullValues, editor);
-			menu.AddSeparator("");
-			menu.AddItem(EditorGUIUtility.TrTextContent("Edit Script"), false, OnEditProxyScript, editor);
-			menu.DropDown(rect);
-		}
-
-		private static void OnPullValues(object obj)
-		{
-			var editor = (ProgramEditor)obj;
-			for(int i = 0; i < editor.proxies.Length; i++)
-			{
-				Unsupported.SmartReset(editor.proxies[i]);
-				ProxyUtils.CopyFieldsToProxy(editor.behaviours[i], editor.proxies[i]);
-			}
-		}
-
-		private static void OnResetProxy(object obj)
-		{
-			var editor = (ProgramEditor)obj;
-			Undo.IncrementCurrentGroup();
-			Undo.SetCurrentGroupName("Reset");
-			Undo.RecordObjects(editor.proxies, "Reset");
-			Undo.RecordObjects(editor.behaviours, "Reset");
-			for(int i = 0; i < editor.proxies.Length; i++)
-			{
-				Unsupported.SmartReset(editor.proxies[i]);
-				ProxyUtils.CopyFieldsToBehaviour(editor.proxies[i], editor.behaviours[i]);
-			}
-		}
-
-		private static void OnEditProxyScript(object obj)
-		{
-			var editor = (ProgramEditor)obj;
-			AssetDatabase.OpenAsset(MonoScript.FromMonoBehaviour(editor.proxies[0]));
 		}
 
 		private enum EditorState
@@ -929,6 +889,231 @@ namespace Katsudon.Editor
 			}
 		}
 
+		private static class ProxyContextMenu
+		{
+			public static void Display(Rect rect, ProgramEditor editor)
+			{
+				bool isSingle = editor.behaviours.Length == 1;
+				bool isFirst = false;
+				bool isLast = false;
+				if(isSingle)
+				{
+					var list = CollectionCache.GetList<Component>();
+					editor.behaviours[0].gameObject.GetComponents(list);
+					int index = list.IndexOf(editor.behaviours[0]);
+					isFirst = index <= 1;
+					isLast = true;
+					for(int i = index + 1; i < list.Count; i++)
+					{
+						if((list[i].hideFlags & HideFlags.HideInInspector) == 0)
+						{
+							isLast = false;
+							break;
+						}
+					}
+					CollectionCache.Release(list);
+				}
+
+				var menu = new GenericMenu();
+
+				menu.AddItem(EditorGUIUtility.TrTextContent("Reset"), false, OnReset, editor);
+				if(isSingle) AddPrefabMenuItems(menu, editor.behaviours[0]);
+				menu.AddItem(EditorGUIUtility.TrTextContent("Pull Values From Behaviour",
+					"Pulls changes from behavior if they haven't been updated for some reason."), false, OnPullValues, editor);
+				menu.AddSeparator("");
+				menu.AddItem(EditorGUIUtility.TrTextContent("Remove Component"), false, OnRemove, editor);
+				if(isSingle && !isFirst) menu.AddItem(EditorGUIUtility.TrTextContent("Move Up"), false, OnMoveUp, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Move Up"));
+				if(isSingle && !isLast) menu.AddItem(EditorGUIUtility.TrTextContent("Move Down"), false, OnMoveDown, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Move Down"));
+				if(isSingle) menu.AddItem(EditorGUIUtility.TrTextContent("Copy Component"), false, OnCopy, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Copy Component"));
+				if(isSingle) menu.AddItem(EditorGUIUtility.TrTextContent("Paste Component As New"), false, OnPasteComponentAsNew, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Paste Component As New"));
+				if(isSingle) menu.AddItem(EditorGUIUtility.TrTextContent("Paste Component Values"), false, OnPasteComponentValues, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Paste Component Values"));
+				menu.AddSeparator("");
+				if(isSingle) menu.AddItem(EditorGUIUtility.TrTextContent("Find References In Scene"), false, OnFindProxyReferences, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Find References In Scene"));
+				if(isSingle) menu.AddItem(EditorGUIUtility.TrTextContent("Find UdonBehaviour References In Scene"), false, OnFindBehaviourReferences, editor);
+				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Find UdonBehaviour References In Scene"));
+				menu.AddItem(EditorGUIUtility.TrTextContent("Edit Script"), false, OnEditScript, editor);
+				menu.DropDown(rect);
+			}
+
+			private static void OnReset(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				Undo.IncrementCurrentGroup();
+				Undo.SetCurrentGroupName("Reset");
+				Undo.RecordObjects(editor.proxies, "Reset");
+				Undo.RecordObjects(editor.behaviours, "Reset");
+				for(int i = 0; i < editor.proxies.Length; i++)
+				{
+					Unsupported.SmartReset(editor.proxies[i]);
+					ProxyUtils.CopyFieldsToBehaviour(editor.proxies[i], editor.behaviours[i]);
+				}
+			}
+
+			private static void OnPullValues(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				for(int i = 0; i < editor.proxies.Length; i++)
+				{
+					Unsupported.SmartReset(editor.proxies[i]);
+					ProxyUtils.CopyFieldsToProxy(editor.behaviours[i], editor.proxies[i]);
+				}
+			}
+
+			private static void OnRemove(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				Undo.IncrementCurrentGroup();
+				int group = Undo.GetCurrentGroup();
+				var behaviours = editor.behaviours;
+				var proxies = editor.proxies;
+				for(int i = behaviours.Length - 1; i >= 0; i--)
+				{
+					BehavioursTracker.UnRegisterPair(behaviours[i]);
+					Undo.DestroyObjectImmediate(behaviours[i]);
+				}
+				Undo.CollapseUndoOperations(group);
+				utils.ForceRebuildInspectors();
+			}
+
+			private static void OnMoveUp(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				ComponentUtility.MoveComponentUp(editor.behaviours[0]);
+			}
+
+			private static void OnMoveDown(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				ComponentUtility.MoveComponentDown(editor.behaviours[0]);
+			}
+
+			private static void OnCopy(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				ComponentUtility.CopyComponent(editor.behaviours[0]);
+			}
+
+			private static void OnPasteComponentAsNew(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				ComponentUtility.PasteComponentAsNew(editor.behaviours[0].gameObject);
+			}
+
+			private static void OnPasteComponentValues(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				ComponentUtility.PasteComponentValues(editor.behaviours[0]);
+				int group = Undo.GetCurrentGroup();
+				Undo.RecordObject(editor.proxies[0], "Paste Component Values");
+				ProxyUtils.CopyFieldsToProxy(editor.behaviours[0], editor.proxies[0]);
+				Undo.CollapseUndoOperations(group);
+			}
+
+			private static void OnFindProxyReferences(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				utils.FindComponentReferencesOnScene(new MenuCommand(editor.proxies[0], 0));
+			}
+
+			private static void OnFindBehaviourReferences(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				utils.FindComponentReferencesOnScene(new MenuCommand(editor.behaviours[0], 0));
+			}
+
+			private static void OnEditScript(object obj)
+			{
+				var editor = (ProgramEditor)obj;
+				AssetDatabase.OpenAsset(MonoScript.FromMonoBehaviour(editor.proxies[0]));
+			}
+
+			private static void AddPrefabMenuItems(GenericMenu menu, UdonBehaviour targetComponent)
+			{
+				if(PrefabUtility.IsDisconnectedFromPrefabAsset(targetComponent.gameObject)) return;
+				if(PrefabUtility.GetCorrespondingObjectFromSource(targetComponent.gameObject) == null) return;
+				utils.InitPrefabUtils();
+				if(PrefabUtility.GetCorrespondingObjectFromSource(targetComponent) == null && targetComponent != null)
+				{
+					GameObject instanceGo = targetComponent.gameObject;
+					utils.HandleApplyRevertMenuItems(
+						"Added Component",
+						instanceGo,
+						(menuItemContent, sourceObject) => {
+							GameObject rootObject = GetRootGameObject(sourceObject);
+							if(!PrefabUtility.IsPartOfPrefabThatCanBeAppliedTo(rootObject) || EditorUtility.IsPersistent(instanceGo))
+							{
+								menu.AddDisabledItem(menuItemContent);
+							}
+							else
+							{
+								menu.AddItem(menuItemContent, false, utils.ApplyPrefabAddedComponent,
+									utils.ObjectInstanceAndSourcePathInfoCtor(targetComponent, AssetDatabase.GetAssetPath(sourceObject)));
+							}
+						},
+						(menuItemContent) => {
+							menu.AddItem(menuItemContent, false, utils.RevertPrefabAddedComponent, targetComponent);
+						},
+						false
+					);
+				}
+				else
+				{
+					bool hasPrefabOverride = false;
+					using(var so = new SerializedObject(targetComponent))
+					{
+						SerializedProperty property = so.GetIterator();
+						while(property.Next(property.hasChildren))
+						{
+							if(property.isInstantiatedPrefab && property.prefabOverride && !property.isDefaultOverride)
+							{
+								hasPrefabOverride = true;
+								break;
+							}
+						}
+					}
+
+					// Handle modified component.
+					if(hasPrefabOverride)
+					{
+						bool defaultOverrides = utils.IsObjectOverrideAllDefaultOverridesComparedToAnySource(targetComponent);
+
+						utils.HandleApplyRevertMenuItems(
+							"Modified Component", targetComponent,
+							(menuItemContent, sourceObject) => {
+								GameObject rootObject = GetRootGameObject(sourceObject);
+								if(!PrefabUtility.IsPartOfPrefabThatCanBeAppliedTo(rootObject) || EditorUtility.IsPersistent(targetComponent))
+								{
+									menu.AddDisabledItem(menuItemContent);
+								}
+								else
+								{
+									menu.AddItem(menuItemContent, false, utils.ApplyPrefabObjectOverride,
+										utils.ObjectInstanceAndSourcePathInfoCtor(targetComponent, AssetDatabase.GetAssetPath(sourceObject)));
+								}
+							},
+							(menuItemContent) => {
+								menu.AddItem(menuItemContent, false, utils.RevertPrefabObjectOverride, targetComponent);
+							},
+							defaultOverrides
+						);
+					}
+				}
+			}
+
+			private static GameObject GetRootGameObject(UnityEngine.Object componentOrGameObject)
+			{
+				GameObject gameObject = componentOrGameObject is GameObject go ? go : (componentOrGameObject is Component c ? c.gameObject : null);
+				if(gameObject == null) return null;
+				return gameObject.transform.root.gameObject;
+			}
+		}
+
 		private class UnityEditorUtils
 		{
 			private const BindingFlags INTERNAL_BIND = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
@@ -950,6 +1135,17 @@ namespace Katsudon.Editor
 			public readonly Func<Rect, UnityEngine.Object[], float, Rect> DrawEditorHeaderItems;
 			public readonly Func<UnityEngine.Object[], Event, Component, bool> ShouldDrawOverrideBackground;
 			public readonly Action<Rect, bool> DrawOverrideBackground;
+
+			public readonly Action<MenuCommand> FindComponentReferencesOnScene;
+			public readonly Action ForceRebuildInspectors;
+
+			public Action<string, UnityEngine.Object, Action<GUIContent, UnityEngine.Object>, Action<GUIContent>, bool> HandleApplyRevertMenuItems = null;
+			public Func<UnityEngine.Object, bool> IsObjectOverrideAllDefaultOverridesComparedToAnySource;
+			public Func<UnityEngine.Object, string, object> ObjectInstanceAndSourcePathInfoCtor;
+			public GenericMenu.MenuFunction2 ApplyPrefabAddedComponent;
+			public GenericMenu.MenuFunction2 RevertPrefabAddedComponent;
+			public GenericMenu.MenuFunction2 ApplyPrefabObjectOverride;
+			public GenericMenu.MenuFunction2 RevertPrefabObjectOverride;
 
 			public readonly Type DragAndDropDelay;
 			public readonly FieldInfo dragAndDropDelayField;
@@ -1002,6 +1198,9 @@ namespace Katsudon.Editor
 				var EditorDraggingMode = typeof(EditorGUI).Assembly.GetType("UnityEditor.EditorDragging").GetNestedType("DraggingMode", BindingFlags.NonPublic);
 				var EditorDraggingModeNullable = typeof(Nullable<>).MakeGenericType(EditorDraggingMode);
 				InspectorEditorDraggingMode = Activator.CreateInstance(EditorDraggingModeNullable, Enum.ToObject(EditorDraggingMode, 0));
+
+				FindComponentReferencesOnScene = CreateAction<MenuCommand>(typeof(SearchableEditorWindow), "OnSearchForReferencesToComponent");
+				ForceRebuildInspectors = CreateAction(typeof(EditorUtility), "ForceRebuildInspectors");
 			}
 
 			public GUIContent TempContent(Texture texture)
@@ -1012,6 +1211,32 @@ namespace Katsudon.Editor
 			public GUIContent TempContent(string text)
 			{
 				return _tempContentText(text);
+			}
+
+			public void InitPrefabUtils()
+			{
+				if(HandleApplyRevertMenuItems != null) return;
+				HandleApplyRevertMenuItems = CreateAction<string, UnityEngine.Object, Action<GUIContent, UnityEngine.Object>, Action<GUIContent>, bool>(typeof(PrefabUtility), "HandleApplyRevertMenuItems");
+				IsObjectOverrideAllDefaultOverridesComparedToAnySource = CreateFunc<UnityEngine.Object, bool>(typeof(PrefabUtility), "IsObjectOverrideAllDefaultOverridesComparedToAnySource");
+
+				var targetChoiceHandler = typeof(PrefabUtility).Assembly.GetType("UnityEditor.TargetChoiceHandler");
+				ApplyPrefabAddedComponent = CreateMenuCallback(targetChoiceHandler, "ApplyPrefabAddedComponent");
+				RevertPrefabAddedComponent = CreateMenuCallback(targetChoiceHandler, "RevertPrefabAddedComponent");
+				ApplyPrefabObjectOverride = CreateMenuCallback(targetChoiceHandler, "ApplyPrefabObjectOverride");
+				RevertPrefabObjectOverride = CreateMenuCallback(targetChoiceHandler, "RevertPrefabObjectOverride");
+
+				var childType = targetChoiceHandler.GetNestedType("ObjectInstanceAndSourcePathInfo", INTERNAL_BIND);
+				var objParameter = Expression.Parameter(typeof(UnityEngine.Object));
+				var pathParameter = Expression.Parameter(typeof(string));
+				var tmpVariable = Expression.Variable(childType);
+				ObjectInstanceAndSourcePathInfoCtor = Expression.Lambda<Func<UnityEngine.Object, string, object>>(
+					Expression.Block(new ParameterExpression[] { tmpVariable },
+						Expression.Assign(Expression.Field(tmpVariable, "instanceObject"), objParameter),
+						Expression.Assign(Expression.Field(tmpVariable, "assetPath"), pathParameter),
+						Expression.Convert(tmpVariable, typeof(object))
+					),
+					objParameter, pathParameter
+				).Compile();
 			}
 
 			private static TOut GetFieldValue<TOut>(Type type, string name)
@@ -1044,6 +1269,11 @@ namespace Katsudon.Editor
 				return (Func<TIn0, TIn1, TIn2, TOut>)(object)Delegate.CreateDelegate(typeof(Func<TIn0, TIn1, TIn2, TOut>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1), typeof(TIn2) }, null));
 			}
 
+			private static Action<TIn0, TIn1, TIn2, TIn3, TIn4> CreateAction<TIn0, TIn1, TIn2, TIn3, TIn4>(Type type, string name)
+			{
+				return (Action<TIn0, TIn1, TIn2, TIn3, TIn4>)(object)Delegate.CreateDelegate(typeof(Action<TIn0, TIn1, TIn2, TIn3, TIn4>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1), typeof(TIn2), typeof(TIn3), typeof(TIn4) }, null));
+			}
+
 			private static Action<TIn0, TIn1, TIn2> CreateAction<TIn0, TIn1, TIn2>(Type type, string name)
 			{
 				return (Action<TIn0, TIn1, TIn2>)(object)Delegate.CreateDelegate(typeof(Action<TIn0, TIn1, TIn2>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1), typeof(TIn2) }, null));
@@ -1052,6 +1282,21 @@ namespace Katsudon.Editor
 			private static Action<TIn0, TIn1> CreateAction<TIn0, TIn1>(Type type, string name)
 			{
 				return (Action<TIn0, TIn1>)(object)Delegate.CreateDelegate(typeof(Action<TIn0, TIn1>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0), typeof(TIn1) }, null));
+			}
+
+			private static Action<TIn0> CreateAction<TIn0>(Type type, string name)
+			{
+				return (Action<TIn0>)(object)Delegate.CreateDelegate(typeof(Action<TIn0>), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(TIn0) }, null));
+			}
+
+			private static Action CreateAction(Type type, string name)
+			{
+				return (Action)(object)Delegate.CreateDelegate(typeof(Action), type.GetMethod(name, INTERNAL_BIND, null, Type.EmptyTypes, null));
+			}
+
+			private static GenericMenu.MenuFunction2 CreateMenuCallback(Type type, string name)
+			{
+				return (GenericMenu.MenuFunction2)(object)Delegate.CreateDelegate(typeof(GenericMenu.MenuFunction2), type.GetMethod(name, INTERNAL_BIND, null, new Type[] { typeof(object) }, null));
 			}
 		}
 	}
