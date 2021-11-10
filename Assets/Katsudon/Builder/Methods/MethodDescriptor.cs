@@ -120,7 +120,7 @@ namespace Katsudon.Builder.Methods
 					storedStacks.RemoveAt(0);
 					var stackHandle = ApplyStoredStack(stored);
 					methodToMachineAddress[currentOp.offset] = machineBlock.machine.GetAddressCounter();
-					stackHandle.Dispose();
+					stackHandle.Apply();
 				}
 				else
 				{
@@ -178,6 +178,7 @@ namespace Katsudon.Builder.Methods
 			var rawMachine = (IRawUdonMachine)machine;
 			foreach(var variable in stack)
 			{
+				if(!clearStack) variable.Allocate();
 				variable.Allocate();
 				rawMachine.AddPush(variable.OwnType().Mode(VariableMeta.UsageMode.In));
 			}
@@ -274,6 +275,7 @@ namespace Katsudon.Builder.Methods
 				{
 					storedStack[index].Use();
 					rawMachine.AddPush(iterator.Current.UseType(storedStack[index].type).Mode(VariableMeta.UsageMode.In));
+					index++;
 				}
 				return new CopyStoredHandle(stored, this, rawMachine.mainMachine);
 			}
@@ -337,7 +339,7 @@ namespace Katsudon.Builder.Methods
 			}
 		}
 
-		private struct CopyStoredHandle : IDisposable
+		private struct CopyStoredHandle
 		{
 			private StoredStack stored;
 			private IMethodDescriptor method;
@@ -350,7 +352,7 @@ namespace Katsudon.Builder.Methods
 				this.udonMachine = udonMachine;
 			}
 
-			public void Dispose()
+			public void Apply()
 			{
 				if(method == null) return;
 				var stack = stored.stack;

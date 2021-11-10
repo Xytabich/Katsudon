@@ -315,6 +315,7 @@ namespace Katsudon.Builder
 			public void AddJump(IVariable variable)
 			{
 				if(!variable.type.IsAssignableFrom(typeof(uint))) throw new InvalidOperationException("The variable must be an unsigned 32-bit integer");
+				variable.Use();
 				udonMachine.AddOpcode(OpCode.JUMP_INDIRECT, variable);
 			}
 

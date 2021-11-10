@@ -5,7 +5,7 @@ namespace Katsudon.Builder.AsmOpCodes
 	[OperationBuilder]
 	public class StelemNOpcode : IOperationBuider
 	{
-		public int order => 0;
+		public int order => 100;
 
 		private System.Type type;
 

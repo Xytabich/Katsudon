@@ -11,7 +11,12 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 	{
 		public int order => 19;
 
-		private List<VariableMeta> arguments = new List<VariableMeta>();
+		private CallExtern externCall;
+
+		private CallGenericExtern(CallExtern externCall)
+		{
+			this.externCall = externCall;
+		}
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
@@ -42,13 +47,42 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 					var args = methodInfo.GetGenericArguments();
 					for(int i = 0; i < args.Length; i++)
 					{
-						if(args[i] != typeof(object))//FIX: use constraint types?
+						if(args[i] != typeof(object))//FIX: use generic type constraints?
 						{
+							var methods = methodInfo.DeclaringType.GetMethods((methodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic) | (methodInfo.IsStatic ? BindingFlags.Static : BindingFlags.Instance));
+							var name = methodInfo.Name;
+							for(int j = 0; j < methods.Length; j++)
+							{
+								if(methods[j].Name == name && !methods[j].IsGenericMethodDefinition)
+								{
+									var methodParams = methods[j].GetParameters();
+									if(methodParams.Length == parameters.Length)
+									{
+										bool isSuitable = true;
+										for(int k = 0; k < methodParams.Length; k++)
+										{
+											if(!methodParams[i].ParameterType.IsAssignableFrom(parameters[i].ParameterType))
+											{
+												isSuitable = false;
+												break;
+											}
+										}
+										if(isSuitable)
+										{
+											if(externCall.TryCallMethod(method, methods[j]))
+											{
+												return true;
+											}
+										}
+									}
+								}
+							}
 							throw new Exception("Only the type 'object' can be used as an argument for this generic method: " + methodDefinition);
 						}
 					}
 				}
 
+				var arguments = CollectionCache.GetList<VariableMeta>();
 				int popCount = 0;
 				if(!methodInfo.IsStatic) popCount++;
 				popCount += parameters.Length;
@@ -79,7 +113,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 				{
 					method.machine.AddExtern(fullName, () => method.GetOrPushOutVariable(methodInfo.ReturnType), arguments.ToArray());
 				}
-				arguments.Clear();
+				CollectionCache.Release(arguments);
 				return true;
 			}
 			return false;
@@ -87,7 +121,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
-			var builder = new CallGenericExtern();
+			var builder = new CallGenericExtern(modules.GetModule<CallExtern>());
 			container.RegisterOpBuilder(OpCodes.Call, builder);
 			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
 		}

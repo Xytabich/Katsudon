@@ -938,6 +938,51 @@ namespace Katsudon.Editor
 				if(isSingle) menu.AddItem(EditorGUIUtility.TrTextContent("Find UdonBehaviour References In Scene"), false, OnFindBehaviourReferences, editor);
 				else menu.AddDisabledItem(EditorGUIUtility.TrTextContent("Find UdonBehaviour References In Scene"));
 				menu.AddItem(EditorGUIUtility.TrTextContent("Edit Script"), false, OnEditScript, editor);
+
+				if(editor.proxies.Length == 1)
+				{
+					var methods = editor.proxies[0].GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+					Dictionary<string, ContextMenuItem> additionalItems = null;
+					for(int i = 0; i < methods.Length; i++)
+					{
+						var attrib = methods[i].GetCustomAttribute<ContextMenu>();
+						if(attrib != null)
+						{
+							if(additionalItems == null) additionalItems = CollectionCache.GetDictionary<string, ContextMenuItem>();
+							if(!additionalItems.TryGetValue(attrib.menuItem, out var item))
+							{
+								item = new ContextMenuItem(attrib.menuItem, editor.proxies[0]);
+								additionalItems[attrib.menuItem] = item;
+							}
+							if(attrib.validate) item.condition = methods[i];
+							else
+							{
+								item.action = methods[i];
+								item.order = attrib.priority;
+							}
+						}
+					}
+					if(additionalItems != null)
+					{
+						bool isFirstItem = true;
+						var list = CollectionCache.GetList(additionalItems.Values);
+						CollectionCache.Release(additionalItems);
+						foreach(var item in list)
+						{
+							if(item.CanBeAdded())
+							{
+								if(isFirstItem)
+								{
+									isFirstItem = false;
+									menu.AddSeparator("");
+								}
+								item.AddToMenu(menu);
+							}
+						}
+						CollectionCache.Release(list);
+					}
+				}
+
 				menu.DropDown(rect);
 			}
 
@@ -1111,6 +1156,43 @@ namespace Katsudon.Editor
 				GameObject gameObject = componentOrGameObject is GameObject go ? go : (componentOrGameObject is Component c ? c.gameObject : null);
 				if(gameObject == null) return null;
 				return gameObject.transform.root.gameObject;
+			}
+
+			private class ContextMenuItem
+			{
+				private string name;
+				private MonoBehaviour target;
+				public MethodInfo condition = null;
+				public MethodInfo action = null;
+				public int order = 0;
+
+				public ContextMenuItem(string name, MonoBehaviour target)
+				{
+					this.name = name;
+					this.target = target;
+				}
+
+				public bool CanBeAdded()
+				{
+					return action != null;
+				}
+
+				public void AddToMenu(GenericMenu menu)
+				{
+					if(condition == null || (bool)condition.Invoke(target, new object[0]))
+					{
+						menu.AddItem(new GUIContent(name), false, OnSelected);
+					}
+					else
+					{
+						menu.AddDisabledItem(new GUIContent(name));
+					}
+				}
+
+				private void OnSelected()
+				{
+					action.Invoke(target, new object[0]);
+				}
 			}
 		}
 

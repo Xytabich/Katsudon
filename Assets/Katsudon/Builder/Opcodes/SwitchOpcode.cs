@@ -13,13 +13,18 @@ namespace Katsudon.Builder.AsmOpCodes
 			int[] addresses = (int[])method.currentOp.argument;
 
 			var indexVariable = method.PopStack();
-			indexVariable.Allocate();
-
-			IVariable condition = null;
-			CltOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(addresses.Length),
-				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
 
 			var outLabel = new EmbedAddressLabel();
+			IVariable condition = null;
+
+			indexVariable.Allocate();
+			CltOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(addresses.Length),
+				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
+			method.machine.AddBranch(condition, outLabel);
+
+			indexVariable.Allocate();
+			CgeOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(0),
+				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
 			method.machine.AddBranch(condition, outLabel);
 
 			IVariable addressVariable = null;

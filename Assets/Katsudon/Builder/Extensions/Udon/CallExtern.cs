@@ -14,7 +14,11 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
-			var methodInfo = (MethodInfo)method.currentOp.argument;
+			return TryCallMethod(method, (MethodInfo)method.currentOp.argument);
+		}
+
+		public bool TryCallMethod(IMethodDescriptor method, MethodInfo methodInfo)
+		{
 			var parameters = methodInfo.GetParameters();
 			if(UdonCacheHelper.cache.TryFindUdonMethod(methodInfo.IsStatic ? null : method.PeekStack(parameters.Length).type, methodInfo, out var methodId, out var fullName))
 			{
@@ -71,6 +75,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 			var builder = new CallExtern();
 			container.RegisterOpBuilder(OpCodes.Call, builder);
 			container.RegisterOpBuilder(OpCodes.Callvirt, builder);
+			modules.AddModule(builder);
 		}
 	}
 }
