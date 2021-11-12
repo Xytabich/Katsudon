@@ -29,7 +29,7 @@ namespace Katsudon.Builder
 				variablesInUse.RemoveWhere(UnusedVariablesFilter);
 				if(variablesInUse.Count > 0)
 				{
-					throw new Exception(string.Format("Method has unreleased tmp variables ({0}):\n{1}", variablesInUse.Count, string.Join("\n", variablesInUse)));
+					throw new Exception(string.Format("Block has unreleased tmp variables ({0}):\n{1}", variablesInUse.Count, string.Join("\n", variablesInUse)));
 				}
 			}
 		}

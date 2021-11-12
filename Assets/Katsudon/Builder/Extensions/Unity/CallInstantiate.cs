@@ -41,7 +41,7 @@ namespace Katsudon.Builder.Extensions.UnityExtensions
 						if(type == typeof(GameObject) && parameters.Length == 1)
 						{
 							method.machine.AddExtern("VRCInstantiate.__Instantiate__UnityEngineGameObject__UnityEngineGameObject",
-								() => method.GetTmpVariable(typeof(GameObject)),
+								() => method.GetOrPushOutVariable(typeof(GameObject)),
 								original.OwnType()
 							);
 						}

@@ -33,7 +33,15 @@ namespace Katsudon.Builder.Methods
 			var machineBlock = new UdonProgramBlock(udonMachine, convertersList);
 			bodyBuilder.BuildBehaviour(method, uBehMethod.arguments, uBehMethod.ret, returnLabel, machineBlock, properties);
 #if KATSUDON_DEBUG
-			machineBlock.CheckVariables();
+			try
+			{
+				machineBlock.CheckVariables();
+			}
+			catch
+			{
+				UnityEngine.Debug.Log(method.DeclaringType + ":" + method);
+				throw;
+			}
 #endif
 
 			if(uBehMethod.ret != null) properties.AddVariable(uBehMethod.ret);
