@@ -273,8 +273,8 @@ namespace Katsudon.Builder.Methods
 				var iterator = PopMultiple(stack.Count);
 				while(iterator.MoveNext())
 				{
-					storedStack[index].Use();
 					rawMachine.AddPush(iterator.Current.UseType(storedStack[index].type).Mode(VariableMeta.UsageMode.In));
+					storedStack[index].Use();
 					index++;
 				}
 				return new CopyStoredHandle(stored, this, rawMachine.mainMachine);
@@ -418,11 +418,6 @@ namespace Katsudon.Builder.Methods
 			public void AddCopy(IVariable fromVariable, IVariable toVariable)
 			{
 				machine.AddCopy(fromVariable, toVariable);
-			}
-
-			public void AddCopy(IVariable fromVariable, Func<IVariable> toVariableCtor)
-			{
-				machine.AddCopy(fromVariable, toVariableCtor);
 			}
 
 			public void AddCopy(IVariable fromVariable, IVariable toVariable, Type type)

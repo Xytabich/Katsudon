@@ -35,7 +35,7 @@ namespace Katsudon.Builder.Extensions.PropertiesShortcuts
 				if(target is ThisVariable)
 				{
 					target.Use();
-					method.machine.AddCopy(fieldsCollection.GetField(field), () => method.GetOrPushOutVariable(methodInfo.ReturnType, 1));
+					method.machine.AddCopy(fieldsCollection.GetField(field), method.GetOrPushOutVariable(methodInfo.ReturnType, 1));
 				}
 				else
 				{

@@ -96,10 +96,16 @@ namespace Katsudon.Builder.Extensions.DelegateExtension
 
 						method.machine.ApplyLabel(externStaticLabel);
 
+						var reservedPush = CollectionCache.GetList<IVariable>();
 						for(int i = 0; i < argsCount; i++)
 						{
+							arguments[i].variable.Allocate();
+							reservedPush.Add(arguments[i].variable);
+
 							rawMachine.AddPush(arguments[i]);
 						}
+						for(int i = reservedPush.Count - 1; i >= 0; i--) reservedPush[i].Use();
+						CollectionCache.Release(reservedPush);
 
 						if(outVariable != null)
 						{

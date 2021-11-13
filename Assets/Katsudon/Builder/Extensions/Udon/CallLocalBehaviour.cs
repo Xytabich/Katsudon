@@ -67,7 +67,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 
 				if(methodInfo.ReturnType != typeof(void))
 				{
-					udonMachine.AddCopy(local.ret, () => method.GetOrPushOutVariable(methodInfo.ReturnType, 1));
+					udonMachine.AddCopy(local.ret, method.GetOrPushOutVariable(methodInfo.ReturnType, 1));
 				}
 				return true;
 			}

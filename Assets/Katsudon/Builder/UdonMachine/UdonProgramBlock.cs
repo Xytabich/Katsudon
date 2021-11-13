@@ -232,23 +232,12 @@ namespace Katsudon.Builder
 
 			public void AddCopy(IVariable fromVariable, IVariable toVariable)
 			{
+				fromVariable.Allocate();
+				toVariable.Allocate();
 				AddPush(fromVariable.Mode(VariableMeta.UsageMode.In));
 				AddPush(toVariable.Mode(VariableMeta.UsageMode.Out));
-
-				udonMachine.AddOpcode(OpCode.COPY);
-
-				ApplyReferences();
-			}
-
-			/// <summary>
-			/// Deferred use of the target variable, necessary for more optimal reuse of temporary variables
-			/// </summary>
-			public void AddCopy(IVariable fromVariable, Func<IVariable> toVariableCtor)
-			{
-				AddPush(fromVariable.Mode(VariableMeta.UsageMode.In));
-
-				var toVariable = toVariableCtor();
-				AddPush(toVariable.Mode(VariableMeta.UsageMode.Out));
+				fromVariable.Use();
+				toVariable.Use();
 
 				udonMachine.AddOpcode(OpCode.COPY);
 
@@ -257,8 +246,12 @@ namespace Katsudon.Builder
 
 			public void AddCopy(IVariable fromVariable, IVariable toVariable, Type type)
 			{
+				fromVariable.Allocate();
+				toVariable.Allocate();
 				AddPush(fromVariable.UseType(type).Mode(VariableMeta.UsageMode.In));
 				AddPush(toVariable.Mode(VariableMeta.UsageMode.Out));
+				fromVariable.Use();
+				toVariable.Use();
 
 				udonMachine.AddOpcode(OpCode.COPY);
 
@@ -267,10 +260,16 @@ namespace Katsudon.Builder
 
 			public void AddExtern(string name, params VariableMeta[] inVariables)
 			{
+				var reserved = CollectionCache.GetList<IVariable>();
 				for(int i = 0; i < inVariables.Length; i++)
 				{
+					inVariables[i].variable.Allocate();
+					reserved.Add(inVariables[i].variable);
+
 					AddPush(inVariables[i].Mode(VariableMeta.UsageMode.In));
 				}
+				for(int i = reserved.Count - 1; i >= 0; i--) reserved[i].Use();
+				CollectionCache.Release(reserved);
 
 				udonMachine.AddOpcode(OpCode.EXTERN, udonMachine.GetExternIdentifierVariable(name));
 
@@ -279,10 +278,16 @@ namespace Katsudon.Builder
 
 			public void AddExtern(string name, IVariable outVariable, params VariableMeta[] inVariables)
 			{
+				var reserved = CollectionCache.GetList<IVariable>();
 				for(int i = 0; i < inVariables.Length; i++)
 				{
+					inVariables[i].variable.Allocate();
+					reserved.Add(inVariables[i].variable);
+
 					AddPush(inVariables[i].Mode(VariableMeta.UsageMode.In));
 				}
+				for(int i = reserved.Count - 1; i >= 0; i--) reserved[i].Use();
+				CollectionCache.Release(reserved);
 
 				outVariable.Allocate();
 				AddPush(outVariable.Mode(VariableMeta.UsageMode.Out));
@@ -293,10 +298,16 @@ namespace Katsudon.Builder
 
 			public void AddExtern(string name, Func<IVariable> outVariableCtor, params VariableMeta[] inVariables)
 			{
+				var reserved = CollectionCache.GetList<IVariable>();
 				for(int i = 0; i < inVariables.Length; i++)
 				{
+					inVariables[i].variable.Allocate();
+					reserved.Add(inVariables[i].variable);
+
 					AddPush(inVariables[i].Mode(VariableMeta.UsageMode.In));
 				}
+				for(int i = reserved.Count - 1; i >= 0; i--) reserved[i].Use();
+				CollectionCache.Release(reserved);
 
 				var outVariable = outVariableCtor();
 				outVariable.Allocate();
@@ -402,6 +413,9 @@ namespace Katsudon.Builder
 	{
 		UdonMachine mainMachine { get; }
 
+		/// <summary>
+		/// If several pushes are used before extern - reserve the variable. (I.e. before pushing call Allocate and after all pushes call Use)
+		/// </summary>
 		void AddPush(VariableMeta variableInfo);
 
 		void ApplyReferences();
@@ -431,8 +445,6 @@ namespace Katsudon.Builder
 	public interface IUdonProgramBuilder
 	{
 		void AddCopy(IVariable fromVariable, IVariable toVariable);
-
-		void AddCopy(IVariable fromVariable, Func<IVariable> toVariableCtor);
 
 		void AddCopy(IVariable fromVariable, IVariable toVariable, Type type);
 
