@@ -12,8 +12,9 @@ namespace Katsudon.Builder.AsmOpCodes
 			int argIndex;
 			if(ILUtils.TryGetLdarg(method.currentOp, out argIndex, !method.isStatic))
 			{
-				if(argIndex < 0) method.PushStack(method.machine.GetThisVariable());
-				else method.PushStack(method.GetArgumentVariable(argIndex));
+				var variable = argIndex < 0 ? method.machine.GetThisVariable() : method.GetArgumentVariable(argIndex);
+				variable.Allocate();
+				method.PushStack(variable);
 			}
 			return true;
 		}

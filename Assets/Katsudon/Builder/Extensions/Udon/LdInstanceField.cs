@@ -62,7 +62,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 				this.variableName = variableName;
 				this.targetVariable = targetVariable;
 				this.tmpVariable = tmpVariable;
-				
+
 				if(targetVariable is ITmpVariable tmp) tmp.Reserve();
 
 				tmpVariable.onRelease += ReleaseValue;

@@ -95,6 +95,14 @@ namespace Katsudon.Builder.AsmOpCodes
 				method.PushStack(outVariable);
 			}
 
+			// Since ldarg uses Allocate() a Use() call is needed here
+			for(int i = 0; i < argsCount; i++)
+			{
+				if(parameters[i].ParameterType.IsByRef)
+				{
+					arguments[i].Use();
+				}
+			}
 			CollectionCache.Release(arguments);
 
 			for(int i = 0; i < reserved.Count; i++)

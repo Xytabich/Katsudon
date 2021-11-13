@@ -56,22 +56,21 @@ namespace Katsudon.Builder.Externs
 			}
 			else
 			{
-				Type type = a.type;
-				if(a.type != b.type && bc == null && (ac != null ||
-					NumberCodeUtils.GetSize(NumberCodeUtils.GetCode(b.type)) > NumberCodeUtils.GetSize(NumberCodeUtils.GetCode(a.type))))
+				var code = Type.GetTypeCode(a.type);
+				if(a.type != b.type && bc == null && (ac != null || NumberCodeUtils.GetSize(Type.GetTypeCode(b.type)) > NumberCodeUtils.GetSize(code)))
 				{
-					type = b.type;
+					code = Type.GetTypeCode(b.type);
 				}
 				if(unsigned.HasValue)
 				{
-					var code = NumberCodeUtils.GetCode(type);
 					if(NumberCodeUtils.IsUnsigned(code) != unsigned.Value)
 					{
-						type = NumberCodeUtils.ToType(unsigned.Value ? NumberCodeUtils.ToUnsigned(code) : NumberCodeUtils.ToSigned(code));
+						code = unsigned.Value ? NumberCodeUtils.ToUnsigned(code) : NumberCodeUtils.ToSigned(code);
 					}
 				}
-				type = NumberCodeUtils.ToPrimitive(type);
-				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(type), type, () => method.GetOrPushOutVariable(type));
+				Type type, outputType = type = NumberCodeUtils.ToType(code);
+				if(NumberCodeUtils.GetSize(code) < sizeof(int)) outputType = typeof(int);
+				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(type), outputType, () => method.GetOrPushOutVariable(outputType));
 			}
 		}
 
@@ -92,7 +91,9 @@ namespace Katsudon.Builder.Externs
 			}
 			else
 			{
-				var type = NumberCodeUtils.ToPrimitive(a.type);
+				var code = Type.GetTypeCode(a.type);
+				var type = NumberCodeUtils.ToType(code);
+				if(NumberCodeUtils.GetSize(code) < sizeof(int)) type = typeof(int);
 				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(typeof(int)), type, () => method.GetOrPushOutVariable(type));
 			}
 		}
