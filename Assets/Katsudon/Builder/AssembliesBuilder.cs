@@ -140,7 +140,7 @@ namespace Katsudon.Builder
 
 			foreach(var pair in interfaceMethodsMap)
 			{
-				if(!buildMethods.Contains(pair.Key))
+				if(!buildMethods.Contains(pair.Key) && pair.Value.GetMethodBody().GetILAsByteArray().Length > 1)
 				{
 					buildMethods.Add(pair.Key);
 					buildOrder.Add(pair.Key);

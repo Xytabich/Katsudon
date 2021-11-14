@@ -73,6 +73,8 @@ namespace Katsudon.Builder.Methods
 						properties.AddVariable(variable);
 					}
 					machineBlock.ApplyProperties(properties);
+
+					udonMachine.AddOpcode(OpCode.JUMP, UdonMachine.endProgramAddress);
 					return true;
 				}
 			}
