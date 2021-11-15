@@ -1,5 +1,5 @@
-﻿using System;
-using System.Reflection.Emit;
+﻿using System.Reflection.Emit;
+using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.AsmOpCodes
 {
@@ -18,25 +18,29 @@ namespace Katsudon.Builder.AsmOpCodes
 			IVariable condition = null;
 
 			indexVariable.Allocate();
-			CltOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(addresses.Length),
-				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
-			method.machine.AddBranch(condition, outLabel);
-
-			indexVariable.Allocate();
 			CgeOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(0),
 				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
 			method.machine.AddBranch(condition, outLabel);
 
-			IVariable addressVariable = null;
-			method.machine.AddExtern(
-				"SystemUInt32Array.__Get__SystemInt32__SystemUInt32",
-				() => (addressVariable = method.GetTmpVariable(typeof(uint))),
-				new LabelList((method.machine as IRawUdonMachine).mainMachine.GetConstCollection(),
-					Array.ConvertAll(addresses, a => method.GetMachineAddressLabel(a))).OwnType(),
-				indexVariable.UseType(typeof(int))
-			);
-			method.machine.AddJump(addressVariable);
+			var addressVariable = method.GetTmpVariable(typeof(uint)).Reserve();
+			method.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), typeof(uint)), addressVariable, indexVariable.OwnType());
 
+			CltOpcode.ProcessOp(method, null, addressVariable, method.machine.GetConstVariable((uint)addresses.Length),
+				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
+			method.machine.AddBranch(condition, outLabel);
+
+			method.machine.BinaryOperatorExtern(BinaryOperator.Multiplication, addressVariable, method.machine.GetConstVariable((uint)(sizeof(uint) * 2)), addressVariable);
+			uint counter = method.machine.GetAddressCounter();
+			// counter + PUSH PUSH PUSH EXTERN JUMP_INDIRECT (10 words)
+			var startAddress = method.machine.GetConstVariable(counter + (uint)(sizeof(uint) * 10));
+			method.machine.BinaryOperatorExtern(BinaryOperator.Addition, addressVariable, startAddress, addressVariable);
+			method.machine.AddJump(addressVariable);
+			for(int i = 0; i < addresses.Length; i++)
+			{
+				method.machine.AddJump(method.GetMachineAddressLabel(addresses[i]));
+			}
+
+			addressVariable.Release();
 			method.machine.ApplyLabel(outLabel);
 			return true;
 		}
@@ -44,36 +48,6 @@ namespace Katsudon.Builder.AsmOpCodes
 		public static void Register(IOperationBuildersRegistry container, IModulesContainer modules)
 		{
 			container.RegisterOpBuilder(OpCodes.Switch, new SwitchOpcode());
-		}
-
-		private class LabelList : IVariable, IDeferredValue<IVariable>
-		{
-			public string name => throw new NotImplementedException();
-			public uint address => throw new NotImplementedException();
-			public Type type => typeof(uint[]);
-
-			private ConstCollection constCollection;
-			private IAddressLabel[] labels;
-
-			public LabelList(ConstCollection constCollection, IAddressLabel[] labels)
-			{
-				this.constCollection = constCollection;
-				this.labels = labels;
-			}
-
-			public void Allocate(int count = 1) { }
-
-			public void Use() { }
-
-			IVariable IDeferredValue<IVariable>.GetValue()
-			{
-				return constCollection.GetConstVariable(Array.ConvertAll(labels, l => l.address)).Used();
-			}
-
-			void IVariable.SetAddress(uint address)
-			{
-				throw new NotImplementedException();
-			}
 		}
 	}
 }
