@@ -234,7 +234,7 @@ namespace Katsudon.Builder
 			{
 				fromVariable.Allocate();
 				toVariable.Allocate();
-				AddPush(fromVariable.Mode(VariableMeta.UsageMode.In));
+				AddPush(fromVariable.UseType(toVariable.type).Mode(VariableMeta.UsageMode.In));
 				AddPush(toVariable.Mode(VariableMeta.UsageMode.Out));
 				fromVariable.Use();
 				toVariable.Use();

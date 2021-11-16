@@ -99,7 +99,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 						}
 						else
 						{
-							arguments.Add(iterator.Current.Mode(VariableMeta.UsageMode.In | VariableMeta.UsageMode.Out));
+							arguments.Add(iterator.Current.UseType(methodInfo.DeclaringType).Mode(VariableMeta.UsageMode.In | VariableMeta.UsageMode.Out));
 						}
 						index++;
 					}

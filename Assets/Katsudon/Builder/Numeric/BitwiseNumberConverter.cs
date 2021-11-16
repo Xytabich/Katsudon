@@ -54,10 +54,10 @@ namespace Katsudon.Builder.Variables
 				{
 					IVariable outVariable = null;
 					var fromType = fromVariable.type;
-					block.machine.BinaryOperatorExtern(
-						BinaryOperator.LogicalAnd, fromVariable,
+					BinaryOperatorExtension.ArithmeticBinaryOperation(
+						block.machine, BinaryOperator.LogicalAnd, fromVariable,
 						block.machine.GetConstVariable(Convert.ChangeType(NumberCodeUtils.GetMaxValue(toPrimitive), fromType)),
-						fromType, () => (outVariable = block.GetTmpVariable(fromType))
+						(type) => (outVariable = block.GetTmpVariable(type))
 					);
 					var converted = block.GetTmpVariable(toType);
 					block.machine.ConvertExtern(outVariable, converted);
@@ -89,24 +89,44 @@ namespace Katsudon.Builder.Variables
 			// converted = Convert.To{toType}(value & unsignedBitsConst);
 			// if((value & fromSignBit) != 0) converted |= toSignBit;
 
-			IVariable tmp = block.GetTmpVariable(value.type);
+			IVariable tmp = block.GetTmpVariable(BinaryOperatorExtension.GetOutputType(value.type));
 			tmp.Allocate();
 			value.Allocate();
 			block.machine.BinaryOperatorExtern(BinaryOperator.LogicalAnd, value, unsignedBitsConst, tmp);
-			var converted = block.GetTmpVariable(toType);
+
+			IVariable converted = block.GetTmpVariable(toType);
 			converted.Allocate();
-			block.machine.ConvertExtern(tmp, converted);
+			if(tmp.type == toType)
+			{
+				converted.Allocate();
+				block.machine.AddCopy(tmp, converted);
+			}
+			else
+			{
+				block.machine.ConvertExtern(tmp, converted);
+			}
 
 			block.machine.BinaryOperatorExtern(BinaryOperator.LogicalAnd, value, fromSignBit, tmp);
 			var condition = block.GetTmpVariable(typeof(bool));
 			block.machine.BinaryOperatorExtern(
 				BinaryOperator.Inequality, tmp,
-				block.machine.GetConstVariable(Convert.ChangeType(0, value.type)),
+				block.machine.GetConstVariable(Convert.ChangeType(0, tmp.type)),
 				condition
 			);
+
 			var exitLabel = new EmbedAddressLabel();
 			block.machine.AddBranch(condition, exitLabel);
-			block.machine.BinaryOperatorExtern(BinaryOperator.LogicalOr, converted, toSignBit, converted);
+			var outType = BinaryOperatorExtension.GetOutputType(toType);
+			if(outType != toType)
+			{
+				tmp = block.GetTmpVariable(outType);
+				block.machine.BinaryOperatorExtern(BinaryOperator.LogicalOr, converted, toSignBit, tmp);
+				block.machine.ConvertExtern(tmp, converted);
+			}
+			else
+			{
+				block.machine.BinaryOperatorExtern(BinaryOperator.LogicalOr, converted, toSignBit, converted);
+			}
 			block.machine.ApplyLabel(exitLabel);
 
 			return converted;
