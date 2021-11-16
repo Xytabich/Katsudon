@@ -2187,10 +2187,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: VRCWorld
       objectReference: {fileID: 0}
+    - target: {fileID: 1415578911040940289, guid: 8894fa7e4588a5c4fab98453e558847d,
+        type: 3}
+      propertyPath: serializedProgramAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 5195dd27803217c48b4336ae78593b49,
+        type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: unityVersion
-      value: 2019.4.30f1
+      value: 2019.4.31f1
       objectReference: {fileID: 0}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
