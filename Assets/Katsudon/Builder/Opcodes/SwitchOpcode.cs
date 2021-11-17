@@ -1,4 +1,5 @@
-﻿using System.Reflection.Emit;
+﻿using System;
+using System.Reflection.Emit;
 using Katsudon.Builder.Externs;
 
 namespace Katsudon.Builder.AsmOpCodes
@@ -18,9 +19,12 @@ namespace Katsudon.Builder.AsmOpCodes
 			IVariable condition = null;
 
 			indexVariable.Allocate();
-			CgeOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(0),
-				() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
-			method.machine.AddBranch(condition, outLabel);
+			if(!NumberCodeUtils.IsUnsigned(Type.GetTypeCode(indexVariable.type)))
+			{
+				CgeOpcode.ProcessOp(method, null, indexVariable, method.machine.GetConstVariable(0),
+					() => (condition = method.GetTmpVariable(typeof(bool))), out condition);
+				method.machine.AddBranch(condition, outLabel);
+			}
 
 			var addressVariable = method.GetTmpVariable(typeof(uint)).Reserve();
 			method.machine.AddExtern(ConvertExtension.GetExternName(typeof(object), typeof(uint)), addressVariable, indexVariable.OwnType());
