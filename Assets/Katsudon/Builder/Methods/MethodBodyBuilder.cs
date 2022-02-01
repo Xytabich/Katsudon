@@ -140,7 +140,7 @@ namespace Katsudon.Builder
 						}
 					}
 				}
-				if(exception == null) new KatsudonBuildException(method, ilOffset.ilOffset, e.InnerException);
+				if(exception == null) exception = new KatsudonBuildException(method, ilOffset.ilOffset, e.InnerException);
 #if KATSUDON_DEBUG
 				UnityEngine.Debug.LogException(e.InnerException);
 #endif
