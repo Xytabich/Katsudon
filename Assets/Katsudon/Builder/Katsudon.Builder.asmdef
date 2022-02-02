@@ -3,12 +3,8 @@
     "references": [
         "VRC.Udon",
         "VRC.Udon.Editor",
-        "Unity.TextMeshPro",
-        "Cinemachine",
-        "Katsudon.Runtime",
-        "Katsudon.Cache"
+        "Katsudon.Runtime"
     ],
-    "optionalUnityReferences": [],
     "includePlatforms": [
         "Editor"
     ],
@@ -17,5 +13,7 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": []
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

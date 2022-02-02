@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Katsudon.Builder.Helpers;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -13,15 +16,15 @@ using VRC.Udon.UAssembly.Assembler;
 using VRC.Udon.UAssembly.Interfaces;
 using VRC.Udon.Wrapper;
 
-namespace Katsudon.Builder.Helpers
+namespace Katsudon.Cache
 {
 	internal class UdonPartsCollector : UdonPartsCacheBase
 	{
 		public override string version => throw new NotImplementedException();
 
-		public IReadOnlyDictionary<Type, int> GetTypeIdentifiers()
+		public override string GetDirectoryPath()
 		{
-			return typeIdentifiers;
+			return Path.GetDirectoryName(new StackTrace(true).GetFrame(0).GetFileName());
 		}
 
 		protected override void CreateTypesList()

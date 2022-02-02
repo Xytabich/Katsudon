@@ -1,7 +1,11 @@
 /*
+!/KatsudonLibs/
 !/Assets/
 /Assets/*
 !/Assets/Katsudon/
 !/Assets/Katsudon Example/
 /Assets/Katsudon/Editor/Cache/UdonPartsCache.cs
 /Assets/Katsudon/Editor/Cache/UdonPartsCache.cs.meta
+/KatsudonLibs/.vs
+/KatsudonLibs/*/bin
+/KatsudonLibs/*/obj

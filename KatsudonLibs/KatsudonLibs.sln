@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32106.194
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Katsudon.Helpers", "Katsudon.Helpers\Katsudon.Helpers.csproj", "{90B03376-7F4B-413A-AE9F-B874CB224352}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{90B03376-7F4B-413A-AE9F-B874CB224352}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90B03376-7F4B-413A-AE9F-B874CB224352}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90B03376-7F4B-413A-AE9F-B874CB224352}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90B03376-7F4B-413A-AE9F-B874CB224352}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {878062BB-9661-4917-B96D-CDC340732E4C}
+	EndGlobalSection
+EndGlobal

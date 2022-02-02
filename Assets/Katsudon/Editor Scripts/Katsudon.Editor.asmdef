@@ -5,7 +5,6 @@
         "VRC.Udon.Editor",
         "VRC.Udon.Serialization.OdinSerializer",
         "Katsudon.Builder",
-        "Katsudon.Cache",
         "Katsudon.Runtime"
     ],
     "includePlatforms": [
