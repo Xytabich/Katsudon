@@ -1,16 +1,10 @@
 {
-    "name": "Katsudon.Editor",
+    "name": "Katsudon.Preinit",
     "references": [
-        "VRC.Udon",
-        "VRC.Udon.Editor",
-        "VRC.Udon.Serialization.OdinSerializer",
-        "Katsudon.Builder",
-        "Katsudon.Runtime",
-        "Katsudon.Preinit"
+        "GUID:627c4d5cd580ddf41bd320e784fe8b9d",
+        "GUID:3c1bc1267eab5884ebe7f232c09ee0d9"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

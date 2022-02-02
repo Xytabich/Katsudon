@@ -1,4 +1,5 @@
 ﻿using Katsudon.Editor.Udon;
+using Katsudon.Helpers;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -132,6 +133,12 @@ namespace Katsudon.Editor
 			}
 			GUI.color = oldColor;
 			return script;
+		}
+
+		[InitializeOnLoadMethod]
+		private static void Init()
+		{
+			EditorReplacer.SetMainEditor(typeof(SerializedUdonProgramAsset), typeof(ProgramAssetInspector), false);
 		}
 	}
 }

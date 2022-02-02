@@ -1,4 +1,5 @@
 ﻿using Katsudon.Editor.Udon;
+using Katsudon.Helpers;
 using UnityEditor;
 using UnityEngine;
 using VRC.Udon.ProgramSources;
@@ -48,6 +49,13 @@ namespace Katsudon.Editor
 				}
 			}
 			base.OnInspectorGUI();
+		}
+
+		[InitializeOnLoadMethod]
+		private static void Init()
+		{
+			EditorReplacer.SetMainEditor(typeof(MonoScript), typeof(ScriptInspector), true);
+			EditorReplacer.SetMainEditor(typeof(MonoScript), typeof(ScriptInspector), false);
 		}
 	}
 }

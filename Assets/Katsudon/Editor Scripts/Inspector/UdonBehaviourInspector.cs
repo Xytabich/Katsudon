@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Katsudon.Editor.Udon;
+using Katsudon.Helpers;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEditorInternal;
@@ -118,7 +119,7 @@ namespace Katsudon.Editor
 
 			if(state == EditorState.DefaultEditor)
 			{
-				var fallback = EditorReplacer.GetFallbackEditor(typeof(UdonBehaviour), targets.Length > 1);
+				var fallback = EditorReplacer.GetFallbackEditor(typeof(UdonBehaviour), new Type[] { typeof(UdonBehaviourDummyEditor) }, targets.Length > 1);
 				if(fallback == null)
 				{
 					state = targets.Length > 1 ? EditorState.CannotEditMulti : EditorState.CannotEdit;
@@ -533,6 +534,13 @@ namespace Katsudon.Editor
 					textStyle.Draw(rect, EditorGUIUtility.TrTextContent("UdonBehaviour", "UdonBehaviour Drag&Drop"), isHover, isActive, foldout, false);
 					break;
 			}
+		}
+
+		[InitializeOnLoadMethod]
+		private static void Init()
+		{
+			EditorReplacer.SetMainEditor(typeof(UdonBehaviour), typeof(UdonBehaviourInspector), true);
+			EditorReplacer.SetMainEditor(typeof(UdonBehaviour), typeof(UdonBehaviourInspector), false);
 		}
 
 		private enum EditorState
