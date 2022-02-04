@@ -111,12 +111,12 @@ namespace Katsudon.Builder
 			var classInfo = assembliesInfo.GetBehaviourInfo(classType);
 			var methods = new Dictionary<MethodIdentifier, AsmMethodInfo>();
 			classInfo.CollectMethods(methods);
-			var typeHierarhy = new List<Type>();
+			var typeHierarchy = new List<Type>();
 
 			var interfaceMethodsMap = new Dictionary<MethodInfo, MethodInfo>();
 			for(Type t = classType; t != typeof(MonoBehaviour); t = t.BaseType)
 			{
-				typeHierarhy.Add(t);
+				typeHierarchy.Add(t);
 				MapInterfaceMethods(t.GetInterfaces(), t, interfaceMethodsMap);
 			}
 
@@ -195,9 +195,9 @@ namespace Katsudon.Builder
 			}
 			classInfo.onMethodRequested -= addMethodCallback;
 
-			for(int i = typeHierarhy.Count - 1; i >= 0; i--)
+			for(int i = typeHierarchy.Count - 1; i >= 0; i--)
 			{
-				var ctor = typeHierarhy[i].GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+				var ctor = typeHierarchy[i].GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 				if(ctor != null)
 				{
 					defaultsExtractor.ExtractDefaults(ctor, fieldsCollection);

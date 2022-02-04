@@ -25,14 +25,14 @@ namespace Katsudon.Info
 		private Dictionary<MethodIdentifier, AsmMethodInfo> methods = new Dictionary<MethodIdentifier, AsmMethodInfo>();
 
 		private AsmTypeInfo[] inherits;
-		private AsmTypeInfo[] hierarhy;
+		private AsmTypeInfo[] hierarchy;
 
-		public AsmTypeInfo(Type type, Guid guid, AsmTypeInfo[] inherits, AsmTypeInfo[] hierarhy)
+		public AsmTypeInfo(Type type, Guid guid, AsmTypeInfo[] inherits, AsmTypeInfo[] hierarchy)
 		{
 			this.type = type;
 			this.guid = guid;
 			this.inherits = inherits;
-			this.hierarhy = hierarhy;
+			this.hierarchy = hierarchy;
 		}
 
 		public IEnumerable<AsmTypeInfo> GetInheritance()
@@ -40,9 +40,9 @@ namespace Katsudon.Info
 			return inherits;
 		}
 
-		public IEnumerable<AsmTypeInfo> GetClassHierarhy()
+		public IEnumerable<AsmTypeInfo> GetClassHierarchy()
 		{
-			return hierarhy;
+			return hierarchy;
 		}
 
 		public void AddField(AsmFieldInfo field)
@@ -64,9 +64,9 @@ namespace Katsudon.Info
 			{
 				bool isNew = true;
 				var id = new MethodNameId(UdonCacheHelper.cache, method.method);
-				for(var i = hierarhy.Length - 1; i >= 0; i--)
+				for(var i = hierarchy.Length - 1; i >= 0; i--)
 				{
-					var list = hierarhy[i].familyMethods;
+					var list = hierarchy[i].familyMethods;
 					if(list != null && list.TryGetValue(id, out var info))
 					{
 						// Override base method
@@ -120,9 +120,9 @@ namespace Katsudon.Info
 
 		public void CollectMethods(IDictionary<MethodIdentifier, AsmMethodInfo> list)
 		{
-			for(var i = 0; i < hierarhy.Length; i++)
+			for(var i = 0; i < hierarchy.Length; i++)
 			{
-				hierarhy[i].CollectMethods(list);
+				hierarchy[i].CollectMethods(list);
 			}
 			foreach(var pair in methods)
 			{
@@ -132,9 +132,9 @@ namespace Katsudon.Info
 
 		public void CollectFields(IDictionary<FieldIdentifier, AsmFieldInfo> list)
 		{
-			for(var i = 0; i < hierarhy.Length; i++)
+			for(var i = 0; i < hierarchy.Length; i++)
 			{
-				hierarhy[i].CollectFields(list);
+				hierarchy[i].CollectFields(list);
 			}
 			foreach(var pair in fields)
 			{
@@ -151,9 +151,9 @@ namespace Katsudon.Info
 					list.Add(pair.Key, pair.Value.count);
 				}
 			}
-			for(var i = hierarhy.Length - 1; i >= 0; i--)
+			for(var i = hierarchy.Length - 1; i >= 0; i--)
 			{
-				var counters = hierarhy[i].fieldNamesCounter;
+				var counters = hierarchy[i].fieldNamesCounter;
 				if(counters != null)
 				{
 					foreach(var pair in counters)
@@ -169,9 +169,9 @@ namespace Katsudon.Info
 			AsmMethodInfo info = null;
 			if(!methods.TryGetValue(id, out info))
 			{
-				for(var i = hierarhy.Length - 1; i >= 0; i--)
+				for(var i = hierarchy.Length - 1; i >= 0; i--)
 				{
-					if(hierarhy[i].methods.TryGetValue(id, out info))
+					if(hierarchy[i].methods.TryGetValue(id, out info))
 					{
 						break;
 					}
@@ -192,9 +192,9 @@ namespace Katsudon.Info
 			AsmMethodInfo info = null;
 			if(familyMethods == null || !familyMethods.TryGetValue(id, out info))
 			{
-				for(var i = hierarhy.Length - 1; i >= 0; i--)
+				for(var i = hierarchy.Length - 1; i >= 0; i--)
 				{
-					var list = hierarhy[i].familyMethods;
+					var list = hierarchy[i].familyMethods;
 					if(list != null && list.TryGetValue(id, out info))
 					{
 						break;
@@ -215,9 +215,9 @@ namespace Katsudon.Info
 			AsmFieldInfo info = null;
 			if(!fields.TryGetValue(id, out info))
 			{
-				for(var i = hierarhy.Length - 1; i >= 0; i--)
+				for(var i = hierarchy.Length - 1; i >= 0; i--)
 				{
-					if(hierarhy[i].fields.TryGetValue(id, out info)) return info;
+					if(hierarchy[i].fields.TryGetValue(id, out info)) return info;
 				}
 			}
 			return info;
@@ -272,9 +272,9 @@ namespace Katsudon.Info
 			if(!container.TryGetValue(name, out var counter))
 			{
 				container[name] = counter = new NameCounter(0, false);
-				for(var i = hierarhy.Length - 1; i >= 0; i--)
+				for(var i = hierarchy.Length - 1; i >= 0; i--)
 				{
-					var list = field ? hierarhy[i].fieldNamesCounter : hierarhy[i].methodNamesCounter;
+					var list = field ? hierarchy[i].fieldNamesCounter : hierarchy[i].methodNamesCounter;
 					if(list != null && list.TryGetValue(name, out var c))
 					{
 						counter.CopyFrom(c);

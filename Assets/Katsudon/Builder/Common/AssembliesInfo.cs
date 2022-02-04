@@ -236,7 +236,7 @@ namespace Katsudon.Info
 
 		private AsmTypeInfo BuildBehaviourInfo(Type type, Guid guid)
 		{
-			var hierarhy = new List<AsmTypeInfo>();
+			var hierarchy = new List<AsmTypeInfo>();
 			var inherits = new HashSet<AsmTypeInfo>();
 			foreach(var interfaceType in type.GetInterfaces())
 			{
@@ -252,11 +252,11 @@ namespace Katsudon.Info
 				inherits.Add(baseInfo);
 				inherits.UnionWith(baseInfo.GetInheritance());
 
-				hierarhy.AddRange(baseInfo.GetClassHierarhy());
-				hierarhy.Add(baseInfo);
+				hierarchy.AddRange(baseInfo.GetClassHierarchy());
+				hierarchy.Add(baseInfo);
 			}
 
-			var info = new AsmTypeInfo(type, guid, inherits.ToArray(), hierarhy.ToArray());
+			var info = new AsmTypeInfo(type, guid, inherits.ToArray(), hierarchy.ToArray());
 			processor.ProcessBehaviourMembers(type, info);
 			return info;
 		}
@@ -365,7 +365,11 @@ namespace Katsudon.Info
 			/// <summary>
 			/// Unique fields can only use their own name; therefore, the entire class cannot have more than one field with this name.
 			/// </summary>
-			Unique = 0x04
+			Unique = 0x04,
+			/// <summary>
+			/// Same as unique but adding variables with the same name, type and flag will not raise errors.
+			/// </summary>
+			SharedUnique = 0x08
 		}
 	}
 }
