@@ -23,9 +23,10 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 			FieldInfo field;
 			if(ILUtils.TryGetLdfld(method.currentOp, out field))
 			{
+				if(!Utils.IsUdonAsmBehaviour(field.DeclaringType)) return false;
+
 				var info = assembliesInfo.GetField(field.DeclaringType, field);
 				var target = method.PopStack();
-
 				if(method.currentOp.opCode == OpCodes.Ldflda)
 				{
 					method.PushStack(new ReferenceInstanceVariable(info.name, method.GetReadonlyVariable(target.OwnType()), method.GetTmpVariable(field.FieldType)));

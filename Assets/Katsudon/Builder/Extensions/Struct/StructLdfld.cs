@@ -22,6 +22,7 @@ namespace Katsudon.Builder.Extensions.Struct
 			if(ILUtils.TryGetLdfld(method.currentOp, out var field))
 			{
 				if(!Utils.IsUdonAsmStruct(field.DeclaringType)) return false;
+
 				var target = method.PopStack();
 				if(method.currentOp.opCode == OpCodes.Ldflda)
 				{

@@ -792,19 +792,50 @@ namespace Katsudon.Editor
 								syncType = (Networking.SyncType)EditorGUILayout.EnumPopup("Sync Method", syncType);
 								if(EditorGUI.EndChangeCheck())
 								{
-									var objects = CollectionCache.GetSet<GameObject>();
-									for(int j = 0; j < info.behaviours.Length; j++)
+									if(syncType == Networking.SyncType.None)
 									{
-										objects.Add(info.behaviours[j].gameObject);
+										info.editor.serializedObject.ApplyModifiedProperties();
+										Undo.IncrementCurrentGroup();
+										Undo.RecordObjects(info.behaviours, "Sync Method Change");
+										for(int j = 0; j < info.behaviours.Length; j++)
+										{
+											info.behaviours[j].SyncMethod = syncType;
+										}
+										info.editor.serializedObject.Update();
 									}
-									Undo.IncrementCurrentGroup();
-									foreach(var obj in objects)
+									else
 									{
-										var list = obj.GetComponents<UdonBehaviour>();
-										Undo.RecordObjects(list, "Sync Method Change");
-										list[0].SyncMethod = syncType;
+										foreach(var ei in editors)
+										{
+											if(ei.editor != null)
+											{
+												ei.editor.serializedObject.ApplyModifiedProperties();
+											}
+										}
+										var objects = CollectionCache.GetSet<GameObject>();
+										for(int j = 0; j < info.behaviours.Length; j++)
+										{
+											objects.Add(info.behaviours[j].gameObject);
+										}
+										Undo.IncrementCurrentGroup();
+										for(int j = 0; j < info.behaviours.Length; j++)
+										{
+											var beh = info.behaviours[j];
+											if(objects.Remove(beh.gameObject))
+											{
+												Undo.RecordObjects(beh.gameObject.GetComponents<UdonBehaviour>(), "Sync Method Change");
+												beh.SyncMethod = syncType;
+											}
+										}
+										CollectionCache.Release(objects);
+										foreach(var ei in editors)
+										{
+											if(ei.editor != null)
+											{
+												ei.editor.serializedObject.Update();
+											}
+										}
 									}
-									CollectionCache.Release(objects);
 								}
 
 								switch(syncType)
