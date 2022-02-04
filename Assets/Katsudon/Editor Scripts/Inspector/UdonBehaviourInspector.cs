@@ -84,7 +84,11 @@ namespace Katsudon.Editor
 			EditorGUI.indentLevel = indent;
 			GUI.enabled = enabled;
 
-			guiContainer.footer.style.marginTop = -3f;
+			if(guiContainer != null)
+			{
+				var footer = guiContainer.GetFooter();
+				if(footer != null) footer.style.marginTop = -3f;
+			}
 		}
 
 		private void InitEditor()
@@ -554,7 +558,7 @@ namespace Katsudon.Editor
 
 		private class OverriddenGUIContainer : IMGUIContainer
 		{
-			public IMGUIContainer footer;
+			private IMGUIContainer footer = null;
 
 			private UnityEditor.Editor target;
 			private ContainerInfo container = default;
@@ -571,6 +575,7 @@ namespace Katsudon.Editor
 				base.HandleEvent(evt);
 				if(evt is AttachToPanelEvent)
 				{
+					footer = null;
 					// Hiding UdonBehaviour inspector title
 					var hierarchy = parent.parent.hierarchy;
 					for(int i = 0; i < hierarchy.childCount; i++)
@@ -595,6 +600,25 @@ namespace Katsudon.Editor
 					this.container.Release();
 					this.container = default;
 				}
+			}
+
+			public IMGUIContainer GetFooter()
+			{
+				if(footer == null)
+				{
+					var hierarchy = parent.parent.hierarchy;
+					for(int i = 0; i < hierarchy.childCount; i++)
+					{
+						if(hierarchy[i] is IMGUIContainer container)
+						{
+							if(container.name.EndsWith("Footer"))
+							{
+								footer = container;
+							}
+						}
+					}
+				}
+				return footer;
 			}
 
 			private struct ContainerInfo
