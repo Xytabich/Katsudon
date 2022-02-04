@@ -2,6 +2,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Katsudon.Builder.Converters;
+using Katsudon.Builder.Helpers;
+using Katsudon.Info;
 using UnityEditor;
 using UnityEngine;
 using VRC.Udon;
@@ -40,30 +42,28 @@ namespace Katsudon.Editor.Udon
 			var programAsset = ProgramUtils.ProgramFieldGetter(behaviour);
 			if(programAsset != null)
 			{
-				var proxyType = proxy.GetType();
-				var program = programAsset.RetrieveProgram();
-				var symbols = program.SymbolTable;
-				var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+				var proxyType = AssembliesInfo.instance.GetBehaviourInfo(proxy.GetType());
+				var fields = CollectionCache.GetDictionary<FieldIdentifier, AsmFieldInfo>();
+				proxyType.CollectFields(fields);
+
 				if(IsInitialized(behaviour))
 				{
-					foreach(var symbol in symbols.GetExportedSymbols())
+					foreach(var pair in fields)
 					{
-						var field = proxyType.GetField(symbol, flags);
-						if(field != null && UdonValueResolver.instance.TryConvertToUdon(field.GetValue(proxy), out var converted))
+						if((pair.Value.flags & AsmFieldInfo.Flags.Export) != 0)
 						{
-							behaviour.SetProgramVariable(symbol, converted);
+							AsmFieldUtils.TryCopyValueToBehaviour(pair.Value, proxy, behaviour.SetProgramVariable);
 						}
 					}
 				}
 				else
 				{
-					behaviour.publicVariables = CreateVariableTable(program);
-					foreach(var symbol in symbols.GetExportedSymbols())
+					behaviour.publicVariables = CreateVariableTable(programAsset.RetrieveProgram());
+					foreach(var pair in fields)
 					{
-						var field = proxyType.GetField(symbol, flags);
-						if(field != null && UdonValueResolver.instance.TryConvertToUdon(field.GetValue(proxy), out var converted))
+						if((pair.Value.flags & AsmFieldInfo.Flags.Export) != 0)
 						{
-							behaviour.publicVariables.TrySetVariableValue(symbol, converted);
+							AsmFieldUtils.TryCopyValueToBehaviour(pair.Value, proxy, (name, value) => behaviour.publicVariables.TrySetVariableValue(name, value));
 						}
 					}
 					EditorUtility.SetDirty(behaviour);
@@ -73,24 +73,22 @@ namespace Katsudon.Editor.Udon
 
 		public static void CopyFieldsToProxy(UdonBehaviour behaviour, MonoBehaviour proxy)
 		{
-			var proxyType = proxy.GetType();
-			var variables = behaviour.publicVariables;
-			var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+			var proxyType = AssembliesInfo.instance.GetBehaviourInfo(proxy.GetType());
+			if(proxyType == null) return;
+
+			var fields = CollectionCache.GetDictionary<FieldIdentifier, AsmFieldInfo>();
+			proxyType.CollectFields(fields);
+
 			if(IsInitialized(behaviour))
 			{
 				BehavioursTracker.IgnoreNextProxyDirtiness(proxy);
-				foreach(var symbol in variables.VariableSymbols)
+				foreach(var pair in fields)
 				{
-					if(behaviour.TryGetProgramVariable(symbol, out var value))
+					if(AsmFieldUtils.TryCopyValueToProxy(pair.Value, proxy, behaviour.TryGetProgramVariable, out bool reserialize))
 					{
-						var field = proxyType.GetField(symbol, flags);
-						if(field != null && UdonValueResolver.instance.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
+						if(reserialize)
 						{
-							field.SetValue(proxy, converted);
-							if(reserialize && UdonValueResolver.instance.TryConvertToUdon(converted, out value))
-							{
-								behaviour.SetProgramVariable(symbol, value);
-							}
+							AsmFieldUtils.TryCopyValueToBehaviour(pair.Value, proxy, behaviour.SetProgramVariable);
 						}
 					}
 				}
@@ -99,34 +97,30 @@ namespace Katsudon.Editor.Udon
 			else
 			{
 				bool isBehaviourChanged = false;
+				var variables = behaviour.publicVariables;
 				var symbols = CollectionCache.GetList(variables.VariableSymbols);
-				foreach(var symbol in symbols)
+				foreach(var pair in fields)
 				{
-					if(variables.TryGetVariableValue(symbol, out var value))
+					if(AsmFieldUtils.TryCopyValueToProxy(pair.Value, proxy, variables.TryGetVariableValue, out bool reserialize))
 					{
-						var field = proxyType.GetField(symbol, flags);
-						if(field != null)
+						if(reserialize)
 						{
-							if(UdonValueResolver.instance.TryConvertFromUdon(value, field.FieldType, out var converted, out bool reserialize))
+							if(AsmFieldUtils.TryCopyValueToBehaviour(pair.Value, proxy, (name, value) => variables.TrySetVariableValue(name, value)))
 							{
-								field.SetValue(proxy, converted);
-								if(reserialize && UdonValueResolver.instance.TryConvertToUdon(converted, out value))
-								{
-									variables.TrySetVariableValue(symbol, value);
-									isBehaviourChanged = true;
-								}
-							}
-							else
-							{
-								variables.RemoveVariable(symbol);
 								isBehaviourChanged = true;
 							}
 						}
+					}
+					else
+					{
+						variables.RemoveVariable(pair.Value.name);
+						isBehaviourChanged = true;
 					}
 				}
 				CollectionCache.Release(symbols);
 				if(isBehaviourChanged) EditorUtility.SetDirty(behaviour);
 			}
+			CollectionCache.Release(fields);
 		}
 
 		public static void InitBehaviour(UdonBehaviour behaviour, MonoBehaviour proxy)
