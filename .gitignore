@@ -3,5 +3,5 @@
 /Assets/*
 !/Assets/Katsudon/
 !/Assets/Katsudon Example/
-/Assets/Katsudon/Cache/UdonPartsCache.cs
-/Assets/Katsudon/Cache/UdonPartsCache.cs.meta
+/Assets/Katsudon/Editor/Cache/UdonPartsCache.cs
+/Assets/Katsudon/Editor/Cache/UdonPartsCache.cs.meta
