@@ -1,7 +1,7 @@
 using System;
 using System.Reflection.Emit;
 
-namespace Katsudon.Builder.AsmOpCodes
+namespace Katsudon.Builder.Extensions.EnumExtension
 {
 	[OperationBuilder]
 	public class StelemEnumOpcode : IOperationBuider

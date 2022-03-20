@@ -1,6 +1,7 @@
+using Katsudon.Builder.Variables;
 using System;
 
-namespace Katsudon.Builder.Variables
+namespace Katsudon.Builder.Extensions.EnumExtension
 {
 	[VariableBuilder]
 	public class CustomEnumVariable : IVariableBuilder
