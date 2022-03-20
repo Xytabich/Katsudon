@@ -87,7 +87,7 @@ namespace Katsudon.Builder.Externs
 					}
 				}
 				Type type, outputType = type = NumberCodeUtils.ToType(code);
-				if(NumberCodeUtils.GetSize(code) < sizeof(int)) outputType = typeof(int);
+				if(code != TypeCode.Boolean && NumberCodeUtils.GetSize(code) < sizeof(int)) outputType = typeof(int);
 				method.machine.BinaryOperatorExtern(operationType, a.UseType(type), b.UseType(type), outputType, () => method.GetOrPushOutVariable(outputType));
 			}
 		}
