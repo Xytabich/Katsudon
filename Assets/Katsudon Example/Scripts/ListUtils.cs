@@ -56,11 +56,6 @@ public static class ListUtils
 		return Array.BinarySearch((Array)array, 0, count, value);
 	}
 
-	public static void Sort<T>(in T[] array, in int count)
-	{
-		Array.Sort((Array)array, 0, count);
-	}
-
 	public static T[] ToArray<T>(in T[] array, in int count)
 	{
 		var result = new T[count];
