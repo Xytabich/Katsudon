@@ -29,7 +29,7 @@ namespace Katsudon.Cache
 
 		protected override void CreateTypesList()
 		{
-			var udonEditorInterface = typeof(UdonEditorManager).GetField("_udonEditorInterface",
+			var udonEditorInterface = typeof(UdonEditorManager).GetProperty("UdonEditorInterface",
 				BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UdonEditorManager.Instance);
 			var typeResolverGroup = typeof(UdonEditorInterface).GetField("_typeResolverGroup",
 				BindingFlags.Instance | BindingFlags.NonPublic).GetValue(udonEditorInterface);

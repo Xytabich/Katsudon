@@ -2,6 +2,6 @@
 {
 	public static class KatsudonInfo
 	{
-		public static string VERSION = "0.2.2";
+		public static string VERSION = "0.3.0";
 	}
 }
