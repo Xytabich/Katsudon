@@ -58,7 +58,7 @@ namespace Katsudon
 		public static string GetExternName(Type type, string externFormat, params Type[] types)
 		{
 			var typeNames = UdonCacheHelper.cache.GetTypeNames();
-			return GetExternName(type, string.Format(externFormat, System.Array.ConvertAll(types, t => GetNameOrThrow(typeNames, t))));
+			return GetExternName(type, string.Format(externFormat, Array.ConvertAll(types, t => GetNameOrThrow(typeNames, t))));
 		}
 
 		public static bool IsUdonType(Type type)

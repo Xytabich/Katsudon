@@ -1,3 +1,5 @@
+using Katsudon.Builder.Helpers;
+using System;
 using System.Collections.Generic;
 
 namespace Katsudon.Builder
@@ -12,6 +14,10 @@ namespace Katsudon.Builder
 			if(constants.TryGetValue(value, out variable))
 			{
 				return variable;
+			}
+			if(!UdonCacheHelper.cache.ContainsExtern(value))
+			{
+				throw new Exception(string.Format("Extern '{0}' is not supported by udon", value));
 			}
 			variable = new UnnamedSignificantVariable("extern", typeof(string), value);
 			constants[value] = variable;

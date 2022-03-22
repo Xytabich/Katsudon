@@ -88,6 +88,11 @@ namespace Katsudon.Cache
 			ParseUdonGraph();
 		}
 
+		protected override void CreateExternsList()
+		{
+			ParseUdonGraph();
+		}
+
 		protected override void CreateTypeIdentifiersList()
 		{
 			tmpTypeCounter = 0;
@@ -108,6 +113,7 @@ namespace Katsudon.Cache
 			var fields = new Dictionary<FieldIdentifier, FieldNodeInfo>();
 			var constructors = new Dictionary<MethodIdentifier, string>();
 			var magicMethods = new Dictionary<string, MagicMethodInfo>();
+			var externNames = new HashSet<string>();
 
 			var modules = (IReadOnlyDictionary<string, IUdonWrapperModule>)typeof(UdonWrapper)
 				.GetField("_wrapperModulesByName", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -128,6 +134,8 @@ namespace Katsudon.Cache
 					CollectTypeMembers(type, cachedSb, typeMembers, typeNames);
 					foreach(var action in actions)
 					{
+						string externName = module.Key + "." + action.Key;
+						externNames.Add(externName);
 						if(typeMembers.TryGetValue(action.Key, out var memberInfo))
 						{
 							if(memberInfo is FieldInfo fieldInfo)
@@ -145,14 +153,14 @@ namespace Katsudon.Cache
 								{
 									nodeInfo = new FieldNodeInfo(type);
 								}
-								if(action.Key.StartsWith("__get_")) nodeInfo.fullGetName = module.Key + "." + action.Key;
-								else nodeInfo.fullSetName = module.Key + "." + action.Key;
+								if(action.Key.StartsWith("__get_")) nodeInfo.fullGetName = externName;
+								else nodeInfo.fullSetName = externName;
 								fields[id] = nodeInfo;
 								continue;
 							}
 							if(memberInfo is ConstructorInfo ctorInfo)
 							{
-								constructors.Add(new MethodIdentifier(this, ctorInfo), module.Key + "." + action.Key);
+								constructors.Add(new MethodIdentifier(this, ctorInfo), externName);
 								continue;
 							}
 							if(memberInfo is MethodInfo methodInfo)
@@ -172,12 +180,12 @@ namespace Katsudon.Cache
 								{
 									if(nodeInfo.PreAddMethod(type))
 									{
-										nodeInfo.AddMethod(type, new MethodIdentifier(this, type, methodInfo), module.Key + "." + action.Key);
+										nodeInfo.AddMethod(type, new MethodIdentifier(this, type, methodInfo), externName);
 									}
 								}
 								else
 								{
-									methods[id] = new MethodNodeInfo(type, new MethodIdentifier(this, type, methodInfo), module.Key + "." + action.Key);
+									methods[id] = new MethodNodeInfo(type, new MethodIdentifier(this, type, methodInfo), externName);
 								}
 								continue;
 							}
@@ -190,6 +198,16 @@ namespace Katsudon.Cache
 						{
 							UnityEngine.Debug.LogFormat("Unknown action {0} in {1}\n{2}", action.Key, module.Key, string.Join("\n", typeMembers.Keys));
 						}
+					}
+				}
+				else
+				{
+					var actions = (IReadOnlyDictionary<string, int>)module.Value.GetType().GetField("_parameterCounts",
+						BindingFlags.Instance | BindingFlags.NonPublic).GetValue(module.Value);
+
+					foreach(var action in actions)
+					{
+						externNames.Add(module.Key + "." + action.Key);
 					}
 				}
 			}
@@ -235,6 +253,8 @@ namespace Katsudon.Cache
 				}
 			}
 			this.methodBaseTypes = methodBaseTypes;
+
+			this.externNames = externNames;
 		}
 
 		private static bool IsGeneric(string str)

@@ -22,6 +22,8 @@ namespace Katsudon.Builder.Helpers
 
 		bool ContainsUdonType(Type type);
 
+		bool ContainsExtern(string fullName);
+
 		IReadOnlyDictionary<MethodIdentifier, string> GetMethodNames();
 
 		IReadOnlyDictionary<MethodIdentifier, Type[]> GetMethodBaseTypes();

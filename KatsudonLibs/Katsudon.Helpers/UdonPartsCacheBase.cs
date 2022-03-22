@@ -17,6 +17,8 @@ namespace Katsudon.Cache
 
 		protected IReadOnlyDictionary<MethodIdentifier, Type[]> methodBaseTypes = null;
 
+		protected ICollection<string> externNames = null;
+
 		protected int tmpTypeCounter;
 		protected Dictionary<Type, int> typeIdentifiers = null;
 
@@ -72,6 +74,18 @@ namespace Katsudon.Cache
 			return typeNames.ContainsKey(type);
 		}
 
+		public bool ContainsExtern(string fullName)
+		{
+			if(externNames == null) CreateExternsList();
+			return externNames.Contains(fullName);
+		}
+
+		public IReadOnlyCollection<string> GetExternNames()
+		{
+			if(externNames == null) CreateExternsList();
+			return (IReadOnlyCollection<string>)externNames;
+		}
+
 		public IReadOnlyDictionary<MethodIdentifier, string> GetMethodNames()
 		{
 			if(methodNames == null) CreateMethodsList();
@@ -105,6 +119,8 @@ namespace Katsudon.Cache
 		public abstract string GetDirectoryPath();
 
 		protected abstract void CreateTypesList();
+
+		protected abstract void CreateExternsList();
 
 		protected abstract void CreateMethodsList();
 

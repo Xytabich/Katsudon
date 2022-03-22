@@ -158,6 +158,16 @@ namespace Katsudon.Builder.Helpers
 						indent--;
 					}
 					AppendLine(sb, indent, "}");
+
+					AppendLine(sb, indent, "protected override void CreateExternsList() {");
+					{
+						indent++;
+						EditorUtility.DisplayProgressBar("Katsudon caching", "Building externs list", 0.95f);
+						var externNames = collector.GetExternNames();
+						AppendListBuilder(sb, indent, "externNames", "HashSet<string>", externNames, ExternNamesBuilder, false);
+						indent--;
+					}
+					AppendLine(sb, indent, "}");
 					indent--;
 				}
 				AppendLine(sb, indent, "}");
@@ -166,8 +176,11 @@ namespace Katsudon.Builder.Helpers
 			sb.Append('}');
 
 			EditorUtility.DisplayProgressBar("Katsudon caching", "Saving cache", 1.0f);
-			File.WriteAllText(Path.Combine(collector.GetDirectoryPath(), "UdonPartsCache.cs"), sb.ToString(), Encoding.UTF8);
+			string cachePath = Path.Combine(collector.GetDirectoryPath(), "UdonPartsCache.cs");
+			File.WriteAllText(cachePath, sb.ToString(), Encoding.UTF8);
 			EditorUtility.ClearProgressBar();
+
+			AssetDatabase.Refresh();
 			return collector;
 		}
 
@@ -175,24 +188,24 @@ namespace Katsudon.Builder.Helpers
 		{
 			sb.Append('\t', indent);
 			sb.Append(text);
-			sb.Append('\n');
+			sb.AppendLine();
 		}
 
 		private static void AppendLineFormat(StringBuilder sb, int indent, string text, object arg0)
 		{
 			sb.Append('\t', indent);
 			sb.AppendFormat(text, arg0);
-			sb.Append('\n');
+			sb.AppendLine();
 		}
 
 		private static void AppendListBuilder<T>(StringBuilder sb, int indent, string outName,
-			string typeName, IReadOnlyCollection<T> list, Action<StringBuilder, T> builder)
+			string typeName, IReadOnlyCollection<T> list, Action<StringBuilder, T> builder, bool initCapacity = true)
 		{
 			sb.Append('\t', indent);
 			sb.Append("var local = new ");
 			sb.Append(typeName);
 			sb.Append("(");
-			sb.Append(list.Count);
+			if(initCapacity) sb.Append(list.Count);
 			sb.AppendLine(");");
 			if(list.Count <= 1000)
 			{
@@ -306,6 +319,13 @@ namespace Katsudon.Builder.Helpers
 			Utils.AppendTypeof(sb, pair.Key);
 			sb.Append(", ");
 			sb.Append(pair.Value);
+		}
+
+		private static void ExternNamesBuilder(StringBuilder sb, string value)
+		{
+			sb.Append("\"");
+			sb.Append(value);
+			sb.Append("\"");
 		}
 	}
 }
