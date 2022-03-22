@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Katsudon.Builder.Converters;
 using Katsudon.Builder.Helpers;
 using Katsudon.Info;
 using UnityEditor;
@@ -37,7 +37,7 @@ namespace Katsudon.Editor.Udon
 			return BehavioursTracker.GetBehaviourByProxy(proxy);
 		}
 
-		public static void CopyFieldsToBehaviour(MonoBehaviour proxy, UdonBehaviour behaviour)
+		public static void CopyFieldsToBehaviour(MonoBehaviour proxy, UdonBehaviour behaviour, ICollection<string> changeOnly = null)
 		{
 			var programAsset = ProgramUtils.ProgramFieldGetter(behaviour);
 			if(programAsset != null)
@@ -50,7 +50,7 @@ namespace Katsudon.Editor.Udon
 				{
 					foreach(var pair in fields)
 					{
-						if((pair.Value.flags & AsmFieldInfo.Flags.Export) != 0)
+						if((pair.Value.flags & AsmFieldInfo.Flags.Export) != 0 && (changeOnly?.Contains(pair.Value.field.Name) ?? true))
 						{
 							AsmFieldUtils.TryCopyValueToBehaviour(pair.Value, proxy, behaviour.SetProgramVariable);
 						}
@@ -61,7 +61,7 @@ namespace Katsudon.Editor.Udon
 					behaviour.publicVariables = CreateVariableTable(programAsset.RetrieveProgram());
 					foreach(var pair in fields)
 					{
-						if((pair.Value.flags & AsmFieldInfo.Flags.Export) != 0)
+						if((pair.Value.flags & AsmFieldInfo.Flags.Export) != 0 && (changeOnly?.Contains(pair.Value.field.Name) ?? true))
 						{
 							AsmFieldUtils.TryCopyValueToBehaviour(pair.Value, proxy, (name, value) => behaviour.publicVariables.TrySetVariableValue(name, value));
 						}

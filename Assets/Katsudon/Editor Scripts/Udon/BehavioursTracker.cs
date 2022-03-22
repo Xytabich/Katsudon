@@ -126,7 +126,11 @@ namespace Katsudon.Editor.Udon
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
 		private static void InitRuntime()
 		{
-			if(ignoreNextDirty == null) ignoreNextDirty = new HashSet<MonoBehaviour>();
+			if(ignoreNextDirty == null)
+			{
+				ignoreNextDirty = new HashSet<MonoBehaviour>();
+				Undo.postprocessModifications += UpdateBehaviourOnProxyPropertiesChange;
+			}
 		}
 
 		[MenuItem("Katsudon/Convert Scene")]
@@ -194,8 +198,42 @@ namespace Katsudon.Editor.Udon
 				if(state == PlayModeStateChange.EnteredEditMode)
 				{
 					ignoreNextDirty = null;
+					Undo.postprocessModifications -= UpdateBehaviourOnProxyPropertiesChange;
 				}
 			}
+		}
+
+		private static UndoPropertyModification[] UpdateBehaviourOnProxyPropertiesChange(UndoPropertyModification[] modifications)
+		{
+			Dictionary<MonoBehaviour, HashSet<string>> modifiedProperties = null;
+			for(int i = 0; i < modifications.Length; i++)
+			{
+				var info = modifications[i].currentValue;
+				if(info != null && Utils.IsUdonAsmBehaviour(info.target.GetType()))
+				{
+					if(modifiedProperties == null)
+					{
+						modifiedProperties = CollectionCache.GetDictionary<MonoBehaviour, HashSet<string>>();
+					}
+					if(!modifiedProperties.TryGetValue((MonoBehaviour)info.target, out var list))
+					{
+						modifiedProperties[(MonoBehaviour)info.target] = list = CollectionCache.GetSet<string>();
+					}
+					list.Add(info.propertyPath.Remove(info.propertyPath.IndexOf('.')));
+				}
+			}
+			if(modifiedProperties != null)
+			{
+				foreach(var pair in modifiedProperties)
+				{
+					IgnoreNextProxyDirtiness(pair.Key);
+					var behaviour = GetBehaviourByProxy(pair.Key);
+					if(behaviour != null) ProxyUtils.CopyFieldsToBehaviour(pair.Key, behaviour, pair.Value);
+					CollectionCache.Release(pair.Value);
+				}
+				CollectionCache.Release(modifiedProperties);
+			}
+			return modifications;
 		}
 
 		private static void UpdateTick()
