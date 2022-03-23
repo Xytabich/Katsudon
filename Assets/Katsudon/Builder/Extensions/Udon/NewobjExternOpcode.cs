@@ -11,7 +11,6 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 		public int order => 0;
 
 		private IReadOnlyDictionary<MethodIdentifier, string> externs = null;
-		private List<VariableMeta> arguments = new List<VariableMeta>();
 
 		bool IOperationBuider.Process(IMethodDescriptor method)
 		{
@@ -20,6 +19,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 			var ctorInfo = (ConstructorInfo)method.currentOp.argument;
 			if(externs.TryGetValue(UdonCacheHelper.cache.GetCtorIdentifier(ctorInfo), out string fullName))
 			{
+				var arguments = CollectionCache.GetList<VariableMeta>();
 				var parameters = ctorInfo.GetParameters();
 				if(parameters.Length > 0)
 				{
@@ -34,7 +34,7 @@ namespace Katsudon.Builder.Extensions.UdonExtensions
 				}
 
 				method.machine.AddExtern(fullName, () => method.GetOrPushOutVariable(ctorInfo.DeclaringType), arguments.ToArray());
-				arguments.Clear();
+				CollectionCache.Release(arguments);
 				return true;
 			}
 			return false;
